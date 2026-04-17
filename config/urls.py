@@ -31,8 +31,9 @@ urlpatterns = [
     path('properties/', include('properties.urls')),
     path('billing/', include('billing.urls')),
     path('payments/', include('payments.urls')),
-    path('field/', include('field_operations.urls')),
-    path('dashboard/', include('admins.urls')),
+    path('field-operations/', include("field_operations.urls")),
+    # path('dashboard/', include('admins.urls')),
+    path("dashboard/", include("admins.urls")),
 ]
 
 if settings.DEBUG:

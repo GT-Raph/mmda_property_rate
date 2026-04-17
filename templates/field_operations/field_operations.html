@@ -1,0 +1,571 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e8e8e8;
+            --text: #202020;
+            --muted: #7a7a7a;
+            --sidebar: #03592f;
+            --sidebar-dark: #014f2a;
+            --green: #0b7a45;
+            --green-soft: #d8f2df;
+            --yellow-soft: #f8e8b5;
+            --yellow-text: #b27a00;
+            --red-soft: #f7d7d7;
+            --red-text: #d72c2c;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 245px;
+            background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-dark) 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 22px 0 14px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            padding: 0 22px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .brand h2 {
+            margin: 0 0 6px;
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .nav {
+            padding: 18px 12px;
+            flex: 1;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #edf7f1;
+            text-decoration: none;
+            padding: 14px 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+            background: rgba(26, 153, 86, 0.55);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 14px 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+            line-height: 1.5;
+        }
+
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .topbar {
+            height: 72px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px;
+            gap: 16px;
+        }
+
+        .search-wrap {
+            flex: 1;
+            max-width: 470px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid transparent;
+            background: #f1f1f1;
+            border-radius: 12px;
+            padding: 0 16px 0 40px;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .search-wrap input:focus {
+            background: #fff;
+            border-color: #bfd7c8;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            color: #8a8a8a;
+            font-size: 17px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .notification {
+            position: relative;
+            font-size: 18px;
+        }
+
+        .notification::after {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #df2436;
+            position: absolute;
+            right: -1px;
+            top: 1px;
+        }
+
+        .user-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #8d26ff;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .user-meta {
+            line-height: 1.2;
+        }
+
+        .user-meta strong {
+            display: block;
+            font-size: 15px;
+        }
+
+        .user-meta small {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .page {
+            padding: 24px 22px 40px;
+            max-width: 1120px;
+        }
+
+        .page h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .page-subtitle {
+            margin: 8px 0 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 22px;
+        }
+
+        .officer-card {
+            padding: 22px;
+        }
+
+        .officer-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .officer-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #edf4ef;
+            color: var(--green);
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .officer-meta h3 {
+            margin: 0 0 4px;
+            font-size: 18px;
+        }
+
+        .officer-meta small {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .officer-stats {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            row-gap: 8px;
+            column-gap: 12px;
+            align-items: center;
+            margin-bottom: 14px;
+            font-size: 14px;
+        }
+
+        .officer-stats .label {
+            color: var(--muted);
+        }
+
+        .officer-stats .value {
+            font-weight: 700;
+        }
+
+        .officer-stats .value-green {
+            font-weight: 700;
+            color: #16a34a;
+        }
+
+        progress {
+            width: 100%;
+            height: 10px;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        progress::-webkit-progress-bar {
+            background: #ececec;
+            border-radius: 999px;
+        }
+
+        progress::-webkit-progress-value {
+            background: var(--green);
+            border-radius: 999px;
+        }
+
+        progress::-moz-progress-bar {
+            background: var(--green);
+            border-radius: 999px;
+        }
+
+        .section-header {
+            padding: 22px 22px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .section-header h2 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 22px;
+            border-top: 1px solid var(--line);
+        }
+
+        .activity-item:first-of-type {
+            border-top: 0;
+        }
+
+        .activity-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 18px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .activity-green {
+            background: #d8f3df;
+            color: #10a34a;
+        }
+
+        .activity-yellow {
+            background: #f8ebbe;
+            color: #c58b00;
+        }
+
+        .activity-red {
+            background: #f8d8d8;
+            color: #e02626;
+        }
+
+        .activity-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 6px;
+        }
+
+        .activity-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .activity-subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .activity-description {
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .activity-footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-verified {
+            background: var(--green-soft);
+            color: #11884a;
+        }
+
+        .status-pending {
+            background: var(--yellow-soft);
+            color: var(--yellow-text);
+        }
+
+        .status-discrepancy {
+            background: var(--red-soft);
+            color: var(--red-text);
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                display: block;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .topbar {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 14px 16px;
+            }
+
+            .search-wrap {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .activity-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>Admin Portal</h2>
+            <p>MMDA Management</p>
+        </div>
+
+        <nav class="nav">
+            <a href="/dashboard/"><span>⌂</span><span>Dashboard</span></a>
+            <a href="/properties/"><span>🏢</span><span>Properties</span></a>
+            <a href="#"><span>💳</span><span>Billing & Payments</span></a>
+            <a href="/field/" class="active"><span>📍</span><span>Field Officers</span></a>
+            <a href="#"><span>📊</span><span>Reports</span></a>
+            <a href="#"><span>⚙</span><span>Settings</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+            Ghana MMDA System<br>
+            Admin Access
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="topbar">
+            <div class="search-wrap">
+                <span class="search-icon">⌕</span>
+                <input type="text" placeholder="Search properties, bills, payments...">
+            </div>
+
+            <div class="topbar-right">
+                <div class="notification">🔔</div>
+
+                <div class="user-box">
+                    <div class="avatar">
+                        {% if request.user.first_name %}
+                            {{ request.user.first_name|slice:":1"|upper }}
+                        {% else %}
+                            {{ request.user.username|slice:":1"|upper }}
+                        {% endif %}
+                    </div>
+
+                    <div class="user-meta">
+                        <strong>
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.first_name }} {{ request.user.last_name }}
+                            {% else %}
+                                {{ request.user.username }}
+                            {% endif %}
+                        </strong>
+                        <small>{{ request.user.email|default:"admin@mmda.gov.gh" }}</small>
+                    </div>
+
+                    <div style="color:#7b7b7b;">⌄</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page">
+            <h1>{{ page_title }}</h1>
+            <div class="page-subtitle">{{ page_subtitle }}</div>
+
+            {% for officer in officers %}
+            <section class="panel officer-card">
+                <div class="officer-head">
+                    <div class="officer-icon">👤</div>
+                    <div class="officer-meta">
+                        <h3>{{ officer.name }}</h3>
+                        <small>{{ officer.code }}</small>
+                    </div>
+                </div>
+
+                <div class="officer-stats">
+                    <div class="label">Assigned</div>
+                    <div class="value">{{ officer.assigned }} properties</div>
+
+                    <div class="label">Completed</div>
+                    <div class="value-green">{{ officer.completed }} verifications</div>
+                </div>
+
+                <progress value="{{ officer.completed }}" max="{{ officer.assigned }}"></progress>
+            </section>
+            {% endfor %}
+
+            <section class="panel">
+                <div class="section-header">
+                    <h2>Recent Field Activity</h2>
+                </div>
+
+                {% for activity in recent_activities %}
+                <div class="activity-item">
+                    <div class="activity-icon {{ activity.icon_class }}">{{ activity.icon }}</div>
+
+                    <div class="activity-body">
+                        <div class="activity-top">
+                            <div>
+                                <h3 class="activity-title">{{ activity.title }}</h3>
+                                <div class="activity-subtitle">
+                                    {{ activity.property_ref }} • {{ activity.location }}
+                                </div>
+                            </div>
+
+                            <span class="status-badge {{ activity.status_class }}">
+                                {{ activity.status }}
+                            </span>
+                        </div>
+
+                        <div class="activity-description">
+                            {{ activity.description }}
+                        </div>
+
+                        <div class="activity-footer">
+                            <span>Officer: {{ activity.officer }}</span>
+                            <span>{{ activity.datetime }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
