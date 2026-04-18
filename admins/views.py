@@ -108,3 +108,124 @@ def dashboard(request):
         },
     }
     return render(request, "admins/dashboard.html", context)
+
+
+@login_required
+def reports_analytics(request):
+    stats = [
+        {
+            "icon": "↗",
+            "icon_class": "icon-green",
+            "title": "Collection Rate",
+            "value": "68.5%",
+            "meta": "vs 62% last month",
+        },
+        {
+            "icon": "📄",
+            "icon_class": "icon-blue",
+            "title": "Bills Generated",
+            "value": "10,845",
+            "meta": "this month",
+        },
+        {
+            "icon": "⭳",
+            "icon_class": "icon-green",
+            "title": "Reports Generated",
+            "value": "24",
+            "meta": "this week",
+        },
+    ]
+
+    reports = [
+        {
+            "title": "Monthly Revenue Report",
+            "description": "Comprehensive revenue collection summary for the month",
+            "generated": "April 11, 2024",
+            "format": "PDF, Excel",
+        },
+        {
+            "title": "Property Registration Summary",
+            "description": "New properties registered and verification status",
+            "generated": "April 10, 2024",
+            "format": "PDF, Excel",
+        },
+        {
+            "title": "Payment Collection Trends",
+            "description": "Analysis of payment patterns and collection efficiency",
+            "generated": "April 5, 2024",
+            "format": "PDF, Excel",
+        },
+        {
+            "title": "Outstanding Bills Report",
+            "description": "Properties with overdue payments and follow-up actions",
+            "generated": "April 11, 2024",
+            "format": "PDF, Excel",
+        },
+        {
+            "title": "Dispute Resolution Summary",
+            "description": "Status of disputes, resolution rate, and common issues",
+            "generated": "April 8, 2024",
+            "format": "PDF",
+        },
+        {
+            "title": "Field Operations Report",
+            "description": "Field officer activities, verifications, and productivity",
+            "generated": "April 12, 2024",
+            "format": "PDF, Excel",
+        },
+    ]
+
+    context = {
+        "page_title": "Reports & Analytics",
+        "page_subtitle": "Generate and export system reports",
+        "stats": stats,
+        "reports": reports,
+    }
+    return render(request, "admins/reports_analytics.html", context)
+
+
+@login_required
+def settings_view(request):
+    active_tab = request.GET.get("tab", "profile")
+
+    context = {
+        "page_title": "Settings",
+        "page_subtitle": "Manage your account settings and preferences",
+        "active_tab": active_tab,
+        "profile_data": {
+            "full_name": request.user.get_full_name() or "Super Admin",
+            "email": request.user.email or "admin@mmda.gov.gh",
+            "phone": "0244123456",
+            "role": "Super Admin",
+        },
+        "notifications": [
+            {
+                "title": "Email Notifications",
+                "description": "Receive email updates about system activity",
+                "enabled": True,
+            },
+            {
+                "title": "Payment Alerts",
+                "description": "Get notified when payments are received",
+                "enabled": True,
+            },
+            {
+                "title": "Dispute Alerts",
+                "description": "Notifications for new disputes and resolutions",
+                "enabled": True,
+            },
+            {
+                "title": "System Updates",
+                "description": "Updates about new features and maintenance",
+                "enabled": False,
+            },
+        ],
+        "sessions": [
+            {
+                "device": "Windows PC - Chrome",
+                "meta": "Current session • Accra, Ghana",
+                "status": "Active",
+            }
+        ],
+    }
+    return render(request, "admins/settings.html", context)

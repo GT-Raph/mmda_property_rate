@@ -1,0 +1,619 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f6f6f6;
+            --panel: #ffffff;
+            --line: #e7e7e7;
+            --text: #1f1f1f;
+            --muted: #7a7a7a;
+            --sidebar: #03592f;
+            --sidebar-dark: #014f2a;
+            --green: #0b7a45;
+            --green-soft: #d9f3e2;
+            --blue-soft: #e8f0ff;
+            --blue-line: #b8d0ff;
+            --red-soft: #fdeaea;
+            --red-line: #f3b7b7;
+            --red-text: #ea2222;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-dark) 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0 14px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            padding: 0 20px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .brand h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .nav {
+            padding: 18px 12px;
+            flex: 1;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #edf7f1;
+            text-decoration: none;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .nav a:hover,
+        .nav a.active {
+            background: rgba(26, 153, 86, 0.55);
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding: 14px 14px 0;
+            font-size: 12px;
+            color: rgba(255,255,255,0.72);
+            line-height: 1.5;
+        }
+
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .topbar {
+            height: 62px;
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px;
+            gap: 16px;
+        }
+
+        .search-wrap {
+            flex: 1;
+            max-width: 440px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            height: 42px;
+            border: 1px solid transparent;
+            background: #f1f1f1;
+            border-radius: 12px;
+            padding: 0 16px 0 38px;
+            outline: none;
+            font-size: 15px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 13px;
+            top: 11px;
+            color: #8a8a8a;
+            font-size: 16px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .notification {
+            position: relative;
+            font-size: 18px;
+        }
+
+        .notification::after {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #df2436;
+            position: absolute;
+            right: -1px;
+            top: 0;
+        }
+
+        .user-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #8d26ff;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .user-meta strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1.1;
+        }
+
+        .user-meta small {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .page {
+            padding: 22px 22px 36px;
+            max-width: 980px;
+        }
+
+        .page h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .page-subtitle {
+            margin: 8px 0 26px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            padding: 16px;
+        }
+
+        .tab-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tab-link.active {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .settings-body {
+            padding: 24px;
+        }
+
+        .settings-body h2 {
+            margin: 0 0 24px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .field input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid #d8d8d8;
+            border-radius: 10px;
+            padding: 0 14px;
+            font-size: 15px;
+            background: #fff;
+            outline: none;
+        }
+
+        .field input[readonly] {
+            background: #f3f3f3;
+            color: #8a8a8a;
+        }
+
+        .hint {
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .btn {
+            border: none;
+            background: var(--green);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .sub-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #fff;
+        }
+
+        .sub-card h3 {
+            margin: 0 0 8px;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .sub-card p {
+            margin: 0 0 12px;
+            color: var(--muted);
+        }
+
+        .password-note {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-line);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1749d1;
+            margin-bottom: 16px;
+        }
+
+        .notification-row,
+        .session-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .notification-row + .notification-row,
+        .session-row + .session-row {
+            margin-top: 12px;
+        }
+
+        .row-text strong {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .row-text span {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .toggle {
+            width: 46px;
+            height: 24px;
+            border-radius: 999px;
+            position: relative;
+            background: #d7dbe1;
+            flex-shrink: 0;
+        }
+
+        .toggle::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+        }
+
+        .toggle.on {
+            background: var(--green);
+        }
+
+        .toggle.on::after {
+            left: 25px;
+        }
+
+        .session-status {
+            color: #14a24a;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .danger-box {
+            border: 1px solid var(--red-line);
+            background: var(--red-soft);
+            border-radius: 10px;
+            padding: 18px 16px;
+        }
+
+        .danger-box h3 {
+            margin: 0 0 8px;
+            color: var(--red-text);
+            font-size: 16px;
+        }
+
+        .danger-box p {
+            margin: 0;
+            color: #7a6666;
+        }
+
+        @media (max-width: 900px) {
+            .layout {
+                display: block;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .topbar {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 14px 16px;
+            }
+
+            .search-wrap {
+                max-width: 100%;
+                width: 100%;
+            }
+
+            .notification-row,
+            .session-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>Admin Portal</h2>
+            <p>MMDA Management</p>
+        </div>
+
+        <nav class="nav">
+            <a href="/dashboard/"><span>⌂</span><span>Dashboard</span></a>
+            <a href="/properties/"><span>🏢</span><span>Properties</span></a>
+            <a href="/billing/"><span>💳</span><span>Billing & Payments</span></a>
+            <a href="/field-operations/"><span>📍</span><span>Field Officers</span></a>
+            <a href="{% url 'admins:reports-analytics' %}"><span>📊</span><span>Reports</span></a>
+            <a href="{% url 'admins:settings' %}" class="active"><span>⚙</span><span>Settings</span></a>
+        </nav>
+
+        <div class="sidebar-footer">
+            Ghana MMDA System<br>
+            Admin Access
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="topbar">
+            <div class="search-wrap">
+                <span class="search-icon">⌕</span>
+                <input type="text" placeholder="Search properties, bills, payments...">
+            </div>
+
+            <div class="topbar-right">
+                <div class="notification">🔔</div>
+
+                <div class="user-box">
+                    <div class="avatar">
+                        {% if request.user.first_name %}
+                            {{ request.user.first_name|slice:":1"|upper }}
+                        {% else %}
+                            {{ request.user.username|slice:":1"|upper }}
+                        {% endif %}
+                    </div>
+
+                    <div class="user-meta">
+                        <strong>
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.first_name }} {{ request.user.last_name }}
+                            {% else %}
+                                {{ request.user.username }}
+                            {% endif %}
+                        </strong>
+                        <small>{{ request.user.email|default:"admin@mmda.gov.gh" }}</small>
+                    </div>
+
+                    <div style="color:#7b7b7b;">⌄</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page">
+            <h1>{{ page_title }}</h1>
+            <div class="page-subtitle">{{ page_subtitle }}</div>
+
+            <section class="panel">
+                <div class="tabs">
+                    <a class="tab-link {% if active_tab == 'profile' %}active{% endif %}" href="{% url 'admins:settings' %}?tab=profile">
+                        <span>◌</span><span>Profile</span>
+                    </a>
+                    <a class="tab-link {% if active_tab == 'password' %}active{% endif %}" href="{% url 'admins:settings' %}?tab=password">
+                        <span>⌂</span><span>Change Password</span>
+                    </a>
+                    <a class="tab-link {% if active_tab == 'notifications' %}active{% endif %}" href="{% url 'admins:settings' %}?tab=notifications">
+                        <span>◔</span><span>Notifications</span>
+                    </a>
+                    <a class="tab-link {% if active_tab == 'security' %}active{% endif %}" href="{% url 'admins:settings' %}?tab=security">
+                        <span>⛨</span><span>Security</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="settings-body">
+                    {% if active_tab == 'profile' %}
+                        <h2>Profile Information</h2>
+
+                        <div class="field">
+                            <label>Full Name</label>
+                            <input type="text" value="{{ profile_data.full_name }}">
+                        </div>
+
+                        <div class="field">
+                            <label>Email Address</label>
+                            <input type="email" value="{{ profile_data.email }}">
+                        </div>
+
+                        <div class="field">
+                            <label>Phone Number</label>
+                            <input type="text" value="{{ profile_data.phone }}">
+                        </div>
+
+                        <div class="field">
+                            <label>Role</label>
+                            <input type="text" value="{{ profile_data.role }}" readonly>
+                            <div class="hint">Contact super admin to change your role</div>
+                        </div>
+
+                        <button class="btn" type="button">Save Changes</button>
+                    {% endif %}
+
+                    {% if active_tab == 'password' %}
+                        <h2>Change Password</h2>
+
+                        <div class="field">
+                            <label>Current Password</label>
+                            <input type="password" placeholder="Enter current password">
+                        </div>
+
+                        <div class="field">
+                            <label>New Password</label>
+                            <input type="password" placeholder="Enter new password">
+                        </div>
+
+                        <div class="field">
+                            <label>Confirm New Password</label>
+                            <input type="password" placeholder="Confirm new password">
+                        </div>
+
+                        <div class="password-note">
+                            Password requirements:<br>
+                            • At least 8 characters long<br>
+                            • Mix of uppercase and lowercase letters<br>
+                            • Include numbers and special characters
+                        </div>
+
+                        <button class="btn" type="button">Update Password</button>
+                    {% endif %}
+
+                    {% if active_tab == 'notifications' %}
+                        <h2>Notification Preferences</h2>
+
+                        {% for item in notifications %}
+                        <div class="sub-card notification-row">
+                            <div class="row-text">
+                                <strong>{{ item.title }}</strong>
+                                <span>{{ item.description }}</span>
+                            </div>
+                            <div class="toggle {% if item.enabled %}on{% endif %}"></div>
+                        </div>
+                        {% endfor %}
+
+                        <button class="btn" type="button">Save Preferences</button>
+                    {% endif %}
+
+                    {% if active_tab == 'security' %}
+                        <h2>Security Settings</h2>
+
+                        <div class="sub-card">
+                            <h3>Two-Factor Authentication</h3>
+                            <p>Add an extra layer of security to your account</p>
+                            <button class="btn" type="button">Enable 2FA</button>
+                        </div>
+
+                        <div class="sub-card">
+                            <h3>Active Sessions</h3>
+                            <p>Manage devices where you're currently logged in</p>
+
+                            {% for session in sessions %}
+                            <div class="session-row">
+                                <div class="row-text">
+                                    <strong>{{ session.device }}</strong>
+                                    <span>{{ session.meta }}</span>
+                                </div>
+                                <div class="session-status">{{ session.status }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="danger-box">
+                            <h3>Account Deactivation</h3>
+                            <p>Contact your system administrator to deactivate your account</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
