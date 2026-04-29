@@ -219,6 +219,10 @@
             font-size: 14px;
         }
 
+        .generate-form {
+            margin: 0;
+        }
+
         .generate-btn {
             border: none;
             background: var(--yellow);
@@ -229,6 +233,28 @@
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
+        }
+
+        .message-list {
+            margin-bottom: 16px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .message.success {
+            background: #d8f2df;
+            color: #11884a;
+        }
+
+        .message.info {
+            background: #eaf2fe;
+            color: #315cbd;
         }
 
         .panel {
@@ -247,11 +273,13 @@
         }
 
         .toolbar-input {
-            width: 120px;
+            width: 180px;
             height: 42px;
             border: 1px solid #dddddd;
             border-radius: 10px;
             background: #fafafa;
+            padding: 0 12px;
+            font-size: 14px;
         }
 
         table {
@@ -376,6 +404,10 @@
         }
 
         @media (max-width: 1100px) {
+            .toolbar {
+                flex-wrap: wrap;
+            }
+
             .panel {
                 overflow-x: auto;
             }
@@ -423,10 +455,10 @@
         </div>
 
         <nav class="nav">
-            <a href="/dashboard/"><span>⌂</span><span>Dashboard</span></a>
-            <a href="/properties/"><span>🏢</span><span>Properties</span></a>
-            <a href="/billing/" class="active"><span>💳</span><span>Billing & Payments</span></a>
-            <a href="/field-operations/"><span>📍</span><span>Field Officers</span></a>
+            <a href="{% url 'admins:admin-dashboard' %}"><span>⌂</span><span>Dashboard</span></a>
+            <a href="{% url 'properties:property-registry' %}"><span>🏢</span><span>Properties</span></a>
+            <a href="{% url 'billing:billing-management' %}" class="active"><span>💳</span><span>Billing & Payments</span></a>
+            <a href="{% url 'field_operations:field-operations' %}"><span>📍</span><span>Field Officers</span></a>
             <a href="{% url 'admins:reports-analytics' %}"><span>📊</span><span>Reports</span></a>
             <a href="{% url 'admins:settings' %}"><span>⚙</span><span>Settings</span></a>
         </nav>
@@ -479,14 +511,41 @@
                     <div class="page-subtitle">{{ page_subtitle }}</div>
                 </div>
 
-                <button class="generate-btn" type="button">＋ Generate Bills</button>
+                <form method="post" class="generate-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="generate_bills">
+                    <input type="hidden" name="year" value="{{ selected_year }}">
+                    <button class="generate-btn" type="submit">＋ Generate Bills</button>
+                </form>
             </div>
 
-            <section class="panel">
-                <div class="toolbar">
-                    <input class="toolbar-input" type="text">
-                    <input class="toolbar-input" type="text">
+            {% if messages %}
+            <div class="message-list">
+                {% for message in messages %}
+                <div class="message {{ message.tags|default:'info' }}">
+                    {{ message }}
                 </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <section class="panel">
+                <form method="get" class="toolbar">
+                    <input
+                        class="toolbar-input"
+                        type="text"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="Search bill/property/owner"
+                    >
+                    <input
+                        class="toolbar-input"
+                        type="number"
+                        name="year"
+                        value="{{ selected_year }}"
+                        placeholder="Year"
+                    >
+                </form>
 
                 <table>
                     <thead>
@@ -527,11 +586,22 @@
                 </table>
 
                 <div class="table-footer">
-                    <div>Showing 1-5 of 5 bills</div>
+                    <div>Showing {{ start_index }}-{{ end_index }} of {{ total_bills }} bills</div>
                     <div class="pagination">
-                        <a href="#" class="page-btn">‹</a>
-                        <a href="#" class="page-number active">1</a>
-                        <a href="#" class="page-btn">›</a>
+                        {% if page_obj.has_previous %}
+                            <a href="?q={{ search_query|urlencode }}&year={{ selected_year }}&page={{ page_obj.previous_page_number }}" class="page-btn">‹</a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            <a href="?q={{ search_query|urlencode }}&year={{ selected_year }}&page={{ num }}"
+                               class="page-number {% if page_obj.number == num %}active{% endif %}">
+                                {{ num }}
+                            </a>
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <a href="?q={{ search_query|urlencode }}&year={{ selected_year }}&page={{ page_obj.next_page_number }}" class="page-btn">›</a>
+                        {% endif %}
                     </div>
                 </div>
             </section>

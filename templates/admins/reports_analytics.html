@@ -22,9 +22,7 @@
             --yellow: #f2c80f;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -338,19 +336,6 @@
             background: var(--yellow);
         }
 
-        .h-jan-collected { height: 105px; }
-        .h-jan-target { height: 125px; }
-        .h-feb-collected { height: 120px; }
-        .h-feb-target { height: 125px; }
-        .h-mar-collected { height: 128px; }
-        .h-mar-target { height: 123px; }
-        .h-apr-collected { height: 140px; }
-        .h-apr-target { height: 150px; }
-        .h-may-collected { height: 158px; }
-        .h-may-target { height: 150px; }
-        .h-jun-collected { height: 182px; }
-        .h-jun-target { height: 175px; }
-
         .month-label {
             font-size: 12px;
             color: var(--muted);
@@ -431,6 +416,10 @@
             color: #8a8a8a;
         }
 
+        .generate-form {
+            margin: 0;
+        }
+
         .generate-btn {
             border: none;
             background: #067946;
@@ -481,10 +470,10 @@
         </div>
 
         <nav class="nav">
-            <a href="/dashboard/"><span>⌂</span><span>Dashboard</span></a>
-            <a href="/properties/"><span>🏢</span><span>Properties</span></a>
-            <a href="/billing/"><span>💳</span><span>Billing & Payments</span></a>
-            <a href="/field-operations/"><span>📍</span><span>Field Officers</span></a>
+            <a href="{% url 'admins:admin-dashboard' %}"><span>⌂</span><span>Dashboard</span></a>
+            <a href="{% url 'properties:property-registry' %}"><span>🏢</span><span>Properties</span></a>
+            <a href="{% url 'billing:billing-management' %}"><span>💳</span><span>Billing & Payments</span></a>
+            <a href="{% url 'field_operations:field-operations' %}"><span>📍</span><span>Field Officers</span></a>
             <a href="{% url 'admins:reports-analytics' %}" class="active"><span>📊</span><span>Reports</span></a>
             <a href="{% url 'admins:settings' %}"><span>⚙</span><span>Settings</span></a>
         </nav>
@@ -553,53 +542,15 @@
 
                     <div class="chart-area">
                         <div class="chart-grid">
+                            {% for month in chart_months %}
                             <div class="bar-group">
                                 <div class="bars">
-                                    <div class="bar collected h-jan-collected"></div>
-                                    <div class="bar target h-jan-target"></div>
+                                    <div class="bar collected" style="--h: {{ month.collected_height }}px;" title="{{ month.collected_display }}"></div>
+                                    <div class="bar target" style="--h: {{ month.target_height }}px;" title="{{ month.target_display }}"></div>
                                 </div>
-                                <div class="month-label">Jan</div>
+                                <div class="month-label">{{ month.label }}</div>
                             </div>
-
-                            <div class="bar-group">
-                                <div class="bars">
-                                    <div class="bar collected h-feb-collected"></div>
-                                    <div class="bar target h-feb-target"></div>
-                                </div>
-                                <div class="month-label">Feb</div>
-                            </div>
-
-                            <div class="bar-group">
-                                <div class="bars">
-                                    <div class="bar collected h-mar-collected"></div>
-                                    <div class="bar target h-mar-target"></div>
-                                </div>
-                                <div class="month-label">Mar</div>
-                            </div>
-
-                            <div class="bar-group">
-                                <div class="bars">
-                                    <div class="bar collected h-apr-collected"></div>
-                                    <div class="bar target h-apr-target"></div>
-                                </div>
-                                <div class="month-label">Apr</div>
-                            </div>
-
-                            <div class="bar-group">
-                                <div class="bars">
-                                    <div class="bar collected h-may-collected"></div>
-                                    <div class="bar target h-may-target"></div>
-                                </div>
-                                <div class="month-label">May</div>
-                            </div>
-
-                            <div class="bar-group">
-                                <div class="bars">
-                                    <div class="bar collected h-jun-collected"></div>
-                                    <div class="bar target h-jun-target"></div>
-                                </div>
-                                <div class="month-label">Jun</div>
-                            </div>
+                            {% endfor %}
                         </div>
 
                         <div class="chart-legend">
@@ -632,7 +583,11 @@
                         </div>
                     </div>
 
-                    <button class="generate-btn" type="button">⭳ Generate</button>
+                    <form method="post" class="generate-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="report_key" value="{{ report.key }}">
+                        <button class="generate-btn" type="submit">⭳ Generate</button>
+                    </form>
                 </div>
                 {% endfor %}
             </section>

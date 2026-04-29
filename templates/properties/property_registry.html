@@ -487,14 +487,19 @@
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
             <section class="panel">
-                <div class="toolbar">
+                <form method="get" class="toolbar">
                     <div class="toolbar-search">
                         <span>⌕</span>
-                        <input type="text" placeholder="Search by reference, owner name, or location">
+                        <input
+                            type="text"
+                            name="q"
+                            value="{{ search_query }}"
+                            placeholder="Search by reference, owner name, or location"
+                        >
                     </div>
-                    <button class="toolbar-btn" type="button">Filter</button>
+                    <button class="toolbar-btn" type="submit">Filter</button>
                     <button class="toolbar-btn" type="button">Add Property</button>
-                </div>
+                </form>
 
                 <table>
                     <thead>
@@ -522,7 +527,7 @@
                                 <span class="badge {{ property.status_class }}">{{ property.status }}</span>
                             </td>
                             <td class="actions">
-                                <a href="#" class="action-btn" title="View">👁</a>
+                                <a href="#property-modal-{{ property.ref|slugify }}" class="action-btn" title="View">👁</a>
                                 <a href="#" class="action-btn" title="Edit">✎</a>
                                 <a href="#" class="action-btn" title="Document">📄</a>
                             </td>
@@ -536,12 +541,25 @@
                 </table>
 
                 <div class="table-footer">
-                    <div>Showing 1–6 of 8 properties</div>
+                    <div>Showing {{ start_index }}–{{ end_index }} of {{ total_properties }} properties</div>
+
                     <div class="pagination">
-                        <a href="#" class="page-btn">‹</a>
-                        <a href="#" class="page-number active">1</a>
-                        <a href="#" class="page-number">2</a>
-                        <a href="#" class="page-btn">›</a>
+                        {% if page_obj.has_previous %}
+                            <a href="?q={{ search_query|urlencode }}&page={{ page_obj.previous_page_number }}" class="page-btn">‹</a>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            <a
+                                href="?q={{ search_query|urlencode }}&page={{ num }}"
+                                class="page-number {% if page_obj.number == num %}active{% endif %}"
+                            >
+                                {{ num }}
+                            </a>
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <a href="?q={{ search_query|urlencode }}&page={{ page_obj.next_page_number }}" class="page-btn">›</a>
+                        {% endif %}
                     </div>
                 </div>
             </section>

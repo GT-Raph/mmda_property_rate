@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
+    <meta http-equiv="refresh" content="15">
     <style>
         :root {
             --bg: #f5f5f5;
@@ -211,9 +212,15 @@
         }
 
         .page-subtitle {
-            margin: 8px 0 20px;
+            margin: 8px 0 8px;
             color: var(--muted);
             font-size: 14px;
+        }
+
+        .live-note {
+            font-size: 12px;
+            color: #6c6c6c;
+            margin-bottom: 20px;
         }
 
         .panel {
@@ -454,10 +461,10 @@
         </div>
 
         <nav class="nav">
-            <a href="/dashboard/"><span>⌂</span><span>Dashboard</span></a>
-            <a href="/properties/"><span>🏢</span><span>Properties</span></a>
-            <a href="/billing/"><span>💳</span><span>Billing & Payments</span></a>
-            <a href="/field-operations/" class="active"><span>📍</span><span>Field Officers</span></a>
+            <a href="{% url 'admins:admin-dashboard' %}"><span>⌂</span><span>Dashboard</span></a>
+            <a href="{% url 'properties:property-registry' %}"><span>🏢</span><span>Properties</span></a>
+            <a href="{% url 'billing:billing-management' %}"><span>💳</span><span>Billing & Payments</span></a>
+            <a href="{% url 'field_operations:field-operations' %}" class="active"><span>📍</span><span>Field Officers</span></a>
             <a href="{% url 'admins:reports-analytics' %}"><span>📊</span><span>Reports</span></a>
             <a href="{% url 'admins:settings' %}"><span>⚙</span><span>Settings</span></a>
         </nav>
@@ -470,10 +477,15 @@
 
     <main class="content">
         <div class="topbar">
-            <div class="search-wrap">
+            <form method="get" class="search-wrap">
                 <span class="search-icon">⌕</span>
-                <input type="text" placeholder="Search properties, bills, payments...">
-            </div>
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ search_query }}"
+                    placeholder="Search property, officer, location, notes..."
+                >
+            </form>
 
             <div class="topbar-right">
                 <div class="notification">🔔</div>
@@ -506,6 +518,7 @@
         <div class="page">
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
+            <div class="live-note">Live view refreshes every 15 seconds • Last updated: {{ last_updated }}</div>
 
             {% for officer in officers %}
             <section class="panel officer-card">
@@ -525,7 +538,14 @@
                     <div class="value-green">{{ officer.completed }} verifications</div>
                 </div>
 
-                <progress value="{{ officer.completed }}" max="{{ officer.assigned }}"></progress>
+                <progress value="{{ officer.completed }}" max="{{ officer.assigned|default:1 }}"></progress>
+            </section>
+            {% empty %}
+            <section class="panel officer-card">
+                <div class="officer-meta">
+                    <h3>No field activity yet</h3>
+                    <small>Field officers will appear here once visits are recorded.</small>
+                </div>
             </section>
             {% endfor %}
 
@@ -559,7 +579,15 @@
                         <div class="activity-footer">
                             <span>Officer: {{ activity.officer }}</span>
                             <span>{{ activity.datetime }}</span>
+                            <span>{{ activity.time_ago }}</span>
                         </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="activity-item">
+                    <div class="activity-body">
+                        <h3 class="activity-title">No recent field activity</h3>
+                        <div class="activity-subtitle">Visits recorded by field officers will appear here.</div>
                     </div>
                 </div>
                 {% endfor %}

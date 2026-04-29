@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg: #f5f5f5;
@@ -16,13 +15,14 @@
             --green-100: #dff5e7;
             --yellow-100: #f9efbf;
             --blue-100: #dce8ff;
+            --green: #0a7a45;
+            --yellow: #f0b606;
+            --red: #df0b27;
             --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
             --radius: 18px;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
@@ -80,7 +80,6 @@
             border-radius: 12px;
             margin-bottom: 8px;
             font-size: 15px;
-            transition: background 0.2s ease;
         }
 
         .nav a:hover,
@@ -261,8 +260,8 @@
             font-weight: 700;
         }
 
-        .trend.up { color: #17a350; }
-        .trend.down { color: #df4040; }
+        .trend.green { color: #17a350; }
+        .trend.red { color: #df4040; }
 
         .stat-title {
             color: var(--muted);
@@ -271,7 +270,7 @@
         }
 
         .stat-value {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 800;
             margin-bottom: 6px;
         }
@@ -281,84 +280,83 @@
             font-size: 13px;
         }
 
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
         .panel {
             padding: 18px;
             margin-bottom: 18px;
         }
 
-        .panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 14px;
-        }
-
         .panel-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 800;
-            margin: 0;
+            margin: 0 0 6px;
         }
 
         .panel-subtitle {
             font-size: 13px;
             color: var(--muted);
-            margin-top: 4px;
+            margin-bottom: 18px;
         }
 
-        .placeholder-pill {
-            width: 116px;
-            height: 28px;
-            border-radius: 9px;
-            border: 1px solid var(--line);
-            background: #fafafa;
+        .metric-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .chart-wrap {
-            height: 280px;
-        }
-
-        .distribution-wrap {
+        .metric-row {
             display: grid;
-            grid-template-columns: 1fr 240px;
-            gap: 18px;
-            align-items: end;
-        }
-
-        .pie-holder {
-            height: 260px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .legend {
-            padding-bottom: 14px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            grid-template-columns: 48px 1fr 110px;
             gap: 12px;
-            margin-bottom: 14px;
-            font-size: 15px;
-        }
-
-        .legend-left {
-            display: flex;
             align-items: center;
-            gap: 10px;
         }
 
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
+        .metric-label {
+            font-size: 14px;
+            font-weight: 700;
         }
 
-        .dot.green { background: #2dc35a; }
-        .dot.yellow { background: #f0b606; }
-        .dot.red { background: #df0b27; }
+        .metric-value {
+            font-size: 14px;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        progress {
+            width: 100%;
+            height: 10px;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        progress::-webkit-progress-bar {
+            background: #ececec;
+            border-radius: 999px;
+        }
+
+        progress::-webkit-progress-value {
+            background: var(--green);
+            border-radius: 999px;
+        }
+
+        progress::-moz-progress-bar {
+            background: var(--green);
+            border-radius: 999px;
+        }
+
+        .dist-green::-webkit-progress-value { background: #2dc35a; }
+        .dist-yellow::-webkit-progress-value { background: var(--yellow); }
+        .dist-red::-webkit-progress-value { background: var(--red); }
+
+        .dist-green::-moz-progress-bar { background: #2dc35a; }
+        .dist-yellow::-moz-progress-bar { background: var(--yellow); }
+        .dist-red::-moz-progress-bar { background: var(--red); }
 
         .activity-list {
             display: flex;
@@ -458,13 +456,9 @@
 
         .alert-success a { color: #17874b; }
 
-        @media (max-width: 1100px) {
-            .distribution-wrap {
+        @media (max-width: 1000px) {
+            .analytics-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .legend {
-                padding-bottom: 0;
             }
         }
 
@@ -493,6 +487,10 @@
                 max-width: 100%;
                 width: 100%;
             }
+
+            .metric-row {
+                grid-template-columns: 42px 1fr 90px;
+            }
         }
     </style>
 </head>
@@ -505,10 +503,10 @@
         </div>
 
         <nav class="nav">
-            <a href="/dashboard/" class="active"><span class="ico">⌂</span><span>Dashboard</span></a>
-            <a href="/properties/"><span class="ico">🏢</span><span>Properties</span></a>
-            <a href="/billing/"><span class="ico">💳</span><span>Billing & Payments</span></a>
-            <a href="/field-operations/"><span class="ico">📍</span><span>Field Officers</span></a>
+            <a href="{% url 'admins:admin-dashboard' %}" class="active"><span class="ico">⌂</span><span>Dashboard</span></a>
+            <a href="{% url 'properties:property-registry' %}"><span class="ico">🏢</span><span>Properties</span></a>
+            <a href="{% url 'billing:billing-management' %}"><span class="ico">💳</span><span>Billing & Payments</span></a>
+            <a href="{% url 'field_operations:field-operations' %}"><span class="ico">📍</span><span>Field Officers</span></a>
             <a href="{% url 'admins:reports-analytics' %}"><span class="ico">📊</span><span>Reports</span></a>
             <a href="{% url 'admins:settings' %}"><span class="ico">⚙</span><span>Settings</span></a>
         </nav>
@@ -540,8 +538,8 @@
 
                     <div class="user-meta">
                         <strong>
-                            {% if request.user.get_full_name %}
-                                {{ request.user.get_full_name }}
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.first_name }} {{ request.user.last_name }}
                             {% else %}
                                 {{ request.user.username }}
                             {% endif %}
@@ -563,9 +561,8 @@
                 <div class="card stat-card">
                     <div class="stat-head">
                         <div class="icon-chip {{ card.icon_class }}">{{ card.icon }}</div>
-                        <div class="trend {{ card.trend }}">
-                            {% if card.trend == "up" %}↗{% else %}↘{% endif %}
-                            {{ card.change }}
+                        <div class="trend {{ card.change_class }}">
+                            {{ card.change_symbol }} {{ card.change }}%
                         </div>
                     </div>
                     <div class="stat-title">{{ card.title }}</div>
@@ -575,61 +572,40 @@
                 {% endfor %}
             </section>
 
-            <section class="card panel">
-                <div class="panel-header">
-                    <div>
-                        <h3 class="panel-title">Revenue Trend</h3>
-                        <div class="panel-subtitle">Monthly collection (GH₵)</div>
-                    </div>
-                    <div class="placeholder-pill"></div>
-                </div>
-                <div class="chart-wrap">
-                    <canvas id="revenueChart"></canvas>
-                </div>
-            </section>
+            <section class="analytics-grid">
+                <div class="card panel">
+                    <h3 class="panel-title">Revenue Trend</h3>
+                    <div class="panel-subtitle">Monthly collections from successful payments</div>
 
-            <section class="card panel">
-                <div class="panel-header">
+                    <div class="metric-list">
+                        {% for point in revenue_points %}
+                        <div class="metric-row">
+                            <div class="metric-label">{{ point.label }}</div>
+                            <progress value="{{ point.value }}" max="{{ revenue_max }}"></progress>
+                            <div class="metric-value">{{ point.display }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="card panel">
                     <h3 class="panel-title">Payment Distribution</h3>
-                </div>
+                    <div class="panel-subtitle">Current year bill status mix</div>
 
-                <div class="distribution-wrap">
-                    <div class="pie-holder">
-                        <canvas id="paymentChart" style="max-width: 280px; max-height: 280px;"></canvas>
-                    </div>
-
-                    <div class="legend">
-                        <div class="legend-item">
-                            <div class="legend-left">
-                                <span class="dot green"></span>
-                                <span>Paid</span>
-                            </div>
-                            <strong>{{ payment_counts.paid }}</strong>
+                    <div class="metric-list">
+                        {% for item in payment_distribution %}
+                        <div class="metric-row">
+                            <div class="metric-label">{{ item.label }}</div>
+                            <progress class="dist-{{ item.class }}" value="{{ item.count }}" max="{{ distribution_total }}"></progress>
+                            <div class="metric-value">{{ item.display }}</div>
                         </div>
-
-                        <div class="legend-item">
-                            <div class="legend-left">
-                                <span class="dot yellow"></span>
-                                <span>Partial</span>
-                            </div>
-                            <strong>{{ payment_counts.partial }}</strong>
-                        </div>
-
-                        <div class="legend-item">
-                            <div class="legend-left">
-                                <span class="dot red"></span>
-                                <span>Unpaid</span>
-                            </div>
-                            <strong>{{ payment_counts.unpaid }}</strong>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </section>
 
             <section class="card panel">
-                <div class="panel-header">
-                    <h3 class="panel-title">Recent Activity</h3>
-                </div>
+                <h3 class="panel-title">Recent Activity</h3>
 
                 <div class="activity-list">
                     {% for item in recent_activities %}
@@ -643,14 +619,18 @@
                             <div class="activity-time">{{ item.time }}</div>
                         </div>
                     </div>
+                    {% empty %}
+                    <div class="activity-item">
+                        <div class="activity-body">
+                            <div class="activity-title">No recent activity yet.</div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </section>
 
             <section class="card panel">
-                <div class="panel-header">
-                    <h3 class="panel-title">System Alerts</h3>
-                </div>
+                <h3 class="panel-title">System Alerts</h3>
 
                 <div class="alert-stack">
                     {% for alert in alerts %}
@@ -664,100 +644,5 @@
         </div>
     </main>
 </div>
-
-{{ revenue_labels|json_script:"revenue-labels-data" }}
-{{ revenue_values|json_script:"revenue-values-data" }}
-{{ payment_labels|json_script:"payment-labels-data" }}
-{{ payment_values|json_script:"payment-values-data" }}
-
-<script>
-    const revenueLabels = JSON.parse(
-        document.getElementById("revenue-labels-data").textContent
-    );
-    const revenueValues = JSON.parse(
-        document.getElementById("revenue-values-data").textContent
-    );
-    const paymentLabels = JSON.parse(
-        document.getElementById("payment-labels-data").textContent
-    );
-    const paymentValues = JSON.parse(
-        document.getElementById("payment-values-data").textContent
-    );
-
-    const revenueCtx = document.getElementById("revenueChart");
-    new Chart(revenueCtx, {
-        type: "line",
-        data: {
-            labels: revenueLabels,
-            datasets: [{
-                label: "Revenue",
-                data: revenueValues,
-                borderColor: "#0a7a45",
-                backgroundColor: "rgba(10, 122, 69, 0.10)",
-                borderWidth: 3,
-                fill: false,
-                tension: 0.35,
-                pointRadius: 4,
-                pointHoverRadius: 5,
-                pointBackgroundColor: "#0a7a45",
-                pointBorderColor: "#0a7a45"
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                x: {
-                    grid: {
-                        color: "#ededed",
-                        borderDash: [4, 4]
-                    },
-                    ticks: {
-                        color: "#8b8b8b"
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: "#ededed",
-                        borderDash: [4, 4]
-                    },
-                    ticks: {
-                        color: "#8b8b8b",
-                        callback: function(value) {
-                            return value.toLocaleString();
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    const paymentCtx = document.getElementById("paymentChart");
-    new Chart(paymentCtx, {
-        type: "pie",
-        data: {
-            labels: paymentLabels,
-            datasets: [{
-                data: paymentValues,
-                backgroundColor: ["#2dc35a", "#f0b606", "#df0b27"],
-                borderColor: "#ffffff",
-                borderWidth: 2
-            }]
-        },
-        options: {
-            plugins: {
-                legend: { display: false }
-            },
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
-</script>
 </body>
 </html>
-when I add this the errors show up
-rewrite it afresh 

@@ -1,6 +1,43 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
+
+class TimeStampedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class ReportRun(TimeStampedModel):
+    REPORT_CHOICES = [
+        ("monthly_revenue", "Monthly Revenue Report"),
+        ("property_registration", "Property Registration Summary"),
+        ("payment_trends", "Payment Collection Trends"),
+        ("outstanding_bills", "Outstanding Bills Report"),
+        ("dispute_resolution", "Dispute Resolution Summary"),
+        ("field_operations", "Field Operations Report"),
+    ]
+
+    report_key = models.CharField(max_length=50, choices=REPORT_CHOICES)
+    generated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_reports",
+    )
+    file_format = models.CharField(max_length=20, default="xlsx")
+    rows_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_report_key_display()} - {self.created_at:%Y-%m-%d %H:%M}"
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
