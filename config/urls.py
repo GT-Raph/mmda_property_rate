@@ -20,20 +20,21 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
+from admins.views import PortalLoginView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(
-        "",
-        auth_views.LoginView.as_view(template_name="registration/login.html"),
-        name="login",
-    ),
+    
+    path("", PortalLoginView.as_view(), name="login"),
     path("accounts/", include("django.contrib.auth.urls")),
+
+    path("dashboard/", include("admins.urls")),
     path('properties/', include('properties.urls')),
     path('billing/', include('billing.urls')),
     path('payments/', include('payments.urls')),
     path('field-operations/', include("field_operations.urls")),
     # path('dashboard/', include('admins.urls')),
-    path("dashboard/", include("admins.urls")),
+    
 ]
 
 if settings.DEBUG:

@@ -1,7 +1,8 @@
 from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
-
+from django.contrib.auth.views import LoginView
+from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
@@ -12,15 +13,36 @@ from django.utils.timesince import timesince
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
+from admins.decorators import module_required
 from admins.models import ReportRun
 from billing.models import Bill, BillDispute
 from field_operations.models import FieldVisit
 from payments.models import Payment
 from properties.models import Property
 
+from .access import landing_url_for_user
+
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
 
+
+class PortalLoginView(LoginView):
+    template_name = "registration/login.html"
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        remember_me = self.request.POST.get("remember_me")
+
+        if remember_me:
+            self.request.session.set_expiry(1209600)  # 2 weeks
+        else:
+            self.request.session.set_expiry(0)  # browser session only
+
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return landing_url_for_user(self.request.user)
+    
 
 def _money(value):
     value = value or Decimal("0.00")
@@ -57,6 +79,7 @@ def _time_ago(dt):
     return f"{timesince(dt, timezone.now()).split(',')[0]} ago"
 
 
+@module_required("dashboard")
 @login_required
 def dashboard(request):
     today = timezone.localdate()
@@ -663,6 +686,7 @@ def _download_report(request, report_key):
     return response
 
 
+@module_required("reports")
 @login_required
 def reports_analytics(request):
     if request.method == "POST":
@@ -814,6 +838,7 @@ def reports_analytics(request):
     return render(request, "admins/reports_analytics.html", context)
 
 
+@module_required("settings")
 @login_required
 def settings_view(request):
     active_tab = request.GET.get("tab", "profile")

@@ -76,7 +76,10 @@ class UserProfile(TimeStampedModel):
     ROLE_CHOICES = [
         ("sys_admin", "System Admin"),
         ("revenue_admin", "Revenue Admin"),
+        ("property_officer", "Property Officer"),
+        ("payment_officer", "Payment Officer"),
         ("billing_officer", "Billing Officer"),
+        ("report_officer", "Report Officer"),
         ("field_officer", "Field Officer"),
         ("citizen", "Citizen"),
     ]

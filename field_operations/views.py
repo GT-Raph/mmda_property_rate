@@ -6,6 +6,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.utils.timesince import timesince
 
+from admins.decorators import module_required
+
 from .models import FieldVisit
 
 
@@ -85,6 +87,7 @@ def _time_label(dt):
     return f"{timesince(dt, timezone.now()).split(',')[0]} ago"
 
 
+@module_required("field_operations")
 @login_required
 def field_operations_dashboard(request):
     search_query = request.GET.get("q", "").strip()

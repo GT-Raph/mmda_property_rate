@@ -3,9 +3,12 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render
 
+from admins.decorators import module_required
+
 from .models import Property
 
 
+@module_required("properties")
 @login_required
 def property_registry(request):
     search_query = request.GET.get("q", "").strip()

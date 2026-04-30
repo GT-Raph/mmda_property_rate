@@ -6,10 +6,13 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from admins.decorators import module_required
+
 from .models import Bill
 from .services import generate_missing_bills
 
 
+@module_required("billing")
 @login_required
 def billing_management(request):
     current_year = timezone.localdate().year
