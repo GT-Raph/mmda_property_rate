@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -38,13 +39,6 @@ class ReportRun(TimeStampedModel):
 
     def __str__(self):
         return f"{self.get_report_key_display()} - {self.created_at:%Y-%m-%d %H:%M}"
-
-class TimeStampedModel(models.Model):
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
 
 
 class Assembly(TimeStampedModel):
@@ -96,7 +90,11 @@ class UserProfile(TimeStampedModel):
         null=True,
         blank=True,
     )
-    role = models.CharField(max_length=30, choices=ROLE_CHOICES)
+    role = models.CharField(
+        max_length=30,
+        choices=ROLE_CHOICES,
+        default="citizen",
+    )
     phone_number = models.CharField(max_length=20, blank=True)
     employee_id = models.CharField(max_length=50, blank=True)
     is_verified = models.BooleanField(default=False)

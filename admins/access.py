@@ -2,7 +2,16 @@ from django.urls import reverse
 
 
 ROLE_MODULES = {
-    "super_admin": {
+    "sys_admin": {
+        "dashboard",
+        "properties",
+        "billing",
+        "payments",
+        "field_operations",
+        "reports",
+        "settings",
+    },
+    "revenue_admin": {
         "dashboard",
         "properties",
         "billing",
@@ -16,6 +25,12 @@ ROLE_MODULES = {
         "properties",
         "settings",
     },
+    "payment_officer": {
+        "dashboard",
+        "payments",
+        "billing",
+        "settings",
+    },
     "billing_officer": {
         "dashboard",
         "billing",
@@ -23,23 +38,16 @@ ROLE_MODULES = {
         "reports",
         "settings",
     },
-    "payment_officer": {
+    "report_officer": {
         "dashboard",
-        "payments",
-        "billing",
+        "reports",
         "settings",
     },
     "field_officer": {
         "field_operations",
         "settings",
     },
-    "report_officer": {
-        "dashboard",
-        "reports",
-        "settings",
-    },
-    "viewer": {
-        "dashboard",
+    "citizen": {
         "settings",
     },
 }
@@ -50,13 +58,15 @@ def get_user_role(user):
         return None
 
     if user.is_superuser:
-        return "super_admin"
+        return "sys_admin"
 
     profile = getattr(user, "profile", None)
-    if profile and profile.role:
-        return profile.role
+    role = getattr(profile, "role", None)
 
-    return "viewer"
+    if role in ROLE_MODULES:
+        return role
+
+    return "citizen"
 
 
 def get_allowed_modules(user):
@@ -80,13 +90,16 @@ def landing_url_for_user(user):
     if role == "field_officer":
         return reverse("field_operations:field-operations")
 
-    if role in ["billing_officer", "payment_officer"]:
-        return reverse("billing:billing-management")
-
     if role == "property_officer":
         return reverse("properties:property-registry")
+
+    if role in ["billing_officer", "payment_officer"]:
+        return reverse("billing:billing-management")
 
     if role == "report_officer":
         return reverse("admins:reports-analytics")
 
-    return reverse("admins:admin-dashboard")
+    if role in ["sys_admin", "revenue_admin"]:
+        return reverse("admins:admin-dashboard")
+
+    return reverse("admins:settings")

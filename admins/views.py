@@ -20,7 +20,7 @@ from field_operations.models import FieldVisit
 from payments.models import Payment
 from properties.models import Property
 
-from .access import landing_url_for_user
+from .access import get_allowed_modules, get_user_role, landing_url_for_user
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
@@ -80,7 +80,6 @@ def _time_ago(dt):
 
 
 @module_required("dashboard")
-@login_required
 def dashboard(request):
     today = timezone.localdate()
     current_month_start = today.replace(day=1)
@@ -346,14 +345,16 @@ def dashboard(request):
 
     context = {
         "page_title": "Dashboard",
-        "page_subtitle": "Property Rate Management System Overview",
-        "summary_cards": summary_cards,
-        "revenue_points": revenue_points,
-        "revenue_max": float(revenue_max),
-        "payment_distribution": payment_distribution,
-        "distribution_total": distribution_total,
-        "recent_activities": recent_items,
-        "alerts": alerts,
+    "page_subtitle": "Property Rate Management System Overview",
+    "summary_cards": summary_cards,
+    "revenue_points": revenue_points,
+    "revenue_max": float(revenue_max),
+    "payment_distribution": payment_distribution,
+    "distribution_total": distribution_total,
+    "recent_activities": recent_items,
+    "alerts": alerts,
+    "user_role": get_user_role(request.user),
+    "allowed_modules": get_allowed_modules(request.user),
     }
     return render(request, "admins/dashboard.html", context)
 
@@ -687,7 +688,6 @@ def _download_report(request, report_key):
 
 
 @module_required("reports")
-@login_required
 def reports_analytics(request):
     if request.method == "POST":
         report_key = request.POST.get("report_key", "").strip()
@@ -839,7 +839,6 @@ def reports_analytics(request):
 
 
 @module_required("settings")
-@login_required
 def settings_view(request):
     active_tab = request.GET.get("tab", "profile")
 

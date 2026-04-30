@@ -14,6 +14,5 @@ def module_required(module_name):
             if not can_access(request.user, module_name):
                 raise PermissionDenied("You do not have access to this page.")
             return view_func(request, *args, **kwargs)
-
         return wrapped
     return decorator
