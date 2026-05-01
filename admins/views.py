@@ -4,6 +4,7 @@ from io import BytesIO
 from django.contrib.auth.views import LoginView
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
+
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import Http404, HttpResponse
