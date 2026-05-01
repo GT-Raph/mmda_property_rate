@@ -488,8 +488,8 @@
 
                 <div class="user-box">
                     <div class="avatar">
-                        {% if request.user.first_name %}
-                            {{ request.user.first_name|slice:":1"|upper }}
+                        {% if request.user.first_name or request.user.last_name %}
+                            {{ request.user.get_full_name|slice:":1"|upper }}
                         {% else %}
                             {{ request.user.username|slice:":1"|upper }}
                         {% endif %}
@@ -498,18 +498,30 @@
                     <div class="user-meta">
                         <strong>
                             {% if request.user.first_name or request.user.last_name %}
-                                {{ request.user.first_name }} {{ request.user.last_name }}
+                                {{ request.user.get_full_name }}
                             {% else %}
                                 {{ request.user.username }}
                             {% endif %}
                         </strong>
-                        <small>{{ request.user.email|default:"admin@mmda.gov.gh" }}</small>
+
+                        {% if request.user.email %}
+                            <small>{{ request.user.email }}</small>
+                        {% else %}
+                            <small>No email added</small>
+                        {% endif %}
+
+                        {% if request.user.is_authenticated and request.user.profile.role %}
+                            <small style="display:block; margin-top:2px;">
+                                {{ request.user.profile.get_role_display }}
+                            </small>
+                        {% endif %}
                     </div>
 
                     <div style="color:#7b7b7b;">⌄</div>
                 </div>
             </div>
         </div>
+
 
         <div class="page">
             <h1>{{ page_title }}</h1>
