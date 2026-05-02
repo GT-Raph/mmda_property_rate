@@ -1,197 +1,164 @@
-from collections import defaultdict
-
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import render
-from django.utils import timezone
-from django.utils.timesince import timesince
 
 from admins.decorators import module_required
-
-from .models import FieldVisit
-
-
-def _officer_name(officer):
-    if not officer:
-        return "Unknown Officer"
-
-    full_name = officer.get_full_name().strip()
-    if full_name:
-        return full_name
-
-    return officer.username
+from admins.models import Assembly, UserProfile
+from billing.models import BillDispute
+from field_operations.models import FieldVisit
 
 
-def _officer_code(officer):
-    if not officer:
-        return "FO-000"
+def _get_current_assembly(request):
+    assembly_id = request.session.get("active_assembly_id")
 
-    profile = getattr(officer, "profile", None)
-    if profile and getattr(profile, "employee_id", ""):
-        return profile.employee_id
+    if assembly_id:
+        try:
+            return Assembly.objects.get(id=assembly_id, is_active=True)
+        except Assembly.DoesNotExist:
+            pass
 
-    return f"FO-{officer.pk:03d}"
+    profile = getattr(request.user, "profile", None)
+    if profile and profile.assembly_id:
+        try:
+            return Assembly.objects.get(id=profile.assembly_id, is_active=True)
+        except Assembly.DoesNotExist:
+            return None
+
+    return None
 
 
-def _location_text(property_obj):
-    if not property_obj:
-        return "—"
+def _officer_name(user):
+    full_name = user.get_full_name().strip()
+    return full_name or user.username
 
+
+def _visit_status(visit):
+    text = f"{getattr(visit, 'outcome', '')} {getattr(visit, 'notes', '')}".lower()
+
+    if any(word in text for word in ["discrep", "mismatch", "issue", "fail"]):
+        return "Discrepancy", "status-discrepancy", "activity-red", "✕"
+
+    if any(word in text for word in ["pending", "await", "review"]):
+        return "Pending", "status-pending", "activity-yellow", "◔"
+
+    return "Verified", "status-verified", "activity-green", "✓"
+
+
+def _visit_title(visit):
+    if hasattr(visit, "get_visit_type_display"):
+        raw = visit.get_visit_type_display()
+    else:
+        raw = str(getattr(visit, "visit_type", "Verification")).replace("_", " ").title()
+
+    mapping = {
+        "Verification": "Property Verification",
+        "Payment Verification": "Payment Verification",
+        "Assessment": "Site Assessment",
+        "Site Assessment": "Site Assessment",
+        "Dispute": "Dispute Investigation",
+        "Dispute Investigation": "Dispute Investigation",
+    }
+    return mapping.get(raw, raw)
+
+
+def _visit_location(prop):
     parts = []
-    suburb = getattr(property_obj, "suburb", "") or ""
-    area_town = getattr(property_obj, "area_town", "") or ""
+    suburb = getattr(prop, "suburb", "") or ""
+    area = getattr(prop, "area_town", "") or ""
+    region = getattr(prop, "region", "") or ""
 
     if suburb:
         parts.append(suburb)
-    if area_town and area_town not in parts:
-        parts.append(area_town)
+    if area and area not in parts:
+        parts.append(area)
+    if region and region not in parts:
+        parts.append(region)
 
-    return ", ".join(parts) or getattr(property_obj, "address_line", "") or "—"
-
-
-def _status_meta(visit):
-    outcome = (getattr(visit, "outcome", "") or "").strip().lower()
-    notes = (getattr(visit, "notes", "") or "").strip().lower()
-    combined = f"{outcome} {notes}"
-
-    if any(word in combined for word in ["discrep", "mismatch", "failed", "issue", "error"]):
-        return {
-            "status": "Discrepancy",
-            "status_class": "status-discrepancy",
-            "icon": "✕",
-            "icon_class": "activity-red",
-            "is_completed": True,
-        }
-
-    if any(word in combined for word in ["pending", "await", "follow", "review", "open"]):
-        return {
-            "status": "Pending",
-            "status_class": "status-pending",
-            "icon": "◔",
-            "icon_class": "activity-yellow",
-            "is_completed": False,
-        }
-
-    return {
-        "status": "Verified",
-        "status_class": "status-verified",
-        "icon": "✓",
-        "icon_class": "activity-green",
-        "is_completed": True,
-    }
+    return ", ".join(parts) if parts else "Location not set"
 
 
-def _time_label(dt):
-    if not dt:
-        return "just now"
-    return f"{timesince(dt, timezone.now()).split(',')[0]} ago"
+def _visit_description(visit):
+    notes = getattr(visit, "notes", "") or ""
+    if notes.strip():
+        return notes.strip()
+
+    status, _, _, _ = _visit_status(visit)
+    title = _visit_title(visit)
+
+    if title == "Payment Verification":
+        return "Owner claimed payment was made. Awaiting confirmation from payment system."
+    if title == "Site Assessment":
+        return "Conducted site assessment for property registration. Measurements confirmed."
+    if title == "Dispute Investigation":
+        return "Investigated a reported dispute and recorded findings."
+    if status == "Discrepancy":
+        return "Discrepancy found during verification. Record requires review."
+    return "Property verified. All details match records."
 
 
 @module_required("field_operations")
-@login_required
 def field_operations_dashboard(request):
-    search_query = request.GET.get("q", "").strip()
+    assembly = _get_current_assembly(request)
 
-    visits_qs = (
-        FieldVisit.objects.select_related(
-            "officer",
-            "officer__profile",
-            "property",
-            "property__owner",
-        )
-        .order_by("-visited_at", "-created_at")
-    )
+    officer_profiles = UserProfile.objects.filter(role="field_officer").select_related("user", "assembly")
+    visit_qs = FieldVisit.objects.select_related("property__owner", "officer").order_by("-visited_at", "-created_at")
 
-    if search_query:
-        visits_qs = visits_qs.filter(
-            Q(property__property_reference__icontains=search_query)
-            | Q(property__owner__full_name__icontains=search_query)
-            | Q(property__area_town__icontains=search_query)
-            | Q(property__suburb__icontains=search_query)
-            | Q(officer__first_name__icontains=search_query)
-            | Q(officer__last_name__icontains=search_query)
-            | Q(officer__username__icontains=search_query)
-            | Q(officer__profile__employee_id__icontains=search_query)
-            | Q(notes__icontains=search_query)
-        )
+    if assembly:
+        officer_profiles = officer_profiles.filter(assembly=assembly)
+        visit_qs = visit_qs.filter(property__assembly=assembly)
 
-    visits = list(visits_qs)
+    officer_cards = []
+    for profile in officer_profiles[:3]:
+        officer_visits = visit_qs.filter(officer=profile.user)
+        assigned_count = officer_visits.values("property_id").distinct().count()
+        completed_count = officer_visits.filter(
+            Q(outcome__icontains="verified")
+            | Q(outcome__icontains="completed")
+            | Q(outcome__icontains="success")
+            | Q(notes__icontains="verified")
+            | Q(notes__icontains="completed")
+        ).count()
 
-    latest_property_visit = {}
-    for visit in visits:
-        key = (visit.officer_id, visit.property_id)
-        if key not in latest_property_visit:
-            latest_property_visit[key] = visit
+        progress = 0
+        if assigned_count > 0:
+            progress = round((completed_count / assigned_count) * 100)
 
-    officer_buckets = defaultdict(list)
-    for visit in latest_property_visit.values():
-        officer_buckets[visit.officer].append(visit)
-
-    officers = []
-    for officer, officer_visits in officer_buckets.items():
-        assigned = len(officer_visits)
-        completed = 0
-
-        for visit in officer_visits:
-            status_info = _status_meta(visit)
-            if status_info["is_completed"]:
-                completed += 1
-
-        progress = int(round((completed / assigned) * 100)) if assigned else 0
-
-        officers.append(
+        officer_cards.append(
             {
-                "name": _officer_name(officer),
-                "code": _officer_code(officer),
-                "assigned": assigned,
-                "completed": completed,
-                "progress": min(progress, 100),
+                "name": _officer_name(profile.user),
+                "code": profile.employee_id or f"FO-{profile.user_id:03d}",
+                "assigned": assigned_count,
+                "completed": completed_count,
+                "progress": progress,
             }
         )
 
-    officers.sort(key=lambda item: (-item["completed"], item["name"]))
-
     recent_activities = []
-    for visit in visits[:12]:
-        status_info = _status_meta(visit)
-
-        if hasattr(visit, "get_visit_type_display"):
-            title = visit.get_visit_type_display()
-        else:
-            title = str(getattr(visit, "visit_type", "Field Activity")).replace("_", " ").title()
-
-        property_obj = visit.property
-        property_ref = getattr(property_obj, "property_reference", "—")
-        location = _location_text(property_obj)
-
-        description = (getattr(visit, "notes", "") or "").strip()
-        if not description:
-            description = "Field visit recorded successfully."
-
-        visited_at = getattr(visit, "visited_at", None) or getattr(visit, "created_at", None)
+    for visit in visit_qs[:6]:
+        status_label, status_class, icon_class, icon = _visit_status(visit)
+        title = _visit_title(visit)
+        prop = visit.property
+        when = visit.visited_at or visit.created_at
 
         recent_activities.append(
             {
                 "title": title,
-                "property_ref": property_ref,
-                "location": location,
-                "description": description,
+                "property_ref": getattr(prop, "property_reference", "N/A"),
+                "location": _visit_location(prop),
+                "description": _visit_description(visit),
                 "officer": _officer_name(visit.officer),
-                "datetime": timezone.localtime(visited_at).strftime("%Y-%m-%d at %H:%M") if visited_at else "—",
-                "time_ago": _time_label(visited_at),
-                "status": status_info["status"],
-                "status_class": status_info["status_class"],
-                "icon": status_info["icon"],
-                "icon_class": status_info["icon_class"],
+                "datetime": when.strftime("%Y-%m-%d at %H:%M") if when else "—",
+                "status": status_label,
+                "status_class": status_class,
+                "icon": icon,
+                "icon_class": icon_class,
             }
         )
 
     context = {
         "page_title": "Field Operations",
         "page_subtitle": "Monitor field officer activities and verifications",
-        "officers": officers,
+        "officer_cards": officer_cards,
         "recent_activities": recent_activities,
-        "search_query": search_query,
-        "last_updated": timezone.localtime().strftime("%d %b %Y %H:%M:%S"),
+        "context_assembly": assembly,
     }
     return render(request, "field_operations/field_operations.html", context)

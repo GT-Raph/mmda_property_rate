@@ -1,6 +1,5 @@
 from .access import can_access, get_user_role
 
-
 def portal_access(request):
     user = request.user
 
@@ -13,6 +12,7 @@ def portal_access(request):
             "payments": can_access(user, "payments"),
             "field_operations": can_access(user, "field_operations"),
             "reports": can_access(user, "reports"),
+            "assembly": can_access(user, "assembly"),
             "settings": can_access(user, "settings"),
         },
     }

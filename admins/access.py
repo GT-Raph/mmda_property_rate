@@ -9,6 +9,7 @@ ROLE_MODULES = {
         "payments",
         "field_operations",
         "reports",
+        "assembly",
         "settings",
     },
     "revenue_admin": {
@@ -18,6 +19,7 @@ ROLE_MODULES = {
         "payments",
         "field_operations",
         "reports",
+        "assembly",
         "settings",
     },
     "property_officer": {

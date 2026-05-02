@@ -1,102 +1,155 @@
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import render
 
 from admins.decorators import module_required
+from admins.models import Assembly
+from properties.models import Property
 
-from .models import Property
+
+def _get_current_assembly(request):
+    assembly_id = request.session.get("active_assembly_id")
+
+    if assembly_id:
+        try:
+            return Assembly.objects.get(id=assembly_id, is_active=True)
+        except Assembly.DoesNotExist:
+            pass
+
+    profile = getattr(request.user, "profile", None)
+    if profile and profile.assembly_id:
+        try:
+            return Assembly.objects.get(id=profile.assembly_id, is_active=True)
+        except Assembly.DoesNotExist:
+            return None
+
+    return None
+
+
+def _property_type_label(prop):
+    if hasattr(prop, "get_property_use_display"):
+        return prop.get_property_use_display()
+
+    raw = (getattr(prop, "property_use", "") or "").replace("_", " ").title()
+    return raw or "—"
+
+
+def _property_type_class(prop):
+    label = _property_type_label(prop).lower()
+
+    if "mixed" in label:
+        return "type-mixed"
+    if "commercial" in label:
+        return "type-commercial"
+    return "type-residential"
+
+
+def _property_status(prop):
+    verification_status = (getattr(prop, "verification_status", "") or "").lower()
+    is_active = getattr(prop, "is_active", True)
+
+    if not is_active:
+        return "Inactive", "status-inactive"
+
+    if verification_status in ["pending", "under_review", "unverified"]:
+        return "Pending", "status-pending"
+
+    return "Active", "status-active"
+
+
+def _property_location(prop):
+    parts = []
+    suburb = getattr(prop, "suburb", "") or ""
+    area = getattr(prop, "area_town", "") or ""
+
+    if suburb:
+        parts.append(suburb)
+    if area and area not in parts:
+        parts.append(area)
+
+    return ", ".join(parts) if parts else "—"
 
 
 @module_required("properties")
-@login_required
 def property_registry(request):
-    search_query = request.GET.get("q", "").strip()
+    context_assembly = _get_current_assembly(request)
 
-    queryset = (
-        Property.objects.select_related("owner")
-        .prefetch_related("bills")
-        .order_by("-created_at")
-    )
+    search = (request.GET.get("q") or "").strip()
+    property_type = (request.GET.get("type") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    page_number = request.GET.get("page", 1)
 
-    if search_query:
-        queryset = queryset.filter(
-            Q(property_reference__icontains=search_query)
-            | Q(owner__full_name__icontains=search_query)
-            | Q(area_town__icontains=search_query)
-            | Q(suburb__icontains=search_query)
-            | Q(digital_address__icontains=search_query)
-            | Q(address_line__icontains=search_query)
+    properties_qs = Property.objects.select_related("owner", "assembly").order_by("-created_at")
+
+    if context_assembly:
+        properties_qs = properties_qs.filter(assembly=context_assembly)
+
+    if search:
+        properties_qs = properties_qs.filter(
+            Q(property_reference__icontains=search)
+            | Q(owner__full_name__icontains=search)
+            | Q(area_town__icontains=search)
+            | Q(suburb__icontains=search)
         )
 
-    paginator = Paginator(queryset, 6)
-    page_number = request.GET.get("page")
+    if property_type:
+        properties_qs = properties_qs.filter(property_use=property_type)
+
+    if status == "active":
+        properties_qs = properties_qs.filter(is_active=True).exclude(
+            verification_status__in=["pending", "under_review", "unverified"]
+        )
+    elif status == "pending":
+        properties_qs = properties_qs.filter(
+            Q(verification_status__in=["pending", "under_review", "unverified"])
+        )
+    elif status == "inactive":
+        properties_qs = properties_qs.filter(is_active=False)
+
+    paginator = Paginator(properties_qs, 6)
     page_obj = paginator.get_page(page_number)
 
-    properties = []
+    property_rows = []
+    for prop in page_obj:
+        status_label, status_class = _property_status(prop)
 
-    for prop in page_obj.object_list:
-        location_parts = []
-        if prop.suburb:
-            location_parts.append(prop.suburb)
-        if prop.area_town and prop.area_town not in location_parts:
-            location_parts.append(prop.area_town)
-
-        location = ", ".join(location_parts) or prop.address_line or "—"
-
-        if not prop.is_active:
-            status = "Inactive"
-            status_class = "status-inactive"
-        elif prop.verification_status == "verified":
-            status = "Active"
-            status_class = "status-active"
-        else:
-            status = "Pending"
-            status_class = "status-pending"
-
-        billing_history = []
-        for bill in prop.bills.all().order_by("-billing_year")[:5]:
-            if bill.status == "paid":
-                bill_status = "Paid"
-            elif bill.status == "part_paid":
-                bill_status = "Partial"
-            elif bill.status in ["pending", "overdue"]:
-                bill_status = "Unpaid"
-            else:
-                bill_status = bill.status.replace("_", " ").title()
-
-            billing_history.append(
-                {
-                    "title": f"{bill.billing_year} Annual Rate",
-                    "due_date": bill.due_date.strftime("%b %d, %Y") if bill.due_date else "—",
-                    "status": bill_status,
-                }
-            )
-
-        properties.append(
+        property_rows.append(
             {
                 "id": prop.id,
-                "ref": prop.property_reference,
-                "owner_name": prop.owner.full_name,
-                "location": location,
-                "property_type": prop.get_property_use_display(),
-                "type_class": "type-blue",
-                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}",
-                "status": status,
+                "reference": prop.property_reference,
+                "owner_name": getattr(prop.owner, "full_name", "—"),
+                "location": _property_location(prop),
+                "type_label": _property_type_label(prop),
+                "type_class": _property_type_class(prop),
+                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
+                "status_label": status_label,
                 "status_class": status_class,
-                "registration_date": prop.created_at.strftime("%B %d, %Y"),
-                "billing_history": billing_history,
             }
         )
+
+    type_choices = []
+    if hasattr(Property, "PROPERTY_USE_CHOICES"):
+        type_choices = list(Property.PROPERTY_USE_CHOICES)
+    elif hasattr(Property, "_meta"):
+        field = Property._meta.get_field("property_use")
+        if getattr(field, "choices", None):
+            type_choices = list(field.choices)
+
+    start_index = page_obj.start_index() if paginator.count else 0
+    end_index = page_obj.end_index() if paginator.count else 0
 
     context = {
         "page_title": "Property Registry",
         "page_subtitle": f"Manage and view all registered properties ({paginator.count} total)",
-        "properties": properties,
+        "context_assembly": context_assembly,
+        "properties": property_rows,
         "page_obj": page_obj,
-        "search_query": search_query,
-        "total_properties": paginator.count,
-        "start_index": page_obj.start_index() if paginator.count else 0,
-        "end_index": page_obj.end_index() if paginator.count else 0,
+        "paginator": paginator,
+        "start_index": start_index,
+        "end_index": end_index,
+        "search": search,
+        "selected_type": property_type,
+        "selected_status": status,
+        "type_choices": type_choices,
     }
     return render(request, "properties/property_registry.html", context)
