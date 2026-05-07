@@ -1,23 +1,34 @@
+import base64
 from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
 
+import qrcode
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
+from django.contrib.sessions.models import Session
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import Http404, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.timesince import timesince
 from django.utils.translation import gettext_lazy as _
-
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
 from admins.decorators import module_required
-from admins.models import Assembly, ReportRun, UserProfile
+from admins.forms import (
+    NotificationSettingsForm,
+    PRMSPasswordChangeForm,
+    ProfileSettingsForm,
+    TotpVerifyForm,
+)
+from admins.models import AdminPreference, Assembly, LoginAudit, ReportRun, UserProfile
 from billing.models import Bill, BillDispute
 from field_operations.models import FieldVisit
 from payments.models import Payment
@@ -27,6 +38,14 @@ from .access import get_allowed_modules, get_user_role, landing_url_for_user
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
+
+
+def _portal_access(user):
+    return get_allowed_modules(user)
+
+
+def _settings_url(tab="profile"):
+    return f"{reverse('admins:settings')}?tab={tab}"
 
 
 class PortalLoginView(LoginView):
@@ -101,7 +120,7 @@ class PortalLoginView(LoginView):
 
         self.request.session[self.selected_assembly_session_key] = assembly.id
         self.request.session.modified = True
-        return redirect("login")
+        return redirect("portal-login")
 
     def handle_login(self):
         selected_assembly = self.get_selected_assembly()
@@ -844,6 +863,8 @@ def dashboard(request):
         },
     ]
 
+    portal_access = _portal_access(request.user)
+
     context = {
         "page_title": "Dashboard",
         "page_subtitle": "Property Rate Management System Overview",
@@ -856,7 +877,8 @@ def dashboard(request):
         "recent_activities": recent_items,
         "alerts": alerts,
         "user_role": get_user_role(request.user),
-        "allowed_modules": get_allowed_modules(request.user),
+        "allowed_modules": portal_access,
+        "portal_access": portal_access,
     }
     return render(request, "admins/dashboard.html", context)
 
@@ -996,7 +1018,6 @@ def reports_analytics(request):
         )
 
     latest_runs = _latest_report_run_map(context_assembly)
-
     reports = []
     for key, config in REPORT_BUILDERS.items():
         latest_run = latest_runs.get(key)
@@ -1010,6 +1031,8 @@ def reports_analytics(request):
             }
         )
 
+    portal_access = _portal_access(request.user)
+
     context = {
         "page_title": "Reports & Analytics",
         "page_subtitle": "Generate and export system reports",
@@ -1017,6 +1040,8 @@ def reports_analytics(request):
         "stats": stats,
         "chart_months": chart_months,
         "reports": reports,
+        "portal_access": portal_access,
+        "allowed_modules": portal_access,
     }
     return render(request, "admins/reports_analytics.html", context)
 
@@ -1026,15 +1051,14 @@ def assembly_management(request):
     assembly = _get_current_assembly(request)
 
     if not assembly:
-        return redirect("login")
+        return redirect("portal-login")
 
     total_properties = Property.objects.filter(assembly=assembly).count()
     total_bills = Bill.objects.filter(assembly=assembly).count()
-    field_officers = UserProfile.objects.filter(
-        assembly=assembly,
-        role="field_officer",
-    ).count()
+    field_officers = UserProfile.objects.filter(assembly=assembly, role="field_officer").count()
     total_users = UserProfile.objects.filter(assembly=assembly).count()
+
+    portal_access = _portal_access(request.user)
 
     context = {
         "page_title": "Assembly Management",
@@ -1049,52 +1073,187 @@ def assembly_management(request):
             {"label": "Field Officers", "value": f"{field_officers:,}"},
             {"label": "Total Users", "value": f"{total_users:,}"},
         ],
+        "portal_access": portal_access,
+        "allowed_modules": portal_access,
     }
     return render(request, "admins/assembly_management.html", context)
+
+
+def _settings_base_context(request, active_tab="profile", show_2fa_setup=False, verify_form=None):
+    profile = getattr(request.user, "profile", None)
+    preferences, _ = AdminPreference.objects.get_or_create(user=request.user)
+
+    profile_form = ProfileSettingsForm(user=request.user, profile=profile)
+    notification_form = NotificationSettingsForm(instance=preferences)
+    password_form = PRMSPasswordChangeForm(request.user)
+
+    totp_device = TOTPDevice.objects.filter(user=request.user, confirmed=True).first()
+    pending_device = TOTPDevice.objects.filter(user=request.user, confirmed=False, name="prms").first()
+
+    active_sessions = LoginAudit.objects.filter(
+        user=request.user,
+        is_active=True,
+    ).order_by("-last_seen")[:10]
+
+    portal_access = _portal_access(request.user)
+
+    return {
+        "page_title": "Settings",
+        "page_subtitle": "Manage your account settings and preferences",
+        "active_tab": active_tab,
+        "profile_form": profile_form,
+        "notification_form": notification_form,
+        "password_form": password_form,
+        "verify_form": verify_form or TotpVerifyForm(),
+        "preferences": preferences,
+        "profile_data": {
+            "full_name": request.user.get_full_name().strip() or request.user.username,
+            "email": request.user.email or "",
+            "phone": profile.phone_number if profile else "",
+            "role": profile.get_role_display() if profile else "User",
+        },
+        "two_factor_enabled": bool(totp_device),
+        "pending_device": pending_device,
+        "show_2fa_setup": show_2fa_setup,
+        "active_sessions": active_sessions,
+        "portal_access": portal_access,
+        "allowed_modules": portal_access,
+    }
+
+
+def _make_qr_data_uri(text):
+    qr = qrcode.make(text)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return f"data:image/png;base64,{encoded}"
 
 
 @module_required("settings")
 def settings_view(request):
     active_tab = request.GET.get("tab", "profile")
+    profile = getattr(request.user, "profile", None)
+    preferences, _ = AdminPreference.objects.get_or_create(user=request.user)
 
-    context = {
-        "page_title": "Settings",
-        "page_subtitle": "Manage your account settings and preferences",
-        "active_tab": active_tab,
-        "profile_data": {
-            "full_name": request.user.get_full_name() or "Super Admin",
-            "email": request.user.email or "admin@mmda.gov.gh",
-            "phone": "0244123456",
-            "role": "Super Admin",
-        },
-        "notifications": [
-            {
-                "title": "Email Notifications",
-                "description": "Receive email updates about system activity",
-                "enabled": True,
-            },
-            {
-                "title": "Payment Alerts",
-                "description": "Get notified when payments are received",
-                "enabled": True,
-            },
-            {
-                "title": "Dispute Alerts",
-                "description": "Notifications for new disputes and resolutions",
-                "enabled": True,
-            },
-            {
-                "title": "System Updates",
-                "description": "Updates about new features and maintenance",
-                "enabled": False,
-            },
-        ],
-        "sessions": [
-            {
-                "device": "Windows PC - Chrome",
-                "meta": "Current session • Accra, Ghana",
-                "status": "Active",
-            }
-        ],
-    }
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "save_profile":
+            form = ProfileSettingsForm(request.POST, user=request.user, profile=profile)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Profile updated successfully.")
+                return redirect(_settings_url("profile"))
+
+            context = _settings_base_context(request, active_tab="profile")
+            context["profile_form"] = form
+            return render(request, "admins/settings.html", context)
+
+        if action == "change_password":
+            form = PRMSPasswordChangeForm(request.user, request.POST)
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Password updated successfully.")
+                return redirect(_settings_url("password"))
+
+            context = _settings_base_context(request, active_tab="password")
+            context["password_form"] = form
+            return render(request, "admins/settings.html", context)
+
+        if action == "save_notifications":
+            form = NotificationSettingsForm(request.POST, instance=preferences)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Notification preferences saved.")
+                return redirect(_settings_url("notifications"))
+
+            context = _settings_base_context(request, active_tab="notifications")
+            context["notification_form"] = form
+            return render(request, "admins/settings.html", context)
+
+    context = _settings_base_context(request, active_tab=active_tab)
     return render(request, "admins/settings.html", context)
+
+
+@module_required("settings")
+def begin_2fa_setup(request):
+    if request.method != "POST":
+        return redirect(_settings_url("security"))
+
+    TOTPDevice.objects.filter(user=request.user, confirmed=False, name="prms").delete()
+    device = TOTPDevice.objects.create(user=request.user, name="prms", confirmed=False)
+
+    context = _settings_base_context(
+        request,
+        active_tab="security",
+        show_2fa_setup=True,
+        verify_form=TotpVerifyForm(),
+    )
+    context["pending_device"] = device
+    context["qr_code_data_uri"] = _make_qr_data_uri(device.config_url)
+    context["manual_key"] = device.bin_key
+
+    messages.info(
+        request,
+        "Scan the QR code with your authenticator app, then enter the 6-digit code.",
+    )
+    return render(request, "admins/settings.html", context)
+
+
+@module_required("settings")
+def confirm_2fa_setup(request):
+    if request.method != "POST":
+        return redirect(_settings_url("security"))
+
+    device = TOTPDevice.objects.filter(
+        user=request.user,
+        confirmed=False,
+        name="prms",
+    ).first()
+
+    if not device:
+        messages.error(request, "No pending 2FA setup found.")
+        return redirect(_settings_url("security"))
+
+    form = TotpVerifyForm(request.POST)
+    if form.is_valid():
+        token = form.cleaned_data["token"]
+        if device.verify_token(token):
+            device.confirmed = True
+            device.save(update_fields=["confirmed"])
+            messages.success(request, "Two-factor authentication enabled successfully.")
+            return redirect(_settings_url("security"))
+
+    context = _settings_base_context(
+        request,
+        active_tab="security",
+        show_2fa_setup=True,
+        verify_form=form,
+    )
+    context["pending_device"] = device
+    context["qr_code_data_uri"] = _make_qr_data_uri(device.config_url)
+    context["manual_key"] = device.bin_key
+    messages.error(request, "Invalid verification code. Please try again.")
+    return render(request, "admins/settings.html", context)
+
+
+@module_required("settings")
+def disable_2fa(request):
+    if request.method == "POST":
+        TOTPDevice.objects.filter(user=request.user, name="prms").delete()
+        messages.success(request, "Two-factor authentication disabled.")
+    return redirect(_settings_url("security"))
+
+
+@module_required("settings")
+def revoke_session(request, audit_id):
+    audit = get_object_or_404(LoginAudit, id=audit_id, user=request.user)
+
+    if request.method == "POST":
+        Session.objects.filter(session_key=audit.session_key).delete()
+        audit.is_active = False
+        audit.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, "Session revoked successfully.")
+
+    return redirect(_settings_url("security"))

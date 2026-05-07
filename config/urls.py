@@ -26,7 +26,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     path("", PortalLoginView.as_view(), name="login"),
-    path("accounts/", include("django.contrib.auth.urls")),
+    # path("accounts/", include("django.contrib.auth.urls")),
 
     path("dashboard/", include("admins.urls")),
     path('properties/', include('properties.urls')),

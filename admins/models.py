@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -104,3 +105,46 @@ class UserProfile(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user.get_username()} ({self.role})"
+
+
+class AdminPreference(TimeStampedModel):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="admin_preferences",
+    )
+    email_notifications = models.BooleanField(default=True)
+    payment_alerts = models.BooleanField(default=True)
+    dispute_alerts = models.BooleanField(default=True)
+    system_updates = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["user__username"]
+
+    def __str__(self):
+        return f"Preferences - {self.user.get_username()}"
+
+
+class LoginAudit(TimeStampedModel):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="login_audits",
+    )
+    session_key = models.CharField(max_length=64, unique=True)
+    user_agent = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    device_name = models.CharField(max_length=255, blank=True)
+    location_label = models.CharField(max_length=255, blank=True, default="Unknown")
+    last_seen = models.DateTimeField(default=timezone.now)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-last_seen"]
+        indexes = [
+            models.Index(fields=["session_key"]),
+            models.Index(fields=["user", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.get_username()} - {self.device_name or 'Session'}"

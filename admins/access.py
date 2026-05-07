@@ -1,6 +1,17 @@
 from django.urls import reverse
 
 
+ALL_MODULES = (
+    "dashboard",
+    "properties",
+    "billing",
+    "payments",
+    "field_operations",
+    "reports",
+    "assembly",
+    "settings",
+)
+
 ROLE_MODULES = {
     "sys_admin": {
         "dashboard",
@@ -71,9 +82,27 @@ def get_user_role(user):
     return "citizen"
 
 
-def get_allowed_modules(user):
+def build_portal_access(module_names):
+    module_names = set(module_names or [])
+    return {module: module in module_names for module in ALL_MODULES}
+
+
+def get_allowed_module_names(user):
     role = get_user_role(user)
     return ROLE_MODULES.get(role, set())
+
+
+def get_allowed_modules(user):
+    """
+    Returns a dict like:
+    {
+        "dashboard": True,
+        "properties": True,
+        ...
+    }
+    This is what your templates need for portal_access.dashboard, etc.
+    """
+    return build_portal_access(get_allowed_module_names(user))
 
 
 def can_access(user, module_name):
@@ -83,7 +112,7 @@ def can_access(user, module_name):
     if user.is_superuser:
         return True
 
-    return module_name in get_allowed_modules(user)
+    return get_allowed_modules(user).get(module_name, False)
 
 
 def landing_url_for_user(user):
