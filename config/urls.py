@@ -19,13 +19,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.views import LogoutView
 
 from admins.views import PortalLoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    path("", PortalLoginView.as_view(), name="login"),
+    path("", PortalLoginView.as_view(), name="portal-login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
     # path("accounts/", include("django.contrib.auth.urls")),
 
     path("dashboard/", include("admins.urls")),
