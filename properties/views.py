@@ -93,6 +93,8 @@ def property_registry(request):
         properties_qs = properties_qs.filter(
             Q(property_reference__icontains=search)
             | Q(owner__full_name__icontains=search)
+            | Q(owner__name__icontains=search)
+            | Q(owner__owner_name__icontains=search)
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
         )
@@ -118,11 +120,21 @@ def property_registry(request):
     for prop in page_obj:
         status_label, status_class = _property_status(prop)
 
+        owner_name = "—"
+        owner = getattr(prop, "owner", None)
+        if owner:
+            owner_name = (
+                getattr(owner, "full_name", None)
+                or getattr(owner, "name", None)
+                or getattr(owner, "owner_name", None)
+                or str(owner)
+            )
+
         property_rows.append(
             {
                 "id": prop.id,
                 "reference": prop.property_reference,
-                "owner_name": getattr(prop.owner, "full_name", "—"),
+                "owner_name": owner_name,
                 "location": _property_location(prop),
                 "type_label": _property_type_label(prop),
                 "type_class": _property_type_class(prop),
@@ -197,6 +209,9 @@ def add_property(request):
         "page_subtitle": "Register a new property into the system",
         "context_assembly": context_assembly,
         "form": form,
+        "property_fields": [form[name] for name in form.property_field_names],
+        "owner_selector_fields": [form[name] for name in form.owner_selector_field_names],
+        "owner_fields": [form[name] for name in form.owner_field_names],
         "portal_access": portal_access,
     }
     return render(request, "properties/property_form.html", context)

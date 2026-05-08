@@ -12,6 +12,9 @@
             --line: #e8e8e8;
             --text: #171717;
             --muted: #7d7d7d;
+            --sidebar: #050505;
+            --sidebar-line: rgba(255,255,255,0.08);
+            --gold: #d1ac4c;
             --gold-bg: #ead79f;
             --green-soft: #d9f7df;
             --green: #16a34a;
@@ -19,40 +22,199 @@
             --red: #b42318;
             --shadow: 0 4px 18px rgba(0,0,0,0.04);
             --radius: 18px;
+            --sidebar-width: 230px;
+            --topbar-height: 78px;
         }
 
         * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            padding: 24px;
             font-family: Arial, Helvetica, sans-serif;
             background: var(--bg);
             color: var(--text);
         }
 
-        .page {
-            max-width: 960px;
-            margin: 0 auto;
+        .layout { min-height: 100vh; }
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-width);
+            background: var(--sidebar);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
         }
 
-        .card {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 24px;
+        .brand {
+            padding: 22px 24px 18px;
+            border-bottom: 1px solid var(--sidebar-line);
         }
 
-        h1 {
-            margin: 0 0 8px;
-            font-size: 28px;
+        .brand h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 800;
         }
 
-        .subtitle {
-            margin: 0 0 24px;
-            color: var(--muted);
+        .brand p {
+            margin: 0;
+            font-size: 13px;
+            color: rgba(255,255,255,0.68);
+        }
+
+        .nav {
+            padding: 18px 14px;
+            flex: 1;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.9);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            margin-bottom: 8px;
+            text-decoration: none;
+        }
+
+        .nav a.active {
+            background: var(--gold-bg);
+            color: #1f1f1f;
+            font-weight: 700;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--sidebar-line);
+            padding: 16px 14px 18px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(255,255,255,0.62);
+        }
+
+        .content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 500;
+            height: var(--topbar-height);
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 22px;
+        }
+
+        .search-wrap {
+            width: 100%;
+            max-width: 580px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid transparent;
+            background: #f4f4f4;
+            border-radius: 10px;
+            padding: 0 16px 0 40px;
             font-size: 14px;
+            outline: none;
+        }
+
+        .search-wrap span {
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            color: #8b8b8b;
+            font-size: 16px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .notification {
+            position: relative;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .notification::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: -3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .user-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .user-meta strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .user-meta small {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .page {
+            padding: 20px 22px 34px;
+            max-width: 1100px;
+        }
+
+        .page h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .page-subtitle {
+            margin: 0 0 4px;
+            font-size: 14px;
+            color: #7c8188;
+        }
+
+        .assembly-caption {
+            margin: 0 0 22px;
+            font-size: 13px;
+            color: #9a9a9a;
         }
 
         .message {
@@ -72,13 +234,18 @@
             color: var(--red);
         }
 
-        .non-field-errors {
-            margin-bottom: 12px;
-            padding: 12px 14px;
-            border-radius: 10px;
-            background: var(--red-soft);
-            color: var(--red);
-            font-size: 14px;
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0 0 18px;
         }
 
         .form-grid {
@@ -140,6 +307,12 @@
             color: var(--red);
         }
 
+        .divider {
+            height: 1px;
+            background: var(--line);
+            margin: 24px 0;
+        }
+
         .actions {
             display: flex;
             gap: 12px;
@@ -170,6 +343,16 @@
             color: #333;
         }
 
+        @media (max-width: 860px) {
+            .sidebar {
+                display: none;
+            }
+
+            .content {
+                margin-left: 0;
+            }
+        }
+
         @media (max-width: 680px) {
             .form-grid {
                 grid-template-columns: 1fr;
@@ -178,72 +361,233 @@
             .actions {
                 flex-direction: column;
             }
+
+            .page {
+                padding: 16px 14px 26px;
+            }
+
+            .page h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="page">
-        <h1>{{ page_title }}</h1>
-        <p class="subtitle">{{ page_subtitle }}</p>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <h2>Admin Portal</h2>
+            <p>MMDA Management</p>
+        </div>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+        <nav class="nav">
+            {% if portal_access.dashboard %}
+                <a href="{% url 'admins:admin-dashboard' %}">⌂ Dashboard</a>
+            {% endif %}
+            {% if portal_access.properties %}
+                <a href="{% url 'properties:property-registry' %}" class="active">🏢 Properties</a>
+            {% endif %}
+            {% if portal_access.billing %}
+                <a href="{% url 'billing:billing-management' %}">💳 Billing & Payments</a>
+            {% endif %}
+            {% if portal_access.field_operations %}
+                <a href="{% url 'field_operations:field-operations' %}">📍 Field Officers</a>
+            {% endif %}
+            {% if portal_access.reports %}
+                <a href="{% url 'admins:reports-analytics' %}">📊 Reports</a>
+            {% endif %}
+            {% if portal_access.assembly %}
+                <a href="{% url 'admins:assembly-management' %}">ⓘ Assembly</a>
+            {% endif %}
+            {% if portal_access.settings %}
+                <a href="{% url 'admins:settings' %}">⚙ Settings</a>
+            {% endif %}
+        </nav>
 
-        {% if form.non_field_errors %}
-            <div class="non-field-errors">
-                {{ form.non_field_errors }}
+        <div class="sidebar-footer">
+            Ghana MMDA System<br>
+            Admin Access
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="topbar">
+            <div class="search-wrap">
+                <span>⌕</span>
+                <input type="text" placeholder="Search properties, bills, payments...">
             </div>
-        {% endif %}
 
-        <section class="card">
-            <form method="post">
-                {% csrf_token %}
+            <div class="topbar-right">
+                <div class="notification">🔔</div>
 
-                <div class="form-grid">
-                    {% for field in form %}
-                        <div class="field-group {% if field.name == 'landmark' or field.name == 'digital_address' %}full{% endif %}">
-                            <label for="{{ field.id_for_label }}">
-                                {{ field.label }}
-                                {% if field.field.required %}
-                                    <span class="required-star">*</span>
-                                {% endif %}
-                            </label>
+                <div class="user-box">
+                    <div class="avatar">
+                        {% if request.user.first_name or request.user.last_name %}
+                            {{ request.user.get_full_name|slice:":1"|upper }}
+                        {% else %}
+                            {{ request.user.username|slice:":1"|upper }}
+                        {% endif %}
+                    </div>
 
-                            {% if field.field.widget.input_type == "checkbox" %}
-                                <div class="checkbox-wrap">
-                                    {{ field }}
-                                    <span>Yes</span>
-                                </div>
+                    <div class="user-meta">
+                        <strong>
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.get_full_name }}
                             {% else %}
-                                {{ field }}
+                                {{ request.user.username }}
                             {% endif %}
+                        </strong>
+                        {% if request.user.email %}
+                            <small>{{ request.user.email }}</small>
+                        {% else %}
+                            <small>No email added</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                            {% if field.name == "property_reference" %}
-                                <div class="help-text">Leave blank and the system will auto-generate it.</div>
-                            {% endif %}
+        <div class="page">
+            <h1>{{ page_title }}</h1>
+            <p class="page-subtitle">{{ page_subtitle }}</p>
+            {% if context_assembly %}
+                <p class="assembly-caption">{{ context_assembly.name }}</p>
+            {% endif %}
 
-                            {% if field.help_text %}
-                                <div class="help-text">{{ field.help_text }}</div>
-                            {% endif %}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
 
-                            {% for error in field.errors %}
-                                <div class="error-text">{{ error }}</div>
+            {% if form.non_field_errors %}
+                <div class="message error">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <section class="card">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <h2 class="section-title">Owner Information</h2>
+
+                    <div class="form-grid">
+                        {% for field in owner_selector_fields %}
+                            <div class="field-group {% if field.name == 'existing_owner' %}full{% endif %}">
+                                {% if field.field.widget.input_type == "checkbox" %}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    <div class="checkbox-wrap">
+                                        {{ field }}
+                                        <span>Yes</span>
+                                    </div>
+                                {% else %}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="error-text">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="newOwnerFields">
+                        <div class="form-grid">
+                            {% for field in owner_fields %}
+                                <div class="field-group {% if field.name == 'owner_address' or field.name == 'owner_postal_address' or field.name == 'owner_digital_address' %}full{% endif %}">
+                                    <label for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                        {% if field.name in form.owner_required_field_names %}
+                                            <span class="required-star">*</span>
+                                        {% endif %}
+                                    </label>
+
+                                    {% if field.field.widget.input_type == "checkbox" %}
+                                        <div class="checkbox-wrap">
+                                            {{ field }}
+                                            <span>Yes</span>
+                                        </div>
+                                    {% else %}
+                                        {{ field }}
+                                    {% endif %}
+
+                                    {% for error in field.errors %}
+                                        <div class="error-text">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
                             {% endfor %}
                         </div>
-                    {% endfor %}
-                </div>
+                    </div>
 
-                <div class="actions">
-                    <button type="submit" class="btn btn-primary">Save Property</button>
-                    <a href="{% url 'properties:property-registry' %}" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
-        </section>
-    </div>
+                    <div class="divider"></div>
+
+                    <h2 class="section-title">Property Information</h2>
+
+                    <div class="form-grid">
+                        {% for field in property_fields %}
+                            <div class="field-group {% if field.name == 'landmark' or field.name == 'digital_address' %}full{% endif %}">
+                                <label for="{{ field.id_for_label }}">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="required-star">*</span>
+                                    {% endif %}
+                                </label>
+
+                                {% if field.field.widget.input_type == "checkbox" %}
+                                    <div class="checkbox-wrap">
+                                        {{ field }}
+                                        <span>Yes</span>
+                                    </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+
+                                {% for error in field.errors %}
+                                    <div class="error-text">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary">Save Property</button>
+                        <a href="{% url 'properties:property-registry' %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+</div>
+
+<script>
+    function toggleOwnerFields() {
+        const existingOwner = document.getElementById("id_existing_owner");
+        const createNewOwner = document.getElementById("id_create_new_owner");
+        const newOwnerFields = document.getElementById("newOwnerFields");
+
+        if (!existingOwner || !createNewOwner || !newOwnerFields) return;
+
+        const shouldShow = createNewOwner.checked || !existingOwner.value;
+        newOwnerFields.style.display = shouldShow ? "block" : "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const existingOwner = document.getElementById("id_existing_owner");
+        const createNewOwner = document.getElementById("id_create_new_owner");
+
+        if (existingOwner) {
+            existingOwner.addEventListener("change", toggleOwnerFields);
+        }
+
+        if (createNewOwner) {
+            createNewOwner.addEventListener("change", toggleOwnerFields);
+        }
+
+        toggleOwnerFields();
+    });
+</script>
 </body>
 </html>
