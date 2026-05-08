@@ -23,6 +23,8 @@
             --yellow: #d79a00;
             --yellow-soft: #f9edbf;
             --gray-soft: #eef0f3;
+            --red-soft: #fff1f1;
+            --red: #b42318;
             --shadow: 0 4px 18px rgba(0,0,0,0.04);
             --radius: 18px;
             --sidebar-width: 230px;
@@ -41,10 +43,7 @@
 
         body { min-height: 100vh; }
 
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
+        a { color: inherit; text-decoration: none; }
 
         .layout { min-height: 100vh; }
 
@@ -269,6 +268,14 @@
             max-width: 1120px;
         }
 
+        .page-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
         .page h1 {
             margin: 0;
             font-size: 30px;
@@ -286,6 +293,43 @@
             margin: 0 0 22px;
             font-size: 13px;
             color: #9a9a9a;
+        }
+
+        .primary-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 0 18px;
+            border: none;
+            border-radius: 10px;
+            background: var(--gold-bg);
+            color: #1f1f1f;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .message-stack {
+            margin-bottom: 14px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .message.error {
+            background: var(--red-soft);
+            color: var(--red);
         }
 
         .card {
@@ -338,11 +382,6 @@
         .toolbar select {
             padding: 0 14px;
             appearance: none;
-        }
-
-        .toolbar-search input:focus,
-        .toolbar select:focus {
-            border-color: #d8d8d8;
         }
 
         .table-wrap {
@@ -423,12 +462,6 @@
             gap: 14px;
             color: #7c8188;
             font-size: 18px;
-        }
-
-        .actions a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .table-footer {
@@ -514,10 +547,6 @@
             .topbar {
                 padding: 0 14px;
             }
-
-            .search-wrap {
-                max-width: none;
-            }
         }
 
         @media (max-width: 680px) {
@@ -528,17 +557,13 @@
                 align-items: stretch;
             }
 
-            .topbar-left {
+            .topbar-left,
+            .topbar-right {
                 width: 100%;
             }
 
             .topbar-right {
-                width: 100%;
                 justify-content: space-between;
-            }
-
-            .search-wrap {
-                max-width: none;
             }
 
             .page {
@@ -547,6 +572,11 @@
 
             .page h1 {
                 font-size: 24px;
+            }
+
+            .page-head {
+                flex-direction: column;
+                align-items: stretch;
             }
 
             .toolbar {
@@ -576,39 +606,33 @@
                     <span class="nav-icon">⌂</span><span>Dashboard</span>
                 </a>
             {% endif %}
-
             {% if portal_access.properties %}
                 <a href="{% url 'properties:property-registry' %}" class="active">
                     <span class="nav-icon">🏢</span><span>Properties</span>
                 </a>
             {% endif %}
-
             {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
+                <a href="{% url 'billing:billing-management' %}">
                     <span class="nav-icon">💳</span><span>Billing & Payments</span>
                 </a>
             {% endif %}
-
             {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
+                <a href="{% url 'field_operations:field-operations' %}">
                     <span class="nav-icon">📍</span><span>Field Officers</span>
                 </a>
             {% endif %}
-
             {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
+                <a href="{% url 'admins:reports-analytics' %}">
                     <span class="nav-icon">📊</span><span>Reports</span>
                 </a>
             {% endif %}
-
             {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
+                <a href="{% url 'admins:assembly-management' %}">
                     <span class="nav-icon">ⓘ</span><span>Assembly</span>
                 </a>
             {% endif %}
-
             {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
+                <a href="{% url 'admins:settings' %}">
                     <span class="nav-icon">⚙</span><span>Settings</span>
                 </a>
             {% endif %}
@@ -665,10 +689,29 @@
         </div>
 
         <div class="page">
-            <h1>{{ page_title }}</h1>
-            <div class="page-subtitle">{{ page_subtitle }}</div>
-            {% if context_assembly %}
-                <div class="assembly-caption">{{ context_assembly.name }}</div>
+            <div class="page-head">
+                <div>
+                    <h1>{{ page_title }}</h1>
+                    <div class="page-subtitle">{{ page_subtitle }}</div>
+                    {% if context_assembly %}
+                        <div class="assembly-caption">{{ context_assembly.name }}</div>
+                    {% endif %}
+                </div>
+
+                <a href="{% url 'properties:add-property' %}" class="primary-btn">
+                    <span>＋</span>
+                    <span>Add Property</span>
+                </a>
+            </div>
+
+            {% if messages %}
+                <div class="message-stack">
+                    {% for message in messages %}
+                        <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
 
             <section class="card registry-card">
@@ -686,9 +729,7 @@
                     <select name="type" onchange="this.form.submit()">
                         <option value="">All Types</option>
                         {% for value, label in type_choices %}
-                            <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
+                            <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
 
@@ -749,10 +790,7 @@
 
                     <div class="pagination">
                         {% if page_obj.has_previous %}
-                            <a
-                                class="page-btn"
-                                href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.previous_page_number }}"
-                            >‹</a>
+                            <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.previous_page_number }}">‹</a>
                         {% else %}
                             <span class="page-btn">‹</span>
                         {% endif %}
@@ -761,18 +799,12 @@
                             {% if num == page_obj.number %}
                                 <span class="page-btn active">{{ num }}</span>
                             {% elif num >= page_obj.number|add:-1 and num <= page_obj.number|add:1 %}
-                                <a
-                                    class="page-btn"
-                                    href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ num }}"
-                                >{{ num }}</a>
+                                <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ num }}">{{ num }}</a>
                             {% endif %}
                         {% endfor %}
 
                         {% if page_obj.has_next %}
-                            <a
-                                class="page-btn"
-                                href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.next_page_number }}"
-                            >›</a>
+                            <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.next_page_number }}">›</a>
                         {% else %}
                             <span class="page-btn">›</span>
                         {% endif %}

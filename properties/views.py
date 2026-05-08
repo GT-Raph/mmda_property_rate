@@ -1,9 +1,12 @@
+from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from admins.decorators import module_required
 from admins.models import Assembly
+from properties.forms import PropertyCreateForm
 from properties.models import Property
 
 
@@ -153,3 +156,44 @@ def property_registry(request):
         "type_choices": type_choices,
     }
     return render(request, "properties/property_registry.html", context)
+
+
+@module_required("properties")
+def add_property(request):
+    context_assembly = _get_current_assembly(request)
+
+    if not context_assembly:
+        messages.error(request, "No active assembly was found for your account.")
+        return redirect("properties:property-registry")
+
+    if request.method == "POST":
+        form = PropertyCreateForm(request.POST)
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    property_instance = form.save(assembly=context_assembly)
+
+                messages.success(
+                    request,
+                    f"Property {property_instance.property_reference} was added successfully.",
+                )
+                return redirect("properties:property-registry")
+
+            except Exception as exc:
+                messages.error(
+                    request,
+                    f"Could not save the property. {exc}",
+                )
+        else:
+            messages.error(request, "Please correct the highlighted errors and try again.")
+    else:
+        form = PropertyCreateForm()
+
+    context = {
+        "page_title": "Add Property",
+        "page_subtitle": "Register a new property into the system",
+        "context_assembly": context_assembly,
+        "form": form,
+    }
+    return render(request, "properties/property_form.html", context)
