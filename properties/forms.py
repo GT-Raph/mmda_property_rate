@@ -1,155 +1,164 @@
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.shortcuts import render
+import re
+from decimal import Decimal
 
-from admins.decorators import module_required
-from admins.models import Assembly
+from django import forms
+from django.forms import modelform_factory
+from django.utils import timezone
+
 from properties.models import Property
 
 
-def _get_current_assembly(request):
-    assembly_id = request.session.get("active_assembly_id")
+MODEL_FIELDS = {
+    field.name: field
+    for field in Property._meta.get_fields()
+    if getattr(field, "concrete", False) and not getattr(field, "auto_created", False)
+}
 
-    if assembly_id:
-        try:
-            return Assembly.objects.get(id=assembly_id, is_active=True)
-        except Assembly.DoesNotExist:
-            pass
+FIELD_CANDIDATES = [
+    "owner",
+    "property_use",
+    "building_type",
+    "area_town",
+    "suburb",
+    "street_name",
+    "house_number",
+    "digital_address",
+    "landmark",
+    "rateable_value",
+    "latitude",
+    "longitude",
+    "verification_status",
+    "is_active",
+]
 
-    profile = getattr(request.user, "profile", None)
-    if profile and profile.assembly_id:
-        try:
-            return Assembly.objects.get(id=profile.assembly_id, is_active=True)
-        except Assembly.DoesNotExist:
+AVAILABLE_FIELDS = [
+    field_name
+    for field_name in FIELD_CANDIDATES
+    if field_name in MODEL_FIELDS and getattr(MODEL_FIELDS[field_name], "editable", True)
+]
+
+BasePropertyForm = modelform_factory(Property, fields=AVAILABLE_FIELDS)
+
+
+class PropertyCreateForm(BasePropertyForm):
+    class Meta(BasePropertyForm.Meta):
+        fields = AVAILABLE_FIELDS
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        placeholders = {
+            "area_town": "Enter area or town",
+            "suburb": "Enter suburb",
+            "street_name": "Enter street name",
+            "house_number": "Enter house number",
+            "digital_address": "Enter digital address",
+            "landmark": "Enter landmark",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+        }
+
+        for field_name, placeholder in placeholders.items():
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs.update({"placeholder": placeholder})
+
+        if "rateable_value" in self.fields:
+            self.fields["rateable_value"].widget.attrs.update(
+                {
+                    "placeholder": "Enter rateable value",
+                    "step": "0.01",
+                    "min": "0",
+                }
+            )
+
+        if "verification_status" in self.fields:
+            choices = [
+                choice[0]
+                for choice in self.fields["verification_status"].choices
+                if choice[0]
+            ]
+            if "pending" in choices and not self.initial.get("verification_status"):
+                self.fields["verification_status"].initial = "pending"
+
+        if "is_active" in self.fields and self.initial.get("is_active") is None:
+            self.fields["is_active"].initial = True
+
+        for _, field in self.fields.items():
+            if isinstance(field.widget, forms.CheckboxInput):
+                field.widget.attrs.update({"class": "checkbox-input"})
+            elif isinstance(field.widget, forms.Select):
+                field.widget.attrs.update({"class": "form-select"})
+            else:
+                existing_class = field.widget.attrs.get("class", "")
+                field.widget.attrs["class"] = f"{existing_class} form-input".strip()
+
+    def clean_rateable_value(self):
+        if "rateable_value" not in self.cleaned_data:
             return None
 
-    return None
+        value = self.cleaned_data.get("rateable_value")
+        if value is None:
+            return value
 
+        if Decimal(value) < 0:
+            raise forms.ValidationError("Rateable value cannot be negative.")
 
-def _property_type_label(prop):
-    if hasattr(prop, "get_property_use_display"):
-        return prop.get_property_use_display()
+        return value
 
-    raw = (getattr(prop, "property_use", "") or "").replace("_", " ").title()
-    return raw or "—"
+    @staticmethod
+    def generate_property_reference():
+        if "property_reference" not in MODEL_FIELDS:
+            return ""
 
+        year = timezone.localdate().year
+        prefix = f"PROP-{year}-"
 
-def _property_type_class(prop):
-    label = _property_type_label(prop).lower()
-
-    if "mixed" in label:
-        return "type-mixed"
-    if "commercial" in label:
-        return "type-commercial"
-    return "type-residential"
-
-
-def _property_status(prop):
-    verification_status = (getattr(prop, "verification_status", "") or "").lower()
-    is_active = getattr(prop, "is_active", True)
-
-    if not is_active:
-        return "Inactive", "status-inactive"
-
-    if verification_status in ["pending", "under_review", "unverified"]:
-        return "Pending", "status-pending"
-
-    return "Active", "status-active"
-
-
-def _property_location(prop):
-    parts = []
-    suburb = getattr(prop, "suburb", "") or ""
-    area = getattr(prop, "area_town", "") or ""
-
-    if suburb:
-        parts.append(suburb)
-    if area and area not in parts:
-        parts.append(area)
-
-    return ", ".join(parts) if parts else "—"
-
-
-@module_required("properties")
-def property_registry(request):
-    context_assembly = _get_current_assembly(request)
-
-    search = (request.GET.get("q") or "").strip()
-    property_type = (request.GET.get("type") or "").strip()
-    status = (request.GET.get("status") or "").strip()
-    page_number = request.GET.get("page", 1)
-
-    properties_qs = Property.objects.select_related("owner", "assembly").order_by("-created_at")
-
-    if context_assembly:
-        properties_qs = properties_qs.filter(assembly=context_assembly)
-
-    if search:
-        properties_qs = properties_qs.filter(
-            Q(property_reference__icontains=search)
-            | Q(owner__full_name__icontains=search)
-            | Q(area_town__icontains=search)
-            | Q(suburb__icontains=search)
+        last_ref = (
+            Property.objects.filter(property_reference__startswith=prefix)
+            .order_by("-property_reference")
+            .values_list("property_reference", flat=True)
+            .first()
         )
 
-    if property_type:
-        properties_qs = properties_qs.filter(property_use=property_type)
+        next_number = 1
+        if last_ref:
+            match = re.search(r"(\d+)$", str(last_ref))
+            if match:
+                next_number = int(match.group(1)) + 1
 
-    if status == "active":
-        properties_qs = properties_qs.filter(is_active=True).exclude(
-            verification_status__in=["pending", "under_review", "unverified"]
-        )
-    elif status == "pending":
-        properties_qs = properties_qs.filter(
-            Q(verification_status__in=["pending", "under_review", "unverified"])
-        )
-    elif status == "inactive":
-        properties_qs = properties_qs.filter(is_active=False)
+        return f"{prefix}{next_number:05d}"
 
-    paginator = Paginator(properties_qs, 6)
-    page_obj = paginator.get_page(page_number)
+    def save(self, commit=True, assembly=None):
+        instance = super().save(commit=False)
 
-    property_rows = []
-    for prop in page_obj:
-        status_label, status_class = _property_status(prop)
+        if hasattr(instance, "assembly_id") and assembly is not None:
+            instance.assembly = assembly
 
-        property_rows.append(
-            {
-                "id": prop.id,
-                "reference": prop.property_reference,
-                "owner_name": getattr(prop.owner, "full_name", "—"),
-                "location": _property_location(prop),
-                "type_label": _property_type_label(prop),
-                "type_class": _property_type_class(prop),
-                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
-                "status_label": status_label,
-                "status_class": status_class,
-            }
-        )
+        if "property_reference" in MODEL_FIELDS:
+            existing_ref = getattr(instance, "property_reference", "") or ""
+            if not str(existing_ref).strip():
+                generated_ref = self.generate_property_reference()
+                if generated_ref:
+                    instance.property_reference = generated_ref
 
-    type_choices = []
-    if hasattr(Property, "PROPERTY_USE_CHOICES"):
-        type_choices = list(Property.PROPERTY_USE_CHOICES)
-    elif hasattr(Property, "_meta"):
-        field = Property._meta.get_field("property_use")
-        if getattr(field, "choices", None):
-            type_choices = list(field.choices)
+        if hasattr(instance, "verification_status"):
+            existing_status = getattr(instance, "verification_status", "")
+            if not existing_status and "verification_status" in self.fields:
+                choices = [
+                    choice[0]
+                    for choice in self.fields["verification_status"].choices
+                    if choice[0]
+                ]
+                if "pending" in choices:
+                    instance.verification_status = "pending"
+                elif choices:
+                    instance.verification_status = choices[0]
 
-    start_index = page_obj.start_index() if paginator.count else 0
-    end_index = page_obj.end_index() if paginator.count else 0
+        if hasattr(instance, "is_active") and getattr(instance, "is_active", None) is None:
+            instance.is_active = True
 
-    context = {
-        "page_title": "Property Registry",
-        "page_subtitle": f"Manage and view all registered properties ({paginator.count} total)",
-        "context_assembly": context_assembly,
-        "properties": property_rows,
-        "page_obj": page_obj,
-        "paginator": paginator,
-        "start_index": start_index,
-        "end_index": end_index,
-        "search": search,
-        "selected_type": property_type,
-        "selected_status": status,
-        "type_choices": type_choices,
-    }
-    return render(request, "properties/property_registry.html", context)
+        if commit:
+            instance.save()
+            self.save_m2m()
+
+        return instance

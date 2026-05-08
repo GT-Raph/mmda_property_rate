@@ -1,0 +1,249 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e8e8e8;
+            --text: #171717;
+            --muted: #7d7d7d;
+            --gold-bg: #ead79f;
+            --green-soft: #d9f7df;
+            --green: #16a34a;
+            --red-soft: #fff1f1;
+            --red: #b42318;
+            --shadow: 0 4px 18px rgba(0,0,0,0.04);
+            --radius: 18px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .page {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            margin: 0 0 24px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .message.error {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .non-field-errors {
+            margin-bottom: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: var(--red-soft);
+            color: var(--red);
+            font-size: 14px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .field-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .field-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .required-star {
+            color: var(--red);
+        }
+
+        .form-input,
+        .form-select,
+        input,
+        select {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            padding: 0 14px;
+            font-size: 14px;
+            outline: none;
+            background: #fff;
+        }
+
+        .checkbox-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 46px;
+        }
+
+        .checkbox-input {
+            width: 18px;
+            height: 18px;
+        }
+
+        .help-text {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .error-text {
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--red);
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 0 18px;
+            border-radius: 10px;
+            border: none;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--gold-bg);
+            color: #1f1f1f;
+        }
+
+        .btn-secondary {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        @media (max-width: 680px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <h1>{{ page_title }}</h1>
+        <p class="subtitle">{{ page_subtitle }}</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div class="non-field-errors">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <section class="card">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-grid">
+                    {% for field in form %}
+                        <div class="field-group {% if field.name == 'landmark' or field.name == 'digital_address' %}full{% endif %}">
+                            <label for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="required-star">*</span>
+                                {% endif %}
+                            </label>
+
+                            {% if field.field.widget.input_type == "checkbox" %}
+                                <div class="checkbox-wrap">
+                                    {{ field }}
+                                    <span>Yes</span>
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+
+                            {% if field.name == "property_reference" %}
+                                <div class="help-text">Leave blank and the system will auto-generate it.</div>
+                            {% endif %}
+
+                            {% if field.help_text %}
+                                <div class="help-text">{{ field.help_text }}</div>
+                            {% endif %}
+
+                            {% for error in field.errors %}
+                                <div class="error-text">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Save Property</button>
+                    <a href="{% url 'properties:property-registry' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </section>
+    </div>
+</body>
+</html>

@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import redirect, render
 
+from admins.access import get_allowed_modules
 from admins.decorators import module_required
 from admins.models import Assembly
 from properties.forms import PropertyCreateForm
@@ -76,6 +77,7 @@ def _property_location(prop):
 @module_required("properties")
 def property_registry(request):
     context_assembly = _get_current_assembly(request)
+    portal_access = get_allowed_modules(request.user)
 
     search = (request.GET.get("q") or "").strip()
     property_type = (request.GET.get("type") or "").strip()
@@ -124,7 +126,9 @@ def property_registry(request):
                 "location": _property_location(prop),
                 "type_label": _property_type_label(prop),
                 "type_class": _property_type_class(prop),
-                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
+                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}"
+                if getattr(prop, "rateable_value", None)
+                else "GH₵ 0",
                 "status_label": status_label,
                 "status_class": status_class,
             }
@@ -154,6 +158,7 @@ def property_registry(request):
         "selected_type": property_type,
         "selected_status": status,
         "type_choices": type_choices,
+        "portal_access": portal_access,
     }
     return render(request, "properties/property_registry.html", context)
 
@@ -161,6 +166,7 @@ def property_registry(request):
 @module_required("properties")
 def add_property(request):
     context_assembly = _get_current_assembly(request)
+    portal_access = get_allowed_modules(request.user)
 
     if not context_assembly:
         messages.error(request, "No active assembly was found for your account.")
@@ -179,12 +185,8 @@ def add_property(request):
                     f"Property {property_instance.property_reference} was added successfully.",
                 )
                 return redirect("properties:property-registry")
-
             except Exception as exc:
-                messages.error(
-                    request,
-                    f"Could not save the property. {exc}",
-                )
+                messages.error(request, f"Could not save the property. {exc}")
         else:
             messages.error(request, "Please correct the highlighted errors and try again.")
     else:
@@ -195,5 +197,6 @@ def add_property(request):
         "page_subtitle": "Register a new property into the system",
         "context_assembly": context_assembly,
         "form": form,
+        "portal_access": portal_access,
     }
     return render(request, "properties/property_form.html", context)
