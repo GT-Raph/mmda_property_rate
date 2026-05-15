@@ -1,0 +1,408 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e7e7e7;
+            --text: #111111;
+            --muted: #737887;
+            --gold: #e5d29a;
+            --gold-deep: #c89c2c;
+            --blue: #2a63f6;
+            --blue-soft: #dbeafe;
+            --black: #050505;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .topbar {
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2d2d2d;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .owner-meta strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .owner-meta small {
+            display: block;
+            font-size: 12px;
+            color: #c5c5c5;
+        }
+
+        .menu-icon {
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px 18px 120px;
+        }
+
+        .page h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .page-subtitle {
+            margin: 0 0 24px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .property-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .property-hero {
+            background: linear-gradient(90deg, #000 0%, #171717 100%);
+            color: #fff;
+            padding: 18px 18px 16px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .property-ref {
+            font-size: 14px;
+            color: #d7d7d7;
+            margin-bottom: 8px;
+        }
+
+        .property-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .property-location {
+            font-size: 14px;
+            color: #f2f2f2;
+        }
+
+        .status-pill {
+            flex-shrink: 0;
+            background: var(--gold);
+            color: #111;
+            border-radius: 999px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .property-body {
+            padding: 18px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .annual-rate {
+            color: var(--gold-deep);
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--line);
+            margin: 18px 0 16px;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn {
+            height: 46px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: #111;
+        }
+
+        .btn-white {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            color: #111;
+        }
+
+        .cta-box {
+            margin-top: 24px;
+            background: #edf4ff;
+            border: 1px solid #b8d0ff;
+            border-radius: 18px;
+            padding: 28px 18px;
+            text-align: center;
+        }
+
+        .cta-icon {
+            font-size: 48px;
+            color: var(--blue);
+            margin-bottom: 12px;
+        }
+
+        .cta-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .cta-text {
+            color: var(--muted);
+            font-size: 14px;
+            max-width: 420px;
+            margin: 0 auto 18px;
+            line-height: 1.55;
+        }
+
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 160px;
+            height: 42px;
+            border-radius: 12px;
+            background: var(--blue);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .empty-box {
+            background: #fff;
+            border: 1px dashed #d0d0d0;
+            border-radius: 18px;
+            padding: 24px;
+            color: var(--muted);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            z-index: 100;
+        }
+
+        .bottom-nav a {
+            padding: 12px 8px 14px;
+            text-align: center;
+            text-decoration: none;
+            color: #707784;
+            font-size: 12px;
+        }
+
+        .bottom-nav a.active {
+            color: var(--gold-deep);
+            font-weight: 700;
+        }
+
+        .nav-ico {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 700px) {
+            .page {
+                padding: 20px 14px 120px;
+            }
+
+            .page h1 {
+                font-size: 26px;
+            }
+
+            .property-title {
+                font-size: 18px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 18px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
+            </div>
+        </div>
+        <div class="menu-icon">☰</div>
+    </header>
+
+    <main class="page">
+        <h1>My Properties</h1>
+        <p class="page-subtitle">{{ properties_count }} propert{{ properties_count|pluralize:"y,ies" }} registered</p>
+
+        {% if properties %}
+            {% for property in properties %}
+                <section class="property-card">
+                    <div class="property-hero">
+                        <div>
+                            <div class="property-ref">{{ property.reference }}</div>
+                            <div class="property-title">{{ property.heading }}</div>
+                            <div class="property-location">⌖ {{ property.location }}</div>
+                        </div>
+                        <div class="status-pill">{{ property.status }}</div>
+                    </div>
+
+                    <div class="property-body">
+                        <div class="stats-grid">
+                            <div>
+                                <div class="stat-label">Digital Address</div>
+                                <div class="stat-value">{{ property.digital_address }}</div>
+                            </div>
+                            <div>
+                                <div class="stat-label">Rateable Value</div>
+                                <div class="stat-value">{{ property.rateable_value }}</div>
+                            </div>
+                            <div>
+                                <div class="stat-label">Annual Rate</div>
+                                <div class="stat-value annual-rate">{{ property.annual_rate }}</div>
+                            </div>
+                            <div>
+                                <div class="stat-label">{{ property.metric_label }}</div>
+                                <div class="stat-value">{{ property.metric_value }}</div>
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="actions">
+                            <a href="{% url 'citizens:property-certificate' property.id %}" class="btn btn-gold">
+                                <span>⌘</span>
+                                <span>View Certificate</span>
+                            </a>
+                            <a href="{% url 'citizens:property-bills' property.id %}" class="btn btn-white">
+                                <span>$</span>
+                                <span>View Bills</span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            {% endfor %}
+        {% else %}
+            <div class="empty-box">
+                {% if has_owner_profile %}
+                    No properties are linked to this account yet.
+                {% else %}
+                    No owner record is linked to this account yet. Please contact your MMDA office.
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <section class="cta-box">
+            <div class="cta-icon">🏢</div>
+            <div class="cta-title">Want to add another property?</div>
+            <p class="cta-text">Contact your local MMDA office to register additional properties</p>
+            <a href="tel:{{ assembly_phone }}" class="cta-btn">Call MMDA Office</a>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{% url 'citizens:dashboard' %}">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+        <a href="{% url 'citizens:properties' %}" class="active">
+            <span class="nav-ico">🏢</span>
+            Properties
+        </a>
+        <a href="{% url 'citizens:dashboard' %}#bills">
+            <span class="nav-ico">💳</span>
+            Bills
+        </a>
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico">⌘</span>
+            Certificates
+        </a>
+        <a href="{% url 'admins:settings' %}?tab=profile">
+            <span class="nav-ico">⚙</span>
+            Profile
+        </a>
+    </nav>
+</body>
+</html>

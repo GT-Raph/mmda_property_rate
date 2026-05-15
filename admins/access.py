@@ -10,6 +10,7 @@ ALL_MODULES = (
     "reports",
     "assembly",
     "settings",
+    "citizen_dashboard",
 )
 
 ROLE_MODULES = {
@@ -61,6 +62,7 @@ ROLE_MODULES = {
         "settings",
     },
     "citizen": {
+        "citizen_dashboard",
         "settings",
     },
 }
@@ -93,15 +95,6 @@ def get_allowed_module_names(user):
 
 
 def get_allowed_modules(user):
-    """
-    Returns a dict like:
-    {
-        "dashboard": True,
-        "properties": True,
-        ...
-    }
-    This is what your templates need for portal_access.dashboard, etc.
-    """
     return build_portal_access(get_allowed_module_names(user))
 
 
@@ -129,6 +122,9 @@ def landing_url_for_user(user):
 
     if role == "report_officer":
         return reverse("admins:reports-analytics")
+
+    if role == "citizen":
+        return reverse("citizens:dashboard")
 
     if role in ["sys_admin", "revenue_admin"]:
         return reverse("admins:admin-dashboard")

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #111;
+        }
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 18px 40px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            text-decoration: none;
+            color: #777;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 22px;
+        }
+        .bill-item {
+            border: 1px solid #e7e7e7;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .bill-number {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .muted {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .pill {
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .status-paid {
+            background: #dff5e7;
+            color: #16a34a;
+        }
+        .status-partial {
+            background: #f9efbf;
+            color: #d79a00;
+        }
+        .status-unpaid {
+            background: #fde2e2;
+            color: #ef4444;
+        }
+        .amounts {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+        .label {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .value {
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .empty-box {
+            padding: 24px;
+            border: 1px dashed #d0d0d0;
+            border-radius: 14px;
+            color: #6b7280;
+        }
+        @media (max-width: 640px) {
+            .row,
+            .amounts {
+                grid-template-columns: 1fr;
+                display: grid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <a href="{% url 'citizens:properties' %}" class="back-link">← Back to My Properties</a>
+
+        <section class="card">
+            <h1>{{ property.heading }}</h1>
+            <div class="subtitle">{{ property.reference }} • {{ property.location }}</div>
+
+            {% if bills %}
+                {% for bill in bills %}
+                    <div class="bill-item">
+                        <div class="row">
+                            <div>
+                                <div class="bill-number">{{ bill.bill_number }}</div>
+                                <div class="muted">Billing Year: {{ bill.year }}</div>
+                                <div class="muted">Due Date: {{ bill.due_date }}</div>
+                            </div>
+                            <div class="pill {{ bill.status_class }}">{{ bill.status_label }}</div>
+                        </div>
+
+                        <div class="amounts">
+                            <div>
+                                <div class="label">Amount Due</div>
+                                <div class="value">{{ bill.amount_due }}</div>
+                            </div>
+                            <div>
+                                <div class="label">Amount Paid</div>
+                                <div class="value">{{ bill.amount_paid }}</div>
+                            </div>
+                            <div>
+                                <div class="label">Balance</div>
+                                <div class="value">{{ bill.balance }}</div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-box">No bills found for this property.</div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

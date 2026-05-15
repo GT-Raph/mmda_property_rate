@@ -135,33 +135,43 @@ class PortalLoginView(LoginView):
 
         user = form.get_user()
 
-        if not self.user_can_access_selected_assembly(user, selected_assembly):
-            form.add_error(
-                None,
-                _("You are not authorized to access the selected assembly."),
-            )
+        allowed, reason = self.user_can_access_selected_assembly(user, selected_assembly)
+        if not allowed:
+            form.add_error(None, reason)
             return self.form_invalid(form)
 
         self.request.session[self.active_assembly_session_key] = selected_assembly.id
         self.request.session[self.active_assembly_name_session_key] = selected_assembly.name
+        self.request.session.modified = True
 
         return self.form_valid(form)
 
     def user_can_access_selected_assembly(self, user, assembly):
+        if not user.is_active:
+            return False, _("This account is inactive.")
+
         if user.is_superuser:
-            return True
+            return True, ""
 
         profile = getattr(user, "profile", None)
         if not profile:
-            return False
+            return False, _("This account has no user profile. Contact the administrator.")
 
-        if profile.role in ["sys_admin", "revenue_admin"]:
-            return True
+        role = get_user_role(user)
+
+        if role in ["sys_admin", "revenue_admin"]:
+            return True, ""
 
         if not profile.assembly_id:
-            return False
+            return False, _("This account is not assigned to any assembly.")
 
-        return profile.assembly_id == assembly.id
+        if profile.assembly_id != assembly.id:
+            return (
+                False,
+                _("You are not authorized to access the selected assembly. Please choose your assigned assembly."),
+            )
+
+        return True, ""
 
     def form_valid(self, form):
         remember_me = self.request.POST.get("remember_me")

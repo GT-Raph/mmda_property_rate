@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #111;
+        }
+        .page {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 24px 18px 40px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 16px;
+            text-decoration: none;
+            color: #777;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .certificate {
+            background: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 18px;
+            padding: 28px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+        .hero {
+            background: linear-gradient(90deg, #000 0%, #171717 100%);
+            color: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 22px;
+        }
+        .ref {
+            font-size: 14px;
+            color: #d3d3d3;
+            margin-bottom: 8px;
+        }
+        .heading {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .item {
+            border: 1px solid #ececec;
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .label {
+            color: #6b7280;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .value {
+            font-size: 18px;
+            font-weight: 800;
+        }
+        .footer-note {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid #ececec;
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        @media print {
+            .back-link {
+                display: none;
+            }
+            body {
+                background: #fff;
+            }
+            .page {
+                padding: 0;
+            }
+            .certificate {
+                border: none;
+                border-radius: 0;
+            }
+        }
+        @media (max-width: 640px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <a href="{% url 'citizens:properties' %}" class="back-link">← Back to My Properties</a>
+
+        <section class="certificate">
+            <div class="title">Property Certificate</div>
+            <div class="subtitle">{{ assembly_name }} • Issued on {{ issue_date }}</div>
+
+            <div class="hero">
+                <div class="ref">{{ property_reference }}</div>
+                <div class="heading">{{ property_heading }}</div>
+                <div>{{ property_location }}</div>
+            </div>
+
+            <div class="grid">
+                <div class="item">
+                    <div class="label">Owner Name</div>
+                    <div class="value">{{ owner_name }}</div>
+                </div>
+                <div class="item">
+                    <div class="label">Status</div>
+                    <div class="value">{{ property_status }}</div>
+                </div>
+                <div class="item">
+                    <div class="label">Digital Address</div>
+                    <div class="value">{{ digital_address }}</div>
+                </div>
+                <div class="item">
+                    <div class="label">Rateable Value</div>
+                    <div class="value">{{ rateable_value }}</div>
+                </div>
+                <div class="item">
+                    <div class="label">Annual Rate</div>
+                    <div class="value">{{ annual_rate }}</div>
+                </div>
+                <div class="item">
+                    <div class="label">{{ metric_label }}</div>
+                    <div class="value">{{ metric_value }}</div>
+                </div>
+            </div>
+
+            <div class="footer-note">
+                This certificate confirms that the above property record is registered in the Property Rate Management System under {{ assembly_name }}.
+            </div>
+        </section>
+    </main>
+</body>
+</html>

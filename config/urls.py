@@ -36,6 +36,7 @@ urlpatterns = [
     path('payments/', include('payments.urls')),
     path('field-operations/', include("field_operations.urls")),
     # path('dashboard/', include('admins.urls')),
+    path("owner/", include("citizens.urls")),
     
 ]
 

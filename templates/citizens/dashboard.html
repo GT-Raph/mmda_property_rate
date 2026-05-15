@@ -1,0 +1,596 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e7e7e7;
+            --text: #151515;
+            --muted: #71717a;
+            --black: #050505;
+            --green: #16a34a;
+            --green-soft: #dff5e7;
+            --red: #ef4444;
+            --red-soft: #fde2e2;
+            --blue: #2563eb;
+            --blue-soft: #dbeafe;
+            --purple: #9333ea;
+            --purple-soft: #ecd9ff;
+            --gold: #d5b869;
+            --gold-soft: #ead79f;
+            --shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+            --radius: 18px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .topbar {
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #2a2a2a;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .owner-meta strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .owner-meta small {
+            display: block;
+            color: #c4c4c4;
+            font-size: 12px;
+        }
+
+        .menu-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 20px 18px 110px;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: 30px;
+            font-weight: 800;
+        }
+
+        .hero p {
+            margin: 0 0 24px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card {
+            padding: 22px;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            margin-bottom: 14px;
+        }
+
+        .icon-green { background: var(--green-soft); color: var(--green); }
+        .icon-red { background: var(--red-soft); color: var(--red); }
+        .icon-blue { background: var(--blue-soft); color: var(--blue); }
+        .icon-purple { background: var(--purple-soft); color: var(--purple); }
+
+        .stat-title {
+            color: var(--muted);
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .stat-value.red { color: #ef1111; }
+        .stat-value.green { color: var(--green); }
+
+        .quick-actions {
+            background: linear-gradient(90deg, #000 0%, #1c1c1c 100%);
+            border-radius: 18px;
+            padding: 22px;
+            color: #fff;
+            margin-bottom: 24px;
+        }
+
+        .quick-actions h2 {
+            margin: 0 0 18px;
+            font-size: 20px;
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: linear-gradient(90deg, #161616 0%, #2b2b2b 100%);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .section-card {
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .section-head h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .view-link {
+            color: var(--gold);
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .property-item,
+        .payment-item {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 18px 16px;
+            margin-bottom: 12px;
+        }
+
+        .property-top,
+        .bill-top,
+        .payment-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .property-ref,
+        .bill-number,
+        .payment-ref {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .property-location,
+        .bill-ref,
+        .payment-meta {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--line);
+            margin: 14px 0;
+        }
+
+        .property-bottom,
+        .bill-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .small-label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .big-value {
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .badge-residential,
+        .badge-commercial {
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .bill-box {
+            border-radius: 14px;
+            padding: 18px 16px;
+            margin-bottom: 14px;
+            border: 1px solid;
+        }
+
+        .bill-paid {
+            background: #ebf8ef;
+            border-color: #bfe8cb;
+        }
+
+        .bill-unpaid {
+            background: #fff0f0;
+            border-color: #f2c3c3;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .status-paid {
+            background: #d8f4de;
+            color: var(--green);
+        }
+
+        .status-unpaid {
+            background: #ffdede;
+            color: var(--red);
+        }
+
+        .pay-btn {
+            background: var(--gold-soft);
+            color: #1f1f1f;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .payment-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .payment-amount {
+            text-align: right;
+        }
+
+        .payment-amount strong {
+            display: block;
+            color: var(--green);
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .download-link {
+            color: var(--gold);
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .empty-box {
+            padding: 20px;
+            border: 1px dashed #d2d2d2;
+            border-radius: 14px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            z-index: 100;
+        }
+
+        .bottom-nav a {
+            padding: 14px 8px 12px;
+            text-align: center;
+            color: #707784;
+            text-decoration: none;
+            font-size: 12px;
+        }
+
+        .bottom-nav a.active {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .nav-ico {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .stats-grid,
+            .actions-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero h1 {
+                font-size: 24px;
+            }
+
+            .stats-grid,
+            .actions-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .property-top,
+            .property-bottom,
+            .bill-top,
+            .bill-bottom,
+            .payment-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .payment-amount {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">
+                {{ owner_short_name|slice:":1"|upper }}
+            </div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
+            </div>
+        </div>
+
+        <div class="menu-icon">☰</div>
+    </header>
+
+    <main class="page">
+        <section class="hero">
+            <h1>Welcome back, {{ owner_name }}</h1>
+            <p>Manage your properties and bills</p>
+        </section>
+
+        <section class="stats-grid">
+            <div class="card stat-card">
+                <div class="stat-icon icon-green">🏢</div>
+                <div class="stat-title">Properties</div>
+                <div class="stat-value">{{ stats.properties_count }}</div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon icon-red">❗</div>
+                <div class="stat-title">Outstanding</div>
+                <div class="stat-value red">{{ stats.outstanding_total }}</div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon icon-blue">💳</div>
+                <div class="stat-title">Paid ({{ now|date:"Y" }})</div>
+                <div class="stat-value green">{{ stats.paid_total }}</div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon icon-purple">🧾</div>
+                <div class="stat-title">Total Bills</div>
+                <div class="stat-value">{{ stats.bills_count }}</div>
+            </div>
+        </section>
+
+        <section class="quick-actions">
+            <h2>Quick Actions</h2>
+            <div class="actions-grid">
+                <a href="#bills" class="action-btn"><span>💳</span><span>Pay Bills</span></a>
+                <a href="#properties" class="action-btn"><span>⌘</span><span>Certificates</span></a>
+                <a href="#bills" class="action-btn"><span>ⓘ</span><span>Dispute</span></a>
+                <a href="#payments" class="action-btn"><span>⭳</span><span>Receipts</span></a>
+            </div>
+        </section>
+
+        <section class="card section-card" id="properties">
+            <div class="section-head">
+                <h2>My Properties</h2>
+            </div>
+
+            {% if properties %}
+                {% for property in properties %}
+                    <div class="property-item">
+                        <div class="property-top">
+                            <div>
+                                <div class="property-ref">{{ property.reference }}</div>
+                                <div class="property-location">{{ property.location }}</div>
+                            </div>
+                            <span class="badge {{ property.type_class }}">{{ property.type_label }}</span>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="property-bottom">
+                            <div>
+                                <div class="small-label">Annual Rate</div>
+                                <div class="big-value">{{ property.annual_rate }}</div>
+                            </div>
+                            <a href="#" class="view-link">View Details →</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-box">No properties are linked to this account yet.</div>
+            {% endif %}
+        </section>
+
+        <section class="card section-card" id="bills">
+            <div class="section-head">
+                <h2>Bills & Payments</h2>
+                <a href="#" class="view-link">View All →</a>
+            </div>
+
+            {% if bills %}
+                {% for bill in bills %}
+                    <div class="bill-box {{ bill.status_class }}">
+                        <div class="bill-top">
+                            <div>
+                                <div class="bill-number">{{ bill.bill_number }}</div>
+                                <div class="bill-ref">{{ bill.property_reference }}</div>
+                            </div>
+                            <span class="status-pill {% if bill.status_label == 'Paid' %}status-paid{% else %}status-unpaid{% endif %}">
+                                {{ bill.status_label }}
+                            </span>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="bill-bottom">
+                            <div>
+                                <div class="big-value">{{ bill.amount_due }}</div>
+                                <div class="small-label">📅 Due: {{ bill.due_date }}</div>
+                            </div>
+
+                            {% if bill.action_label %}
+                                <button class="pay-btn" type="button">{{ bill.action_label }}</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-box">No bills available yet.</div>
+            {% endif %}
+        </section>
+
+        <section class="card section-card" id="payments">
+            <div class="section-head">
+                <h2>Recent Payments</h2>
+                <a href="#" class="view-link">View All →</a>
+            </div>
+
+            {% if payments %}
+                {% for payment in payments %}
+                    <div class="payment-item">
+                        <div>
+                            <div class="payment-ref">{{ payment.property_reference }}</div>
+                            <div class="payment-meta">{{ payment.date_label }} • {{ payment.method }}</div>
+                        </div>
+
+                        <div class="payment-amount">
+                            <strong>{{ payment.amount }}</strong>
+                            <a href="#" class="download-link">Download</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-box">No successful payments found yet.</div>
+            {% endif %}
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{% url 'citizens:dashboard' %}" class="active">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico">🏢</span>
+            Properties
+        </a>
+        <a href="#bills">
+            <span class="nav-ico">💳</span>
+            Bills
+        </a>
+        <a href="#payments">
+            <span class="nav-ico">⌘</span>
+            Certificates
+        </a>
+        <a href="{% url 'admins:settings' %}?tab=profile">
+            <span class="nav-ico">⚙</span>
+            Profile
+        </a>
+    </nav>
+</body>
+</html>
