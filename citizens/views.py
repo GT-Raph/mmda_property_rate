@@ -13,8 +13,151 @@ from billing.models import Bill
 from payments.models import Payment
 from properties.models import Property
 
+import uuid
+from django.db import transaction
+from .forms import CitizenPaymentForm
+
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
+
+
+def _account_number_for_property(prop):
+    reference = getattr(prop, "property_reference", "") or ""
+    if reference.startswith("PROP-"):
+        return reference.replace("PROP-", "ACC-", 1)
+    return reference or "—"
+
+
+def _safe_decimal(value):
+    try:
+        return Decimal(value or 0)
+    except Exception:
+        return Decimal("0.00")
+
+
+def _bill_balance(bill):
+    amount_due = _safe_decimal(getattr(bill, "amount_due", 0))
+    amount_paid = _safe_decimal(getattr(bill, "amount_paid", 0))
+    balance = amount_due - amount_paid
+    return balance if balance > 0 else Decimal("0.00")
+
+
+def _field_value(obj, field_names, default=Decimal("0.00")):
+    for field_name in field_names:
+        if hasattr(obj, field_name):
+            value = getattr(obj, field_name)
+            if value not in [None, ""]:
+                return value
+    return default
+
+
+def _rate_impost_value(bill):
+    direct_value = _field_value(
+        bill,
+        ["rate_impost", "rate", "rate_value"],
+        default=None,
+    )
+    if direct_value not in [None, ""]:
+        return direct_value
+
+    rate_policy = getattr(bill, "rate_policy", None)
+    if rate_policy:
+        policy_value = _field_value(
+            rate_policy,
+            ["rate_impost", "rate", "rate_value"],
+            default=None,
+        )
+        if policy_value not in [None, ""]:
+            return policy_value
+
+    return Decimal("0.00000")
+
+
+def _arrears_value(bill):
+    return _safe_decimal(_field_value(bill, ["arrears", "arrears_amount"], default=0))
+
+
+def _penalty_value(bill):
+    return _safe_decimal(_field_value(bill, ["penalty", "penalty_amount"], default=0))
+
+
+def _current_fee_value(bill):
+    direct = _field_value(bill, ["current_fee"], default=None)
+    if direct not in [None, ""]:
+        return _safe_decimal(direct)
+
+    amount_due = _safe_decimal(getattr(bill, "amount_due", 0))
+    arrears = _arrears_value(bill)
+    penalty = _penalty_value(bill)
+
+    computed = amount_due - arrears - penalty
+    return computed if computed > 0 else amount_due
+
+
+def _payment_model_field_names():
+    return {
+        field.name
+        for field in Payment._meta.get_fields()
+        if getattr(field, "concrete", False) and not getattr(field, "auto_created", False)
+    }
+
+
+def _create_payment_record(bill, amount, network, mobile_number, transaction_reference):
+    payment = Payment()
+    field_names = _payment_model_field_names()
+
+    if "bill" in field_names:
+        payment.bill = bill
+
+    if "property" in field_names:
+        payment.property = getattr(bill, "property_record", None)
+
+    if "assembly" in field_names and hasattr(bill, "assembly"):
+        payment.assembly = bill.assembly
+
+    if "amount" in field_names:
+        payment.amount = amount
+
+    if "status" in field_names:
+        payment.status = "successful"
+
+    if "payment_method" in field_names:
+        payment.payment_method = "mobile_money"
+
+    if "network" in field_names:
+        payment.network = network
+
+    if "mobile_number" in field_names:
+        payment.mobile_number = mobile_number
+
+    for field_name in ["transaction_reference", "reference", "external_reference"]:
+        if field_name in field_names:
+            setattr(payment, field_name, transaction_reference)
+            break
+
+    if "paid_at" in field_names:
+        payment.paid_at = timezone.now()
+
+    payment.save()
+    return payment
+
+
+def _mark_bill_paid(bill):
+    balance = _bill_balance(bill)
+    update_fields = []
+
+    if hasattr(bill, "amount_paid"):
+        bill.amount_paid = _safe_decimal(getattr(bill, "amount_paid", 0)) + balance
+        update_fields.append("amount_paid")
+
+    if hasattr(bill, "status"):
+        bill.status = "paid"
+        update_fields.append("status")
+
+    if update_fields:
+        bill.save(update_fields=update_fields)
+
+    return balance
 
 
 def _get_current_assembly(request):
@@ -517,3 +660,341 @@ def citizen_property_certificate(request, property_id):
         "issue_date": timezone.localdate().strftime("%Y-%m-%d"),
     }
     return render(request, "citizens/property_certificate.html", context)
+
+
+@login_required
+def citizen_bills(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    context_assembly = _get_current_assembly(request)
+    owner = _citizen_owner_or_none(request)
+
+    owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
+    owner_short_name = request.user.first_name or owner_name.split()[0]
+
+    unpaid_bills = []
+    paid_bills = []
+    outstanding_total = Decimal("0.00")
+    unpaid_count = 0
+
+    if owner:
+        bills_qs = Bill.objects.filter(property_record__owner=owner).select_related("property_record", "rate_policy").order_by("-billing_year", "-created_at")
+
+        if context_assembly:
+            bills_qs = bills_qs.filter(assembly=context_assembly)
+
+        unpaid_qs = bills_qs.exclude(status__in=["paid", "cancelled"])
+        paid_qs = bills_qs.filter(status="paid")
+
+        unpaid_count = unpaid_qs.count()
+
+        for bill in unpaid_qs:
+            prop = bill.property_record
+            balance = _bill_balance(bill)
+            outstanding_total += balance
+
+            unpaid_bills.append(
+                {
+                    "id": bill.id,
+                    "bill_year": bill.billing_year,
+                    "status_label": "Unpaid",
+                    "account_number": _account_number_for_property(prop),
+                    "property_location": _property_location(prop),
+                    "property_type": _property_type_label(prop),
+                    "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
+                    "rate_impost": _rate_impost_value(bill),
+                    "arrears": _money_full(_arrears_value(bill)),
+                    "penalty": _money_full(_penalty_value(bill)),
+                    "current_fee": _money_full(_current_fee_value(bill)),
+                    "total_due": _money_full(balance),
+                    "due_date": bill.due_date.strftime("%Y-%m-%d") if bill.due_date else "—",
+                }
+            )
+
+        for bill in paid_qs[:10]:
+            prop = bill.property_record
+            paid_bills.append(
+                {
+                    "id": bill.id,
+                    "bill_year": bill.billing_year,
+                    "status_label": "Paid",
+                    "account_number": _account_number_for_property(prop),
+                    "property_location": _property_location(prop),
+                    "amount": _money_full(getattr(bill, "amount_due", 0)),
+                    "paid_on": (
+                        getattr(bill, "updated_at", None) or getattr(bill, "created_at", None)
+                    ).strftime("%Y-%m-%d") if (getattr(bill, "updated_at", None) or getattr(bill, "created_at", None)) else "—",
+                }
+            )
+
+    context = {
+        "page_title": "My Bills",
+        "owner_name": owner_name,
+        "owner_short_name": owner_short_name,
+        "owner_role": "Property Owner",
+        "outstanding_total": _money_full(outstanding_total),
+        "unpaid_count": unpaid_count,
+        "unpaid_bills": unpaid_bills,
+        "paid_bills": paid_bills,
+        "has_owner_profile": bool(owner),
+    }
+    return render(request, "citizens/bills.html", context)
+
+
+@login_required
+def citizen_bill_detail(request, bill_id):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        return redirect("citizens:bills")
+
+    context_assembly = _get_current_assembly(request)
+
+    bill_qs = Bill.objects.filter(property_record__owner=owner).select_related("property_record", "rate_policy")
+    if context_assembly:
+        bill_qs = bill_qs.filter(assembly=context_assembly)
+
+    bill = get_object_or_404(bill_qs, id=bill_id)
+    prop = bill.property_record
+
+    context = {
+        "bill": bill,
+        "property": prop,
+        "assembly_name": context_assembly.name if context_assembly else "MMDA",
+        "account_number": _account_number_for_property(prop),
+        "owner_name": _owner_name(owner),
+        "suburb": getattr(prop, "suburb", "") or "—",
+        "property_use": _property_type_label(prop),
+        "zone": getattr(prop, "zone", "") or "—",
+        "rateable_value": _money_full(getattr(prop, "rateable_value", 0)).replace("GH₵", "").strip(),
+        "rate_impost": _rate_impost_value(bill),
+        "arrears": _money_full(_arrears_value(bill)).replace("GH₵", "GHS "),
+        "penalty": _money_full(_penalty_value(bill)).replace("GH₵", "GHS "),
+        "current_fee": _money_full(_current_fee_value(bill)).replace("GH₵", "GHS "),
+        "total_due": _money_full(_bill_balance(bill)).replace("GH₵", "GHS "),
+        "due_date": bill.due_date.strftime("%Y-%m-%d") if bill.due_date else "—",
+    }
+    return render(request, "citizens/bill_detail.html", context)
+
+
+@login_required
+def citizen_payment_confirm(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        return redirect("citizens:bills")
+
+    context_assembly = _get_current_assembly(request)
+
+    if request.method == "POST":
+        selected_bill_ids = request.POST.getlist("bill_ids")
+        form = CitizenPaymentForm(request.POST)
+    else:
+        selected_bill_ids = request.GET.getlist("bill")
+        if request.GET.get("all") == "1":
+            selected_bill_ids = list(
+                Bill.objects.filter(property_record__owner=owner)
+                .exclude(status__in=["paid", "cancelled"])
+                .values_list("id", flat=True)
+            )
+        form = CitizenPaymentForm()
+
+    bills_qs = Bill.objects.filter(
+        id__in=selected_bill_ids,
+        property_record__owner=owner,
+    ).select_related("property_record", "rate_policy")
+
+    if context_assembly:
+        bills_qs = bills_qs.filter(assembly=context_assembly)
+
+    selected_bills = []
+    total_amount = Decimal("0.00")
+
+    for bill in bills_qs:
+        balance = _bill_balance(bill)
+        total_amount += balance
+        selected_bills.append(
+            {
+                "id": bill.id,
+                "account_number": _account_number_for_property(bill.property_record),
+                "location": _property_location(bill.property_record),
+                "current_fee": _money_full(_current_fee_value(bill)),
+                "arrears": _money_full(_arrears_value(bill)),
+                "penalty": _money_full(_penalty_value(bill)),
+                "balance": _money_full(balance),
+            }
+        )
+
+    if request.method == "POST" and form.is_valid() and selected_bills:
+        request.session["citizen_payment_payload"] = {
+            "bill_ids": [item["id"] for item in selected_bills],
+            "network": form.cleaned_data["network"],
+            "mobile_number": form.cleaned_data["mobile_number"],
+            "total_amount": str(total_amount),
+        }
+        request.session.pop("citizen_payment_result", None)
+        request.session.modified = True
+        return redirect("citizens:payment-processing")
+
+    context = {
+        "page_title": "Confirm Payment",
+        "owner_name": _owner_name(owner),
+        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_role": "Property Owner",
+        "selected_bills": selected_bills,
+        "total_amount": _money_full(total_amount),
+        "form": form,
+    }
+    return render(request, "citizens/payment_confirm.html", context)
+
+
+@login_required
+def citizen_payment_processing(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    if not request.session.get("citizen_payment_payload"):
+        return redirect("citizens:bills")
+
+    context = {
+        "owner_short_name": request.user.first_name or request.user.username,
+        "owner_role": "Property Owner",
+    }
+    return render(request, "citizens/payment_processing.html", context)
+
+
+@login_required
+def citizen_payment_success(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        return redirect("citizens:bills")
+
+    payload = request.session.get("citizen_payment_payload")
+    if not payload:
+        return redirect("citizens:bills")
+
+    result = request.session.get("citizen_payment_result")
+    context_assembly = _get_current_assembly(request)
+
+    if not result:
+        bill_ids = payload.get("bill_ids", [])
+        network = payload.get("network")
+        mobile_number = payload.get("mobile_number")
+        transaction_reference = f"TXN-{uuid.uuid4().hex[:16].upper()}"
+
+        bills_qs = Bill.objects.filter(
+            id__in=bill_ids,
+            property_record__owner=owner,
+        ).select_related("property_record")
+
+        if context_assembly:
+            bills_qs = bills_qs.filter(assembly=context_assembly)
+
+        bills_paid = []
+        total_paid = Decimal("0.00")
+
+        with transaction.atomic():
+            for bill in bills_qs:
+                amount_paid_now = _mark_bill_paid(bill)
+                total_paid += amount_paid_now
+                _create_payment_record(
+                    bill=bill,
+                    amount=amount_paid_now,
+                    network=network,
+                    mobile_number=mobile_number,
+                    transaction_reference=transaction_reference,
+                )
+                bills_paid.append(
+                    {
+                        "account_number": _account_number_for_property(bill.property_record),
+                        "amount": _money_full(amount_paid_now),
+                    }
+                )
+
+        result = {
+            "transaction_reference": transaction_reference,
+            "payment_date": timezone.localdate().strftime("%d/%m/%Y"),
+            "payment_method": "Mobile Money",
+            "total_paid": _money_full(total_paid),
+            "bills_paid": bills_paid,
+        }
+        request.session["citizen_payment_result"] = result
+        request.session.modified = True
+
+    context = {
+        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_role": "Property Owner",
+        "result": result,
+    }
+    return render(request, "citizens/payment_success.html", context)
+
+
+@login_required
+def citizen_payment_history(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        return redirect("citizens:dashboard")
+
+    context_assembly = _get_current_assembly(request)
+
+    payments_qs = Payment.objects.filter(
+        Q(property__owner=owner) | Q(bill__property_record__owner=owner),
+        status="successful",
+    ).select_related("property", "bill").order_by("-paid_at", "-created_at")
+
+    if context_assembly:
+        payments_qs = payments_qs.filter(assembly=context_assembly)
+
+    payments = []
+    total_amount = Decimal("0.00")
+
+    for payment in payments_qs:
+        amount = _safe_decimal(getattr(payment, "amount", 0))
+        total_amount += amount
+
+        bill = getattr(payment, "bill", None)
+        prop = getattr(payment, "property", None) or (bill.property_record if bill else None)
+
+        reference = (
+            getattr(payment, "transaction_reference", None)
+            or getattr(payment, "reference", None)
+            or getattr(payment, "external_reference", None)
+            or f"TXN-{payment.pk}"
+        )
+
+        paid_on = getattr(payment, "paid_at", None) or getattr(payment, "created_at", None)
+
+        payments.append(
+            {
+                "transaction_reference": reference,
+                "bill_number": getattr(bill, "bill_number", "—"),
+                "location": _property_location(prop) if prop else "—",
+                "payment_method": (getattr(payment, "payment_method", "") or "Payment").replace("_", " ").title(),
+                "reference_code": reference,
+                "time_label": paid_on.strftime("%H:%M") if paid_on else "—",
+                "date_label": paid_on.strftime("%Y-%m-%d") if paid_on else "—",
+                "amount": _money_full(amount),
+            }
+        )
+
+    context = {
+        "page_title": "Payment History",
+        "owner_name": _owner_name(owner),
+        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_role": "Property Owner",
+        "payments": payments,
+        "total_amount": _money_full(total_amount),
+        "payments_count": len(payments),
+    }
+    return render(request, "citizens/payment_history.html", context)

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Bills</title>
+    <style>
+        :root{
+            --bg:#f5f5f5;--panel:#fff;--line:#e7e7e7;--text:#111;--muted:#737887;
+            --red:#ef1111;--red-soft:#fff0f0;--gold:#e5d29a;--green:#16a34a;--green-soft:#dff5e7;
+        }
+        *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+        .topbar{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}
+        .owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}.menu-icon{font-size:28px}
+        .page{max-width:980px;margin:0 auto;padding:24px 18px 120px}.page h1{margin:0 0 8px;font-size:30px;font-weight:800}.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
+        .summary{background:var(--red-soft);border:1px solid #ffc2c2;border-radius:18px;padding:16px 16px 18px;margin-bottom:24px}
+        .summary-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.summary-title{color:#b91c1c;font-size:16px;font-weight:700}.summary-value{font-size:32px;font-weight:800;color:var(--red);margin:8px 0 6px}
+        .summary-meta{color:#b91c1c;font-size:14px}.pay-all{display:flex;align-items:center;justify-content:center;height:44px;border-radius:12px;background:#ff0008;color:#fff;font-size:14px;font-weight:700;text-decoration:none;margin-top:14px}
+        .section-title{font-size:20px;font-weight:800;margin:0 0 14px}
+        .bill-card{background:#fff;border:1px solid #ffc2c2;border-radius:18px;padding:16px;margin-bottom:16px}
+        .bill-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.bill-head h3{margin:0;font-size:16px;font-weight:800}.badge-unpaid{background:#ffe0e0;color:#ef1111;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700}
+        .muted{color:var(--muted)} .prop-line{font-size:14px;margin:10px 0 4px}.prop-line strong{color:#111}.type-line{font-size:14px;color:var(--muted);margin-bottom:14px}
+        .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;background:#fafafa;border-radius:14px;padding:14px}
+        .label{color:var(--muted);font-size:13px;margin-bottom:6px}.value{font-size:16px;font-weight:800}.value.red{color:#ef1111}
+        .divider{height:1px;background:var(--line);margin:16px 0}
+        .bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}.total-label{color:var(--muted);font-size:14px;margin-bottom:8px}.total-amount{font-size:24px;font-weight:800;color:#ef1111}
+        .due{text-align:right}.due .label{font-size:14px}
+        .actions{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:16px}
+        .btn-gold,.btn-white{height:44px;border-radius:12px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none}
+        .btn-gold{background:var(--gold);color:#111}.btn-white{background:#fff;border:1px solid #d9d9d9;color:#111;padding:0 18px}
+        .paid-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}
+        .badge-paid{background:var(--green-soft);color:var(--green);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700}
+        .bottom-nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:100}
+        .bottom-nav a{padding:12px 8px 14px;text-align:center;text-decoration:none;color:#707784;font-size:12px}.bottom-nav a.active{color:#c89c2c;font-weight:700}
+        .nav-ico{display:block;font-size:18px;margin-bottom:6px}
+        .empty{background:#fff;border:1px dashed #d0d0d0;border-radius:18px;padding:24px;color:var(--muted);font-size:14px;text-align:center}
+        @media (max-width:700px){
+            .page{padding:20px 14px 120px}.page h1{font-size:26px}.grid{grid-template-columns:1fr 1fr}.bottom{flex-direction:row}
+            .actions{grid-template-columns:1fr 1fr}
+        }
+        @media (max-width:520px){
+            .grid{grid-template-columns:1fr 1fr}.bottom{align-items:flex-start}.total-amount{font-size:22px}
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+        <div class="owner-meta">
+            <strong>{{ owner_short_name }}</strong>
+            <small>{{ owner_role }}</small>
+        </div>
+    </div>
+    <div class="menu-icon">☰</div>
+</header>
+
+<main class="page">
+    <h1>My Bills</h1>
+    <p class="sub">Manage your property rate bills</p>
+
+    <section class="summary">
+        <div class="summary-top">
+            <div>
+                <div class="summary-title">Outstanding Payment</div>
+                <div class="summary-value">{{ outstanding_total }}</div>
+                <div class="summary-meta">{{ unpaid_count }} unpaid bill(s)</div>
+            </div>
+            <div style="font-size:34px;color:#ef1111;">📄</div>
+        </div>
+        {% if unpaid_count %}
+            <a href="{% url 'citizens:payment-confirm' %}?all=1" class="pay-all">▭ Pay Now</a>
+        {% endif %}
+    </section>
+
+    <h2 class="section-title">Unpaid Bills</h2>
+
+    {% if unpaid_bills %}
+        {% for bill in unpaid_bills %}
+            <section class="bill-card">
+                <div class="bill-head">
+                    <h3>Bill Year: {{ bill.bill_year }}</h3>
+                    <span class="badge-unpaid">{{ bill.status_label }}</span>
+                </div>
+
+                <div class="prop-line muted">Account No: {{ bill.account_number }}</div>
+                <div class="prop-line"><strong>⌖ {{ bill.property_location }}</strong></div>
+                <div class="type-line">{{ bill.property_type }}</div>
+
+                <div class="grid">
+                    <div>
+                        <div class="label">Rateable Value</div>
+                        <div class="value">{{ bill.rateable_value }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Rate Impost</div>
+                        <div class="value">{{ bill.rate_impost }}</div>
+                    </div>
+
+                    {% if bill.arrears != "GH₵ 0" %}
+                    <div>
+                        <div class="label">Arrears</div>
+                        <div class="value red">{{ bill.arrears }}</div>
+                    </div>
+                    {% endif %}
+
+                    {% if bill.penalty != "GH₵ 0" %}
+                    <div>
+                        <div class="label">Penalty</div>
+                        <div class="value red">{{ bill.penalty }}</div>
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <div class="label">Current Fee</div>
+                        <div class="value">{{ bill.current_fee }}</div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="bottom">
+                    <div>
+                        <div class="total-label">Total Amount Due</div>
+                        <div class="total-amount">{{ bill.total_due }}</div>
+                    </div>
+                    <div class="due">
+                        <div class="label">🗓 Due Date</div>
+                        <div class="value">{{ bill.due_date }}</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}" class="btn-gold">▭ Pay Bill</a>
+                    <a href="{% url 'citizens:bill-detail' bill.id %}" class="btn-white">📄 View Full Bill</a>
+                </div>
+            </section>
+        {% endfor %}
+    {% else %}
+        <div class="empty">
+            {% if has_owner_profile %}
+                No unpaid bills at the moment.
+            {% else %}
+                No owner record is linked to this account yet.
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <h2 class="section-title" style="margin-top:24px;">Paid Bills</h2>
+
+    {% if paid_bills %}
+        {% for bill in paid_bills %}
+            <section class="paid-card" style="margin-bottom:14px;">
+                <div class="bill-head">
+                    <h3>Bill Year: {{ bill.bill_year }}</h3>
+                    <span class="badge-paid">● {{ bill.status_label }}</span>
+                </div>
+                <div class="prop-line muted">Account No: {{ bill.account_number }}</div>
+                <div class="prop-line"><strong>{{ bill.property_location }}</strong></div>
+                <div class="divider"></div>
+                <div class="bottom">
+                    <div>
+                        <div class="label">Amount</div>
+                        <div class="value">{{ bill.amount }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Paid On</div>
+                        <div class="value">{{ bill.paid_on }}</div>
+                    </div>
+                    <a href="{% url 'citizens:bill-detail' bill.id %}" style="color:#c89c2c;font-weight:700;text-decoration:none;">View Bill →</a>
+                </div>
+            </section>
+        {% endfor %}
+    {% else %}
+        <div class="empty">No paid bills yet.</div>
+    {% endif %}
+</main>
+
+<nav class="bottom-nav">
+    <a href="{% url 'citizens:dashboard' %}"><span class="nav-ico">⌘</span>Dashboard</a>
+    <a href="{% url 'citizens:properties' %}"><span class="nav-ico">🏢</span>Properties</a>
+    <a href="{% url 'citizens:bills' %}" class="active"><span class="nav-ico">💳</span>Bills</a>
+    <a href="{% url 'citizens:payment-history' %}"><span class="nav-ico">⌘</span>Certificates</a>
+    <a href="{% url 'admins:settings' %}?tab=profile"><span class="nav-ico">⚙</span>Profile</a>
+</nav>
+</body>
+</html>

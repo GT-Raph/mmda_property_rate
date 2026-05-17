@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Payment</title>
+    <style>
+        body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111}
+        .topbar{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}.owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}
+        .page{max-width:760px;margin:0 auto;padding:24px 18px 120px}.back{display:inline-block;margin-bottom:18px;color:#c89c2c;text-decoration:none;font-weight:700;font-size:14px}
+        h1{margin:0 0 8px;font-size:30px;font-weight:800}.sub{color:#737887;margin:0 0 24px}
+        .card{background:#fff;border:1px solid #e7e7e7;border-radius:18px;padding:24px;margin-bottom:24px}
+        .title{font-size:18px;font-weight:800;margin-bottom:18px}
+        .bill-row{padding:14px;background:#fafafa;border-radius:12px;margin-bottom:14px}
+        .bill-head{display:flex;justify-content:space-between;gap:16px;font-size:16px;font-weight:800}.muted{color:#737887}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+        .label{font-size:13px;color:#737887;margin-bottom:6px}.value{font-weight:800}.divider{height:1px;background:#e7e7e7;margin:18px 0}.total{display:flex;justify-content:space-between;align-items:center;font-size:16px;font-weight:800}.total strong{font-size:18px;color:#c89c2c}
+        .method-box{padding:16px;background:#fafafa;border-radius:12px;margin-bottom:16px}
+        .form-label{display:block;font-size:14px;font-weight:700;margin:16px 0 8px}.form-input,.form-select{width:100%;height:46px;border:1px solid #ddd;border-radius:10px;padding:0 14px;font-size:14px}
+        .info{margin-top:16px;background:#edf4ff;border:1px solid #b8d0ff;border-radius:10px;padding:12px;color:#2a63f6;font-size:14px}
+        .submit{width:100%;height:48px;border:none;border-radius:12px;background:#e5d29a;color:#111;font-size:16px;font-weight:800}
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+        <div class="owner-meta">
+            <strong>{{ owner_short_name }}</strong>
+            <small>{{ owner_role }}</small>
+        </div>
+    </div>
+    <div style="font-size:28px;">☰</div>
+</header>
+
+<main class="page">
+    <a href="{% url 'citizens:bills' %}" class="back">← Back</a>
+    <h1>Confirm Payment</h1>
+    <p class="sub">Review your payment details</p>
+
+    <section class="card">
+        <div class="title">Payment Summary</div>
+
+        {% for bill in selected_bills %}
+            <div class="bill-row">
+                <div class="bill-head">
+                    <div>Account: {{ bill.account_number }}</div>
+                    <div>{{ bill.balance }}</div>
+                </div>
+                <div class="muted">{{ bill.location }}</div>
+
+                <div class="divider"></div>
+
+                <div class="grid">
+                    <div>
+                        <div class="label">Current Fee</div>
+                        <div class="value">{{ bill.current_fee }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Arrears</div>
+                        <div class="value">{{ bill.arrears }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Penalty</div>
+                        <div class="value">{{ bill.penalty }}</div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="muted">No bill selected.</div>
+        {% endfor %}
+
+        <div class="divider"></div>
+        <div class="total">
+            <span>Total Amount</span>
+            <strong>{{ total_amount }}</strong>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="title">Payment Method</div>
+
+        <div class="method-box">
+            <strong>📱 Mobile Money</strong><br>
+            <span class="muted">MTN, Vodafone, AirtelTigo</span>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            {% for bill in selected_bills %}
+                <input type="hidden" name="bill_ids" value="{{ bill.id }}">
+            {% endfor %}
+
+            <label class="form-label" for="{{ form.network.id_for_label }}">Network</label>
+            {{ form.network }}
+
+            <label class="form-label" for="{{ form.mobile_number.id_for_label }}">Mobile Number</label>
+            {{ form.mobile_number }}
+
+            <div class="info">
+                You will receive a prompt on your phone to approve this payment. Please have your phone ready.
+            </div>
+
+            <div style="margin-top:24px;">
+                <button type="submit" class="submit">Confirm & Pay {{ total_amount }}</button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

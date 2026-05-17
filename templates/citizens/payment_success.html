@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <style>
+        body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111}
+        .topbar{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}.owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}
+        .page{max-width:760px;margin:0 auto;padding:36px 18px 120px}
+        .card{background:#fff;border:1px solid #e7e7e7;border-radius:18px;padding:34px 24px;text-align:center}
+        .icon{width:82px;height:82px;border-radius:50%;background:#dff5e7;color:#16a34a;display:grid;place-items:center;font-size:42px;margin:0 auto 18px}
+        h1{margin:0 0 12px;font-size:28px;font-weight:800}.sub{color:#737887;font-size:16px;margin-bottom:24px}
+        .summary{background:#fafafa;border-radius:14px;padding:16px;text-align:left}
+        .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid #e7e7e7}.row:first-child{border-top:0}
+        .label{color:#737887}.value{font-weight:800}.green{color:#16a34a}
+        .bills{margin-top:18px;border:1px solid #e7e7e7;border-radius:12px;padding:16px;text-align:left}
+        .actions{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+        .btn{min-width:220px;height:46px;border-radius:12px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;text-decoration:none}
+        .btn-white{background:#fff;border:1px solid #ddd;color:#111}.btn-gold{background:#e5d29a;color:#111}
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+        <div class="owner-meta">
+            <strong>{{ owner_short_name }}</strong>
+            <small>{{ owner_role }}</small>
+        </div>
+    </div>
+    <div style="font-size:28px;">☰</div>
+</header>
+
+<main class="page">
+    <section class="card">
+        <div class="icon">✓</div>
+        <h1>Payment Successful!</h1>
+        <p class="sub">Your payment of {{ result.total_paid }} has been processed successfully</p>
+
+        <div class="summary">
+            <div class="row">
+                <span class="label">Transaction Reference</span>
+                <strong class="value">{{ result.transaction_reference }}</strong>
+            </div>
+            <div class="row">
+                <span class="label">Payment Date</span>
+                <strong class="value">{{ result.payment_date }}</strong>
+            </div>
+            <div class="row">
+                <span class="label">Payment Method</span>
+                <strong class="value">{{ result.payment_method }}</strong>
+            </div>
+            <div class="row">
+                <span class="value">Total Paid</span>
+                <strong class="value green">{{ result.total_paid }}</strong>
+            </div>
+        </div>
+
+        <div class="bills">
+            <strong style="display:block;margin-bottom:12px;">Bills Paid</strong>
+            {% for bill in result.bills_paid %}
+                <div class="row">
+                    <span class="label">{{ bill.account_number }}</span>
+                    <strong class="value">{{ bill.amount }}</strong>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="actions">
+            <a href="{% url 'citizens:payment-history' %}" class="btn btn-white">⭳ Download Receipt</a>
+            <a href="{% url 'citizens:dashboard' %}" class="btn btn-gold">Back to Dashboard</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

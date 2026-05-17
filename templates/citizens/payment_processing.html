@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Payment</title>
+    <style>
+        body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;color:#111}
+        .topbar{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+        .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}.owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}
+        .page{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+        .spinner{width:56px;height:56px;border:5px solid #e5d29a;border-top-color:transparent;border-radius:50%;margin:0 auto 24px;animation:spin 1s linear infinite}
+        h1{margin:0 0 12px;font-size:28px;font-weight:800}.sub{color:#737887;font-size:16px;max-width:420px;margin:0 auto}
+        @keyframes spin{to{transform:rotate(360deg)}}
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="topbar-left">
+        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+        <div class="owner-meta">
+            <strong>{{ owner_short_name }}</strong>
+            <small>{{ owner_role }}</small>
+        </div>
+    </div>
+    <div style="font-size:28px;">☰</div>
+</header>
+
+<main class="page">
+    <div>
+        <div class="spinner"></div>
+        <h1>Processing Payment...</h1>
+        <p class="sub">Please wait while we process your transaction</p>
+    </div>
+</main>
+
+<script>
+    setTimeout(function () {
+        window.location.href = "{% url 'citizens:payment-success' %}";
+    }, 1800);
+</script>
+</body>
+</html>
