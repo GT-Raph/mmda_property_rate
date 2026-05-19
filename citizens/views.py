@@ -1,3 +1,4 @@
+import io
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
@@ -28,7 +29,12 @@ from .forms import (
     CitizenPhoneForm,
     CitizenPaymentForm,
 )
-from .models import CitizenPreference
+from .models import CitizenPreference, PropertyCertificate
+
+import qrcode
+from django.conf import settings
+from django.http import Http404, HttpResponse
+from django.urls import reverse
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
@@ -1360,3 +1366,189 @@ def citizen_update_notifications(request):
         form_overrides={"notification_form": form},
     )
     return render(request, "citizens/profile.html", context)
+
+
+@login_required
+def citizen_certificates(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    context_assembly = _get_current_assembly(request)
+    owner = _citizen_owner_or_none(request)
+
+    owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
+    owner_short_name = request.user.first_name or owner_name.split()[0]
+
+    certificate_cards = []
+
+    if owner:
+        properties_qs = _owner_properties_queryset(owner, context_assembly)
+
+        for prop in properties_qs:
+            certificate = _ensure_certificate_for_property(prop)
+
+            certificate_cards.append(
+                {
+                    "certificate_uuid": certificate.certificate_uuid,
+                    "certificate_number": _certificate_number(certificate),
+                    "property_reference": prop.property_reference,
+                    "property_type": _property_type_label(prop),
+                    "property_location": _property_location(prop),
+                    "digital_address": _digital_address(prop),
+                    "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
+                    "registered_date": _property_registered_date(prop),
+                    "owner_name": owner_name,
+                    "qr_url": _certificate_qr_absolute_url(request, certificate),
+                    "download_url": reverse("citizens:certificate-download", args=[certificate.certificate_uuid]),
+                    "verify_url": _certificate_verify_absolute_url(request, certificate),
+                    "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
+                }
+            )
+
+    context = {
+        "page_title": "Property Certificates",
+        "owner_name": owner_name,
+        "owner_short_name": owner_short_name,
+        "owner_role": "Property Owner",
+        "certificate_cards": certificate_cards,
+    }
+    return render(request, "citizens/certificates.html", context)
+
+
+@login_required
+def citizen_certificate_download(request, certificate_uuid):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        raise Http404("No owner record is linked to this user.")
+
+    context_assembly = _get_current_assembly(request)
+
+    certificate_qs = PropertyCertificate.objects.select_related("property").filter(
+        property__owner=owner
+    )
+
+    if context_assembly:
+        certificate_qs = certificate_qs.filter(property__assembly=context_assembly)
+
+    certificate = get_object_or_404(certificate_qs, certificate_uuid=certificate_uuid)
+    prop = certificate.property
+
+    context = {
+        "certificate": certificate,
+        "certificate_number": _certificate_number(certificate),
+        "qr_url": _certificate_qr_absolute_url(request, certificate),
+        "verify_url": _certificate_verify_absolute_url(request, certificate),
+        "assembly_name": context_assembly.name if context_assembly else "Ghana MMDA",
+        "property_reference": prop.property_reference,
+        "property_type": _property_type_label(prop),
+        "property_location": _property_location(prop),
+        "digital_address": _digital_address(prop),
+        "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
+        "registered_date": _property_registered_date(prop),
+        "owner_name": _owner_name(owner),
+        "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
+    }
+    return render(request, "citizens/certificate_download.html", context)
+
+
+@login_required
+def citizen_certificate_qr(request, certificate_uuid):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    owner = _citizen_owner_or_none(request)
+    if not owner:
+        raise Http404("No owner record is linked to this user.")
+
+    context_assembly = _get_current_assembly(request)
+
+    certificate_qs = PropertyCertificate.objects.select_related("property").filter(
+        property__owner=owner
+    )
+
+    if context_assembly:
+        certificate_qs = certificate_qs.filter(property__assembly=context_assembly)
+
+    certificate = get_object_or_404(certificate_qs, certificate_uuid=certificate_uuid)
+
+    verify_url = _certificate_verify_absolute_url(request, certificate)
+
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(verify_url)
+    qr.make(fit=True)
+
+    image = qr.make_image(fill_color="#d8bf7c", back_color="white")
+
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return HttpResponse(buffer.getvalue(), content_type="image/png")
+
+
+def certificate_verify(request, certificate_uuid):
+    certificate = get_object_or_404(
+        PropertyCertificate.objects.select_related("property"),
+        certificate_uuid=certificate_uuid,
+        is_active=True,
+    )
+
+    prop = certificate.property
+    owner = getattr(prop, "owner", None)
+
+    context = {
+        "certificate": certificate,
+        "certificate_number": _certificate_number(certificate),
+        "property_reference": prop.property_reference,
+        "property_type": _property_type_label(prop),
+        "property_location": _property_location(prop),
+        "digital_address": _digital_address(prop),
+        "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
+        "registered_date": _property_registered_date(prop),
+        "owner_name": _owner_name(owner),
+        "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
+    }
+    return render(request, "citizens/certificate_verify.html", context)
+
+
+def _ensure_certificate_for_property(property_obj):
+    certificate, _ = PropertyCertificate.objects.get_or_create(property=property_obj)
+    return certificate
+
+
+def _certificate_verify_absolute_url(request, certificate):
+    relative_url = reverse("citizens:certificate-verify", args=[certificate.certificate_uuid])
+
+    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
+    if site_public_url:
+        return f"{site_public_url.rstrip('/')}{relative_url}"
+
+    return request.build_absolute_uri(relative_url)
+
+
+def _certificate_qr_absolute_url(request, certificate):
+    relative_url = reverse("citizens:certificate-qr", args=[certificate.certificate_uuid])
+    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
+    if site_public_url:
+        return f"{site_public_url.rstrip('/')}{relative_url}"
+    return request.build_absolute_uri(relative_url)
+
+
+def _certificate_number(certificate):
+    year = getattr(certificate.property, "created_at", None)
+    year_value = year.year if year else 2026
+    return f"{certificate.property.property_reference}-CERT-{year_value}"
+
+
+def _property_registered_date(prop):
+    created = getattr(prop, "created_at", None)
+    if created:
+        return created.strftime("%Y-%m-%d")
+    return "—"

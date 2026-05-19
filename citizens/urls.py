@@ -18,6 +18,10 @@ from .views import (
     citizen_update_address,
     citizen_update_notifications,
     citizen_change_password,
+    citizen_certificates,
+    citizen_certificate_download,
+    citizen_certificate_qr,
+    certificate_verify,
 )
 
 app_name = "citizens"
@@ -43,4 +47,10 @@ urlpatterns = [
     path("profile/update/address/", citizen_update_address, name="update-address"),
     path("profile/update/notifications/", citizen_update_notifications, name="update-notifications"),
     path("profile/change-password/", citizen_change_password, name="change-password"),
+
+    path("certificates/", citizen_certificates, name="certificates"),
+    path("certificates/<uuid:certificate_uuid>/download/", citizen_certificate_download, name="certificate-download"),
+    path("certificates/<uuid:certificate_uuid>/qr.png", citizen_certificate_qr, name="certificate-qr"),
+
+    path("verify/certificate/<uuid:certificate_uuid>/", certificate_verify, name="certificate-verify"),
 ]

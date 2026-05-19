@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CitizenPreference
+from .models import CitizenPreference, PropertyCertificate
 
 
 @admin.register(CitizenPreference)
@@ -13,3 +13,17 @@ class CitizenPreferenceAdmin(admin.ModelAdmin):
         "updated_at",
     )
     search_fields = ("user__username", "user__email")
+
+
+@admin.register(PropertyCertificate)
+class PropertyCertificateAdmin(admin.ModelAdmin):
+    list_display = (
+        "property",
+        "certificate_uuid",
+        "is_active",
+        "issued_at",
+    )
+    search_fields = (
+        "property__property_reference",
+        "certificate_uuid",
+    )

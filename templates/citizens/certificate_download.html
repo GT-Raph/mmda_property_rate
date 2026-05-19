@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ certificate_number }}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #111;
+        }
+        .page {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px 18px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 20px;
+            padding: 28px;
+        }
+        .head {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .sub {
+            color: #737887;
+            font-size: 15px;
+        }
+        .qr-row {
+            display: flex;
+            justify-content: center;
+            margin: 24px 0;
+        }
+        .qr-row img {
+            width: 180px;
+            height: 180px;
+            border: 4px solid #e5d29a;
+            border-radius: 14px;
+            padding: 10px;
+            background: #faf8f2;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 32px;
+        }
+        .label {
+            color: #737887;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .value {
+            font-size: 17px;
+            font-weight: 800;
+            line-height: 1.5;
+        }
+        .status {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid #e7e7e7;
+            color: #16a34a;
+            font-weight: 700;
+        }
+        .foot {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e7e7e7;
+            text-align: center;
+            color: #737887;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 22px;
+        }
+        .btn {
+            min-width: 180px;
+            height: 44px;
+            border-radius: 12px;
+            border: 0;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn-gold {
+            background: #e5d29a;
+            color: #111;
+        }
+        .btn-white {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            color: #111;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @media print {
+            .actions { display: none; }
+            body { background: #fff; }
+            .page { padding: 0; }
+            .card { border: 0; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <div class="head">
+                <div class="title">Official Property Certificate</div>
+                <div class="sub">{{ assembly_name }} - Property Rate System</div>
+            </div>
+
+            <div class="qr-row">
+                <img src="{{ qr_url }}" alt="Certificate QR">
+            </div>
+
+            <div class="grid">
+                <div>
+                    <div class="label">Certificate ID</div>
+                    <div class="value">{{ certificate_number }}</div>
+                </div>
+                <div>
+                    <div class="label">Verification URL</div>
+                    <div class="value" style="font-size:14px;">{{ verify_url }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Property ID</div>
+                    <div class="value">{{ property_reference }}</div>
+                </div>
+                <div>
+                    <div class="label">Type</div>
+                    <div class="value">{{ property_type }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Address</div>
+                    <div class="value">{{ property_location }}</div>
+                </div>
+                <div>
+                    <div class="label">Digital Address</div>
+                    <div class="value">{{ digital_address }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Owner</div>
+                    <div class="value">{{ owner_name }}</div>
+                </div>
+                <div>
+                    <div class="label">Rateable Value</div>
+                    <div class="value">{{ rateable_value }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Registered</div>
+                    <div class="value">{{ registered_date }}</div>
+                </div>
+                <div>
+                    <div class="label">Status</div>
+                    <div class="value">{{ status_label }}</div>
+                </div>
+            </div>
+
+            <div class="status">● {{ status_label }}</div>
+
+            <div class="foot">
+                Issued by Ghana MMDA Property Rate Management System<br>
+                Scan the QR code to verify the certificate online.
+            </div>
+
+            <div class="actions">
+                <a href="{% url 'citizens:certificates' %}" class="btn btn-white">Back</a>
+                <button class="btn btn-gold" onclick="window.print()">Download / Print</button>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

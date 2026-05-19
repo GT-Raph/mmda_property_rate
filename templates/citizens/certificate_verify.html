@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Verification</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f7f7f7;
+            color: #111;
+        }
+        .page {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 28px 18px 40px;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid #e7e7e7;
+            border-radius: 20px;
+            padding: 24px;
+        }
+        .status {
+            display: inline-block;
+            background: #dff5e7;
+            color: #16a34a;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+        h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+            font-weight: 800;
+        }
+        .sub {
+            color: #737887;
+            margin-bottom: 22px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px 28px;
+        }
+        .label {
+            color: #737887;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .value {
+            font-size: 16px;
+            font-weight: 800;
+            line-height: 1.45;
+        }
+        .foot {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid #e7e7e7;
+            color: #737887;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <div class="status">{{ status_label }}</div>
+            <h1>Property Certificate Verified</h1>
+            <div class="sub">This QR code belongs to a valid property certificate.</div>
+
+            <div class="grid">
+                <div>
+                    <div class="label">Certificate ID</div>
+                    <div class="value">{{ certificate_number }}</div>
+                </div>
+                <div>
+                    <div class="label">Property ID</div>
+                    <div class="value">{{ property_reference }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Property Type</div>
+                    <div class="value">{{ property_type }}</div>
+                </div>
+                <div>
+                    <div class="label">Owner</div>
+                    <div class="value">{{ owner_name }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Address</div>
+                    <div class="value">{{ property_location }}</div>
+                </div>
+                <div>
+                    <div class="label">Digital Address</div>
+                    <div class="value">{{ digital_address }}</div>
+                </div>
+
+                <div>
+                    <div class="label">Rateable Value</div>
+                    <div class="value">{{ rateable_value }}</div>
+                </div>
+                <div>
+                    <div class="label">Registered</div>
+                    <div class="value">{{ registered_date }}</div>
+                </div>
+            </div>
+
+            <div class="foot">
+                Certificate UUID: {{ certificate.certificate_uuid }}<br>
+                This page confirms the QR code is valid and linked to this property record.
+            </div>
+        </section>
+    </main>
+</body>
+</html>
