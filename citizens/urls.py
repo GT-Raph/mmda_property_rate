@@ -11,6 +11,13 @@ from .views import (
     citizen_payment_processing,
     citizen_payment_success,
     citizen_payment_history,
+    citizen_profile,
+    citizen_update_name,
+    citizen_update_email,
+    citizen_update_phone,
+    citizen_update_address,
+    citizen_update_notifications,
+    citizen_change_password,
 )
 
 app_name = "citizens"
@@ -28,4 +35,12 @@ urlpatterns = [
     path("payments/processing/", citizen_payment_processing, name="payment-processing"),
     path("payments/success/", citizen_payment_success, name="payment-success"),
     path("payments/history/", citizen_payment_history, name="payment-history"),
+
+    path("profile/", citizen_profile, name="profile"),
+    path("profile/update/name/", citizen_update_name, name="update-name"),
+    path("profile/update/email/", citizen_update_email, name="update-email"),
+    path("profile/update/phone/", citizen_update_phone, name="update-phone"),
+    path("profile/update/address/", citizen_update_address, name="update-address"),
+    path("profile/update/notifications/", citizen_update_notifications, name="update-notifications"),
+    path("profile/change-password/", citizen_change_password, name="change-password"),
 ]
