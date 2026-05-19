@@ -15,7 +15,20 @@ from properties.models import Property
 
 import uuid
 from django.db import transaction
-from .forms import CitizenPaymentForm
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
+from django.views.decorators.http import require_POST
+
+from .forms import (
+    CitizenAddressForm,
+    CitizenEmailForm,
+    CitizenNameForm,
+    CitizenNotificationForm,
+    CitizenPasswordForm,
+    CitizenPhoneForm,
+    CitizenPaymentForm,
+)
+from .models import CitizenPreference
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
@@ -998,3 +1011,352 @@ def citizen_payment_history(request):
         "payments_count": len(payments),
     }
     return render(request, "citizens/payment_history.html", context)
+
+
+def _citizen_only(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+    return None
+
+
+def _get_or_create_citizen_preference(user):
+    preference, _ = CitizenPreference.objects.get_or_create(user=user)
+    return preference
+
+
+def _owner_field_names(owner):
+    if not owner:
+        return set()
+    return {
+        field.name
+        for field in owner._meta.get_fields()
+        if getattr(field, "concrete", False) and not getattr(field, "auto_created", False)
+    }
+
+
+def _set_owner_value(owner, candidate_fields, value):
+    if not owner:
+        return None
+
+    field_names = _owner_field_names(owner)
+    for field_name in candidate_fields:
+        if field_name in field_names:
+            setattr(owner, field_name, value)
+            return field_name
+    return None
+
+
+def _save_owner(owner, update_fields):
+    if owner and update_fields:
+        owner.save(update_fields=update_fields)
+
+
+def _split_name(full_name):
+    full_name = (full_name or "").strip()
+    if not full_name:
+        return "", ""
+
+    parts = full_name.split()
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], " ".join(parts[1:])
+
+
+def _display_owner_email(owner, user):
+    if owner:
+        for field_name in ["email", "email_address"]:
+            if hasattr(owner, field_name):
+                value = getattr(owner, field_name, "") or ""
+                if value:
+                    return value
+    return user.email or ""
+
+
+def _display_owner_phone(owner, user):
+    profile = getattr(user, "profile", None)
+
+    if owner:
+        for field_name in ["phone_number", "phone", "mobile"]:
+            if hasattr(owner, field_name):
+                value = getattr(owner, field_name, "") or ""
+                if value:
+                    return value
+
+    if profile and profile.phone_number:
+        return profile.phone_number
+
+    return ""
+
+
+def _display_owner_address(owner, preference, properties_qs):
+    if preference and preference.mailing_address:
+        return preference.mailing_address
+
+    if owner:
+        for field_name in ["address", "residential_address", "postal_address", "location"]:
+            if hasattr(owner, field_name):
+                value = getattr(owner, field_name, "") or ""
+                if value:
+                    return value
+
+    first_property = properties_qs.first() if properties_qs is not None else None
+    if first_property:
+        return _property_location(first_property)
+
+    return ""
+
+
+def _build_citizen_profile_context(request, *, active_modal="", form_overrides=None):
+    context_assembly = _get_current_assembly(request)
+    owner = _find_owner_for_user(request.user)
+    preference = _get_or_create_citizen_preference(request.user)
+
+    properties_qs = (
+        _owner_properties_queryset(owner, context_assembly)
+        if owner
+        else Property.objects.none()
+    )
+
+    owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
+    owner_short_name = request.user.first_name or owner_name.split()[0]
+    display_email = _display_owner_email(owner, request.user)
+    display_phone = _display_owner_phone(owner, request.user)
+    display_address = _display_owner_address(owner, preference, properties_qs)
+
+    forms = {
+        "name_form": CitizenNameForm(initial={"full_name": owner_name}),
+        "email_form": CitizenEmailForm(initial={"email": display_email}),
+        "phone_form": CitizenPhoneForm(initial={"phone_number": display_phone}),
+        "address_form": CitizenAddressForm(initial={"address": display_address}),
+        "password_form": CitizenPasswordForm(request.user),
+        "notification_form": CitizenNotificationForm(instance=preference),
+    }
+
+    if form_overrides:
+        forms.update(form_overrides)
+
+    support_phone = getattr(context_assembly, "contact_phone", "") if context_assembly else ""
+    support_email = getattr(context_assembly, "contact_email", "") if context_assembly else ""
+
+    if not support_phone:
+        support_phone = "0302123456"
+
+    if not support_email:
+        support_email = "support@mmda.gov.gh"
+
+    context = {
+        "page_title": "Profile",
+        "owner_name": owner_name,
+        "owner_short_name": owner_short_name,
+        "owner_role": "Property Owner",
+        "display_email": display_email or "No email added",
+        "display_phone": display_phone or "No phone number added",
+        "display_address": display_address or "No address added",
+        "support_phone": support_phone,
+        "support_email": support_email,
+        "properties_count": properties_qs.count(),
+        "property_items": properties_qs[:2],
+        "active_modal": active_modal,
+        "has_owner_profile": bool(owner),
+        "app_version": "1.0.0",
+        **forms,
+    }
+    return context
+
+
+@login_required
+def citizen_profile(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    modal = (request.GET.get("modal") or "").strip().lower()
+    valid_modals = {"name", "email", "phone", "address", "password", "notifications"}
+    if modal not in valid_modals:
+        modal = ""
+
+    context = _build_citizen_profile_context(request, active_modal=modal)
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_update_name(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    owner = _find_owner_for_user(request.user)
+    form = CitizenNameForm(request.POST)
+
+    if form.is_valid():
+        full_name = form.cleaned_data["full_name"].strip()
+        first_name, last_name = _split_name(full_name)
+
+        request.user.first_name = first_name
+        request.user.last_name = last_name
+        request.user.save(update_fields=["first_name", "last_name"])
+
+        owner_updates = []
+        updated_field = _set_owner_value(owner, ["full_name", "name", "owner_name"], full_name)
+        if updated_field:
+            owner_updates.append(updated_field)
+        _save_owner(owner, owner_updates)
+
+        messages.success(request, "Full name updated successfully.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="name",
+        form_overrides={"name_form": form},
+    )
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_update_email(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    owner = _find_owner_for_user(request.user)
+    form = CitizenEmailForm(request.POST)
+
+    if form.is_valid():
+        email = form.cleaned_data["email"].strip().lower()
+
+        request.user.email = email
+        request.user.save(update_fields=["email"])
+
+        owner_updates = []
+        updated_field = _set_owner_value(owner, ["email", "email_address"], email)
+        if updated_field:
+            owner_updates.append(updated_field)
+        _save_owner(owner, owner_updates)
+
+        messages.success(request, "Email address updated successfully.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="email",
+        form_overrides={"email_form": form},
+    )
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_update_phone(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    owner = _find_owner_for_user(request.user)
+    profile = getattr(request.user, "profile", None)
+    form = CitizenPhoneForm(request.POST)
+
+    if form.is_valid():
+        phone_number = form.cleaned_data["phone_number"].strip()
+
+        if profile:
+            profile.phone_number = phone_number
+            profile.save(update_fields=["phone_number"])
+
+        owner_updates = []
+        updated_field = _set_owner_value(owner, ["phone_number", "phone", "mobile"], phone_number)
+        if updated_field:
+            owner_updates.append(updated_field)
+        _save_owner(owner, owner_updates)
+
+        messages.success(request, "Phone number updated successfully.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="phone",
+        form_overrides={"phone_form": form},
+    )
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_update_address(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    owner = _find_owner_for_user(request.user)
+    preference = _get_or_create_citizen_preference(request.user)
+    form = CitizenAddressForm(request.POST)
+
+    if form.is_valid():
+        address = form.cleaned_data["address"].strip()
+
+        preference.mailing_address = address
+        preference.save(update_fields=["mailing_address", "updated_at"])
+
+        owner_updates = []
+        updated_field = _set_owner_value(owner, ["address", "residential_address", "postal_address", "location"], address)
+        if updated_field:
+            owner_updates.append(updated_field)
+        _save_owner(owner, owner_updates)
+
+        messages.success(request, "Address updated successfully.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="address",
+        form_overrides={"address_form": form},
+    )
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_change_password(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    form = CitizenPasswordForm(request.user, request.POST)
+
+    if form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Password updated successfully.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="password",
+        form_overrides={"password_form": form},
+    )
+    return render(request, "citizens/profile.html", context)
+
+
+@login_required
+@require_POST
+def citizen_update_notifications(request):
+    redirect_response = _citizen_only(request)
+    if redirect_response:
+        return redirect_response
+
+    preference = _get_or_create_citizen_preference(request.user)
+    form = CitizenNotificationForm(request.POST, instance=preference)
+
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Notification preferences saved.")
+        return redirect("citizens:profile")
+
+    context = _build_citizen_profile_context(
+        request,
+        active_modal="notifications",
+        form_overrides={"notification_form": form},
+    )
+    return render(request, "citizens/profile.html", context)

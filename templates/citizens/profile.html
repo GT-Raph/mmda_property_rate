@@ -1,0 +1,1083 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e7e7e7;
+            --text: #111111;
+            --muted: #737887;
+            --black: #050505;
+            --gold: #e5d29a;
+            --gold-deep: #c89c2c;
+            --red: #ef1111;
+            --green: #16a34a;
+            --blue: #2a63f6;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .topbar {
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mini-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #2d2d2d;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+        }
+
+        .topbar-meta strong {
+            display: block;
+            font-size: 14px;
+        }
+
+        .topbar-meta small {
+            display: block;
+            font-size: 12px;
+            color: #c5c5c5;
+        }
+
+        .menu-btn {
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            z-index: 120;
+        }
+
+        .drawer-backdrop.show {
+            display: block;
+        }
+
+        .drawer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 290px;
+            max-width: 88vw;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .drawer h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .drawer-email {
+            color: #bdbdbd;
+            font-size: 14px;
+        }
+
+        .drawer-close {
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        .drawer-nav {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 18px 0;
+            margin-bottom: 18px;
+        }
+
+        .drawer-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 10px;
+            border-radius: 12px;
+            margin-bottom: 6px;
+        }
+
+        .drawer-link:hover,
+        .drawer-link.active {
+            background: #191919;
+        }
+
+        .drawer-logout {
+            margin-top: auto;
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 12px 10px;
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 0 16px 120px;
+        }
+
+        .hero {
+            margin: 0 -16px;
+            background: linear-gradient(90deg, #000 0%, #1a1a1a 100%);
+            color: #fff;
+            padding: 22px 16px;
+        }
+
+        .hero-wrap {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+
+        .hero-avatar {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: #111;
+            display: grid;
+            place-items: center;
+            font-size: 36px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .hero-name {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .hero-role {
+            font-size: 14px;
+            color: #d7d7d7;
+            margin-bottom: 6px;
+        }
+
+        .hero-email {
+            font-size: 14px;
+            color: #bfbfbf;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            margin-top: 18px;
+        }
+
+        .section-label {
+            padding: 14px 16px 8px;
+            font-size: 13px;
+            color: #8a8f9f;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .item-link,
+        .item-static {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            text-decoration: none;
+            color: inherit;
+            padding: 18px 16px;
+            border-top: 1px solid var(--line);
+        }
+
+        .item-link:first-of-type,
+        .item-static:first-of-type {
+            border-top: 0;
+        }
+
+        .item-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .item-icon {
+            width: 22px;
+            text-align: center;
+            color: var(--gold-deep);
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .item-text {
+            min-width: 0;
+        }
+
+        .item-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .item-subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .item-arrow {
+            color: #7d8391;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .property-list {
+            padding: 0 16px 18px;
+        }
+
+        .property-entry {
+            padding: 14px 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .property-entry:first-child {
+            border-top: 0;
+        }
+
+        .property-ref {
+            color: #8a8f9f;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .property-main {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .property-type {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .logout-box {
+            margin-top: 18px;
+            background: #fff;
+            border: 1px solid #ffc2c2;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .logout-btn {
+            width: 100%;
+            height: 52px;
+            border: 0;
+            background: #fff;
+            color: var(--red);
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .footer {
+            text-align: center;
+            color: #8a8f9f;
+            font-size: 13px;
+            padding: 24px 0 0;
+            line-height: 1.6;
+        }
+
+        .message-stack {
+            margin-top: 18px;
+        }
+
+        .message {
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .message.success {
+            background: #e7f7ec;
+            color: #17874b;
+            border: 1px solid #b6e4c5;
+        }
+
+        .message.error {
+            background: #fff0f0;
+            color: #b91c1c;
+            border: 1px solid #ffc2c2;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            z-index: 100;
+        }
+
+        .bottom-nav a {
+            padding: 12px 8px 14px;
+            text-align: center;
+            text-decoration: none;
+            color: #707784;
+            font-size: 12px;
+        }
+
+        .bottom-nav a.active {
+            color: var(--gold-deep);
+            font-weight: 700;
+        }
+
+        .nav-ico {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 200;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 560px;
+            background: #fff;
+            border-radius: 22px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 20px 16px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .modal-close {
+            font-size: 26px;
+            color: #111;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 18px 16px 20px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .modal-input {
+            width: 100%;
+            height: 46px;
+            border: 1px solid #d9d9d9;
+            border-radius: 10px;
+            padding: 0 14px;
+            font-size: 15px;
+            outline: none;
+        }
+
+        textarea.modal-input {
+            min-height: 110px;
+            padding-top: 12px;
+            resize: vertical;
+        }
+
+        .help-box {
+            margin-top: 16px;
+            background: #f8f3de;
+            border: 1px solid #eccb62;
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: #b45309;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .switch-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .switch-row {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .switch-text strong {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .switch-text span {
+            display: block;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .switch {
+            position: relative;
+            width: 46px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .switch-input {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 46px;
+            height: 28px;
+            background: #d8dbe2;
+            border-radius: 999px;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            transition: background .2s ease;
+        }
+
+        .switch-input::before {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+        }
+
+        .switch-input:checked {
+            background: #caa53d;
+        }
+
+        .switch-input:checked::before {
+            transform: translateX(18px);
+        }
+
+        .field-error {
+            color: #b91c1c;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        .form-errors {
+            background: #fff0f0;
+            border: 1px solid #ffc2c2;
+            color: #b91c1c;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-cancel,
+        .btn-save {
+            height: 48px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .btn-cancel {
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            color: #111;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-save {
+            background: var(--gold);
+            border: 0;
+            color: #111;
+            cursor: pointer;
+        }
+
+        @media (max-width: 640px) {
+            .hero-wrap {
+                align-items: flex-start;
+            }
+
+            .hero-avatar {
+                width: 72px;
+                height: 72px;
+                font-size: 30px;
+            }
+
+            .modal-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="mini-avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="topbar-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
+            </div>
+        </div>
+
+        <button type="button" class="menu-btn" id="menuOpen">☰</button>
+    </header>
+
+    <div class="drawer-backdrop" id="drawerBackdrop">
+        <aside class="drawer">
+            <div class="drawer-top">
+                <div>
+                    <h3>Menu</h3>
+                    <div class="drawer-email">{{ display_email }}</div>
+                </div>
+                <button type="button" class="drawer-close" id="menuClose">×</button>
+            </div>
+
+            <nav class="drawer-nav">
+                <a href="{% url 'citizens:dashboard' %}" class="drawer-link">
+                    <span>⌘</span><span>Dashboard</span>
+                </a>
+                <a href="{% url 'citizens:properties' %}" class="drawer-link">
+                    <span>🏢</span><span>Properties</span>
+                </a>
+                <a href="{% url 'citizens:bills' %}" class="drawer-link">
+                    <span>💳</span><span>Bills</span>
+                </a>
+                <a href="{% url 'citizens:properties' %}" class="drawer-link">
+                    <span>⌘</span><span>Certificates</span>
+                </a>
+                <a href="{% url 'citizens:profile' %}" class="drawer-link active">
+                    <span>⚙</span><span>Profile</span>
+                </a>
+            </nav>
+
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="drawer-logout">
+                    <span>↪</span><span>Logout</span>
+                </button>
+            </form>
+        </aside>
+    </div>
+
+    <main class="page">
+        <section class="hero">
+            <div class="hero-wrap">
+                <div class="hero-avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+
+                <div>
+                    <div class="hero-name">{{ owner_name }}</div>
+                    <div class="hero-role">{{ owner_role }}</div>
+                    <div class="hero-email">{{ display_email }}</div>
+                </div>
+            </div>
+        </section>
+
+        {% if messages %}
+            <div class="message-stack">
+                {% for message in messages %}
+                    <div class="message {% if message.tags %}{{ message.tags }}{% else %}success{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="card">
+            <div class="section-label">Account Information</div>
+
+            <a href="{% url 'citizens:profile' %}?modal=name" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">👤</div>
+                    <div class="item-text">
+                        <div class="item-title">Full Name</div>
+                        <div class="item-subtitle">{{ owner_name }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <a href="{% url 'citizens:profile' %}?modal=email" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">✉</div>
+                    <div class="item-text">
+                        <div class="item-title">Email</div>
+                        <div class="item-subtitle">{{ display_email }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <a href="{% url 'citizens:profile' %}?modal=phone" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">📞</div>
+                    <div class="item-text">
+                        <div class="item-title">Phone Number</div>
+                        <div class="item-subtitle">{{ display_phone }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <a href="{% url 'citizens:profile' %}?modal=address" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">⌖</div>
+                    <div class="item-text">
+                        <div class="item-title">Address</div>
+                        <div class="item-subtitle">{{ display_address }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+        </section>
+
+        <section class="card">
+            <div class="section-label">My Properties</div>
+
+            <a href="{% url 'citizens:properties' %}" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">🏢</div>
+                    <div class="item-text">
+                        <div class="item-title">Registered Properties</div>
+                        <div class="item-subtitle">{{ properties_count }} propert{{ properties_count|pluralize:"y,ies" }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <div class="property-list">
+                {% for property in property_items %}
+                    <div class="property-entry">
+                        <div class="property-ref">{{ property.property_reference }}</div>
+                        <div class="property-main">{{ property.house_number }} {{ property.street_name }}</div>
+                        <div class="property-type">{{ property.get_property_use_display|default:property.property_use|title }}</div>
+                    </div>
+                {% empty %}
+                    <div class="property-entry">
+                        <div class="property-main">No properties linked yet</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="section-label">Security &amp; Privacy</div>
+
+            <a href="{% url 'citizens:profile' %}?modal=password" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">🔒</div>
+                    <div class="item-text">
+                        <div class="item-title">Change Password</div>
+                        <div class="item-subtitle">Update your password</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <a href="{% url 'citizens:profile' %}?modal=notifications" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">🔔</div>
+                    <div class="item-text">
+                        <div class="item-title">Notifications</div>
+                        <div class="item-subtitle">Manage notification preferences</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+        </section>
+
+        <section class="card">
+            <div class="section-label">Help &amp; Support</div>
+
+            <a href="tel:{{ support_phone }}" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">📞</div>
+                    <div class="item-text">
+                        <div class="item-title">Contact MMDA</div>
+                        <div class="item-subtitle">{{ support_phone }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+
+            <a href="mailto:{{ support_email }}" class="item-link">
+                <div class="item-left">
+                    <div class="item-icon">✉</div>
+                    <div class="item-text">
+                        <div class="item-title">Email Support</div>
+                        <div class="item-subtitle">{{ support_email }}</div>
+                    </div>
+                </div>
+                <div class="item-arrow">›</div>
+            </a>
+        </section>
+
+        <section class="logout-box">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">↪ Logout</button>
+            </form>
+        </section>
+
+        <div class="footer">
+            PRMS Version {{ app_version }}<br>
+            © 2026 Ghana MMDA
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{% url 'citizens:dashboard' %}">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico">🏢</span>
+            Properties
+        </a>
+        <a href="{% url 'citizens:bills' %}">
+            <span class="nav-ico">💳</span>
+            Bills
+        </a>
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico">⌘</span>
+            Certificates
+        </a>
+        <a href="{% url 'citizens:profile' %}" class="active">
+            <span class="nav-ico">⚙</span>
+            Profile
+        </a>
+    </nav>
+
+    {% if active_modal %}
+        <div class="modal-backdrop">
+            <div class="modal-card">
+                {% if active_modal == "name" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Edit Full Name</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:update-name' %}">
+                            {% csrf_token %}
+                            {% if name_form.non_field_errors %}
+                                <div class="form-errors">{{ name_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <label class="modal-label" for="{{ name_form.full_name.id_for_label }}">Full Name</label>
+                            {{ name_form.full_name }}
+                            {% for error in name_form.full_name.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif active_modal == "email" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Edit Email Address</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:update-email' %}">
+                            {% csrf_token %}
+                            {% if email_form.non_field_errors %}
+                                <div class="form-errors">{{ email_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <label class="modal-label" for="{{ email_form.email.id_for_label }}">Email Address</label>
+                            {{ email_form.email }}
+                            {% for error in email_form.email.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif active_modal == "phone" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Edit Phone Number</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:update-phone' %}">
+                            {% csrf_token %}
+                            {% if phone_form.non_field_errors %}
+                                <div class="form-errors">{{ phone_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <label class="modal-label" for="{{ phone_form.phone_number.id_for_label }}">Phone Number</label>
+                            {{ phone_form.phone_number }}
+                            {% for error in phone_form.phone_number.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif active_modal == "address" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Edit Address</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:update-address' %}">
+                            {% csrf_token %}
+                            {% if address_form.non_field_errors %}
+                                <div class="form-errors">{{ address_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <label class="modal-label" for="{{ address_form.address.id_for_label }}">Address</label>
+                            {{ address_form.address }}
+                            {% for error in address_form.address.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif active_modal == "password" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Change Password</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:change-password' %}">
+                            {% csrf_token %}
+                            {% if password_form.non_field_errors %}
+                                <div class="form-errors">{{ password_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <label class="modal-label" for="{{ password_form.old_password.id_for_label }}">Current Password</label>
+                            {{ password_form.old_password }}
+                            {% for error in password_form.old_password.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <label class="modal-label" for="{{ password_form.new_password1.id_for_label }}" style="margin-top:14px;">New Password</label>
+                            {{ password_form.new_password1 }}
+                            {% for error in password_form.new_password1.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <label class="modal-label" for="{{ password_form.new_password2.id_for_label }}" style="margin-top:14px;">Confirm Password</label>
+                            {{ password_form.new_password2 }}
+                            {% for error in password_form.new_password2.errors %}
+                                <div class="field-error">{{ error }}</div>
+                            {% endfor %}
+
+                            <div class="help-box">
+                                Password requirements:<br>
+                                • At least 8 characters long<br>
+                                • Mix of uppercase and lowercase letters<br>
+                                • Include numbers and special characters
+                            </div>
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                {% elif active_modal == "notifications" %}
+                    <div class="modal-header">
+                        <div class="modal-title">Notifications</div>
+                        <a href="{% url 'citizens:profile' %}" class="modal-close">×</a>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="{% url 'citizens:update-notifications' %}">
+                            {% csrf_token %}
+                            {% if notification_form.non_field_errors %}
+                                <div class="form-errors">{{ notification_form.non_field_errors }}</div>
+                            {% endif %}
+
+                            <div class="switch-list">
+                                <div class="switch-row">
+                                    <div class="switch-text">
+                                        <strong>Bill Reminders</strong>
+                                        <span>Get notified when bills are due</span>
+                                    </div>
+                                    <label class="switch">
+                                        {{ notification_form.bill_reminders }}
+                                    </label>
+                                </div>
+
+                                <div class="switch-row">
+                                    <div class="switch-text">
+                                        <strong>Payment Confirmations</strong>
+                                        <span>Receive payment confirmations</span>
+                                    </div>
+                                    <label class="switch">
+                                        {{ notification_form.payment_confirmations }}
+                                    </label>
+                                </div>
+
+                                <div class="switch-row">
+                                    <div class="switch-text">
+                                        <strong>Property Updates</strong>
+                                        <span>Updates about your properties</span>
+                                    </div>
+                                    <label class="switch">
+                                        {{ notification_form.property_updates }}
+                                    </label>
+                                </div>
+
+                                <div class="switch-row">
+                                    <div class="switch-text">
+                                        <strong>Promotions &amp; Offers</strong>
+                                        <span>Special offers and promotions</span>
+                                    </div>
+                                    <label class="switch">
+                                        {{ notification_form.promotions_offers }}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="modal-actions">
+                                <a href="{% url 'citizens:profile' %}" class="btn-cancel">Cancel</a>
+                                <button type="submit" class="btn-save">Save Preferences</button>
+                            </div>
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <script>
+        const menuOpen = document.getElementById("menuOpen");
+        const menuClose = document.getElementById("menuClose");
+        const drawerBackdrop = document.getElementById("drawerBackdrop");
+
+        if (menuOpen && drawerBackdrop) {
+            menuOpen.addEventListener("click", function () {
+                drawerBackdrop.classList.add("show");
+            });
+        }
+
+        if (menuClose && drawerBackdrop) {
+            menuClose.addEventListener("click", function () {
+                drawerBackdrop.classList.remove("show");
+            });
+        }
+
+        if (drawerBackdrop) {
+            drawerBackdrop.addEventListener("click", function (event) {
+                if (event.target === drawerBackdrop) {
+                    drawerBackdrop.classList.remove("show");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
