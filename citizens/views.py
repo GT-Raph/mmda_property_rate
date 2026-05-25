@@ -423,6 +423,7 @@ def citizen_dashboard(request):
                 "receipts": _safe_reverse("citizens:payment-history"),
             },
             "section_links": {
+                "dashboard": _safe_reverse("citizens:dashboard"),
                 "properties": _safe_reverse("citizens:properties"),
                 "bills": _safe_reverse("citizens:bills"),
                 "payments": _safe_reverse("citizens:payment-history"),

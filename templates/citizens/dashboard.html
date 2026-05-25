@@ -215,16 +215,23 @@
             width:46px;
             height:46px;
             border-radius:12px;
-            display:grid;
-            place-items:center;
-            font-size:20px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             margin-bottom:12px;
         }
 
-        .soft-green{background:#dcfce7;color:var(--green)}
-        .soft-red{background:#fee2e2;color:var(--red)}
-        .soft-blue{background:#dbeafe;color:var(--blue)}
-        .soft-purple{background:#f3e8ff;color:var(--purple)}
+        .stat-icon img{
+            width:22px;
+            height:22px;
+            object-fit:contain;
+            display:block;
+        }
+
+        .soft-green{background:#dcfce7;}
+        .soft-red{background:#fee2e2;}
+        .soft-blue{background:#dbeafe;}
+        .soft-purple{background:#f3e8ff;}
 
         .stat-label{
             color:var(--muted);
@@ -279,8 +286,23 @@
         }
 
         .quick-btn .ico{
-            font-size:18px;
+            width:20px;
+            height:20px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             line-height:1;
+        }
+
+        .quick-btn .ico img{
+            width:18px;
+            height:18px;
+            object-fit:contain;
+            display:block;
+        }
+
+        .quick-btn .ico-white img{
+            filter:invert(1);
         }
 
         .quick-btn .txt{
@@ -571,9 +593,30 @@
             display:block;
             font-size:18px;
             margin-bottom:6px;
+            line-height:1;
         }
 
-        @media (min-width: 700px){
+        .nav-img{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            width:20px;
+            height:20px;
+            margin:0 auto 6px;
+        }
+
+        .nav-img img{
+            width:18px;
+            height:18px;
+            object-fit:contain;
+            display:block;
+        }
+
+        .bottom-nav a.active .nav-img img{
+            filter:sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
+        }
+
+        @media (min-width:700px){
             .page{
                 padding:22px 22px 118px;
             }
@@ -604,7 +647,7 @@
             }
         }
 
-        @media (min-width: 980px){
+        @media (min-width:980px){
             .section{
                 padding:22px;
             }
@@ -629,10 +672,10 @@
             </div>
         </div>
 
-        <button type="button" class="menu-btn" id="menuOpen">☰</button>
+        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
     </header>
 
-    <div class="drawer-backdrop" id="drawerBackdrop">
+    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
         <aside class="drawer">
             <div class="drawer-top">
                 <div>
@@ -643,7 +686,7 @@
             </div>
 
             <nav class="drawer-nav">
-                <a href="{{ section_links.dashboard|default:quick_links.pay_bills }}" class="drawer-link active">
+                <a href="{{ section_links.dashboard }}" class="drawer-link active">
                     <span>⌘</span><span>Dashboard</span>
                 </a>
                 <a href="{{ section_links.properties }}" class="drawer-link">
@@ -667,7 +710,7 @@
                 </button>
             </form>
         </aside>
-    </div>
+    </div> -->
 
     <main class="page">
         <h1 class="page-title">Welcome back, {{ owner_name }}</h1>
@@ -675,25 +718,33 @@
 
         <section class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon soft-green">🏢</div>
+                <div class="stat-icon soft-green">
+                    <img src="{% static 'images/property.png' %}" alt="Properties">
+                </div>
                 <div class="stat-label">Properties</div>
                 <div class="stat-value">{{ stats.properties_count }}</div>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon soft-red">❗</div>
+                <div class="stat-icon soft-red">
+                    <img src="{% static 'images/mark.png' %}" alt="Outstanding">
+                </div>
                 <div class="stat-label">Outstanding</div>
                 <div class="stat-value red-text">{{ stats.outstanding_total }}</div>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon soft-blue">💳</div>
+                <div class="stat-icon soft-blue">
+                    <img src="{% static 'images/paid.png' %}" alt="Paid">
+                </div>
                 <div class="stat-label">Paid ({{ current_year }})</div>
                 <div class="stat-value green-text">{{ stats.paid_total }}</div>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon soft-purple">📄</div>
+                <div class="stat-icon soft-purple">
+                    <img src="{% static 'images/bill.png' %}" alt="Total Bills">
+                </div>
                 <div class="stat-label">Total Bills</div>
                 <div class="stat-value">{{ stats.bills_count }}</div>
             </div>
@@ -703,17 +754,22 @@
             <h3>Quick Actions</h3>
             <div class="quick-grid">
                 <a href="{{ quick_links.pay_bills }}" class="quick-btn">
-                    <span class="ico">▭</span>
+                    <span class="ico ico-white">
+                        <img src="{% static 'images/money.png' %}" alt="Pay Bills">
+                    </span>
                     <span class="txt">Pay Bills</span>
                 </a>
+
                 <a href="{{ quick_links.certificates }}" class="quick-btn">
                     <span class="ico">⌘</span>
                     <span class="txt">Certificates</span>
                 </a>
+
                 <a href="{{ quick_links.dispute }}" class="quick-btn">
                     <span class="ico">!</span>
                     <span class="txt">Dispute</span>
                 </a>
+
                 <a href="{{ quick_links.receipts }}" class="quick-btn">
                     <span class="ico">⭳</span>
                     <span class="txt">Receipts</span>
@@ -818,22 +874,30 @@
     </main>
 
     <nav class="bottom-nav">
-        <a href="{% url 'citizens:dashboard' %}" class="active">
+        <a href="{{ section_links.dashboard }}" class="active">
             <span class="nav-ico">⌘</span>
             Dashboard
         </a>
+
         <a href="{{ section_links.properties }}">
-            <span class="nav-ico">🏢</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
             Properties
         </a>
+
         <a href="{{ section_links.bills }}">
-            <span class="nav-ico">💳</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
             Bills
         </a>
+
         <a href="{{ section_links.certificates }}">
             <span class="nav-ico">⌘</span>
             Certificates
         </a>
+
         <a href="{{ section_links.profile }}">
             <span class="nav-ico">⚙</span>
             Profile
