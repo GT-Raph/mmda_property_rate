@@ -508,17 +508,15 @@ def citizen_dashboard(request):
         "owner_name": _owner_name(owner),
         "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
         "owner_role": "Property Owner",
-        "context_assembly": context_assembly,
-        "has_owner_profile": True,
         "stats": {
             "properties_count": properties_qs.count(),
             "outstanding_total": _money(outstanding_total),
             "paid_total": _money(paid_total),
             "bills_count": bills_qs.count(),
         },
-        "properties": properties_data,
-        "bills": bills_data,
-        "payments": payments_data,
+        "properties": properties_data[:2],
+        "bills": bills_data[:2],
+        "payments": payments_data[:2],
         "current_year": current_year,
     }
     return render(request, "citizens/dashboard.html", context)
