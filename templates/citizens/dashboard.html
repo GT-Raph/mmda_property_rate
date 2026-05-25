@@ -21,7 +21,7 @@
             --red-soft:#fff0f0;
             --blue:#2a63f6;
             --blue-soft:#dbeafe;
-            --purple:#c084fc;
+            --purple:#9333ea;
             --purple-soft:#f3e8ff;
         }
 
@@ -177,16 +177,17 @@
         }
 
         .page{
-            max-width:760px;
+            max-width:1280px;
             margin:0 auto;
-            padding:22px 12px 110px;
+            padding:18px 14px 110px;
         }
 
-        .page h1{
+        .page-title{
             margin:0 0 8px;
             font-size:28px;
             font-weight:800;
             line-height:1.2;
+            max-width:760px;
         }
 
         .page-subtitle{
@@ -198,7 +199,7 @@
         .stats-grid{
             display:grid;
             grid-template-columns:repeat(2, minmax(0, 1fr));
-            gap:10px;
+            gap:12px;
             margin-bottom:16px;
         }
 
@@ -207,7 +208,7 @@
             border:1px solid var(--line);
             border-radius:16px;
             padding:14px;
-            min-height:115px;
+            min-height:114px;
         }
 
         .stat-icon{
@@ -223,7 +224,7 @@
         .soft-green{background:#dcfce7;color:var(--green)}
         .soft-red{background:#fee2e2;color:var(--red)}
         .soft-blue{background:#dbeafe;color:var(--blue)}
-        .soft-purple{background:#f3e8ff;color:#9333ea}
+        .soft-purple{background:#f3e8ff;color:var(--purple)}
 
         .stat-label{
             color:var(--muted);
@@ -232,7 +233,7 @@
         }
 
         .stat-value{
-            font-size:20px;
+            font-size:19px;
             font-weight:800;
             line-height:1.2;
         }
@@ -240,12 +241,59 @@
         .green-text{color:var(--green)}
         .red-text{color:var(--red)}
 
+        .quick-actions{
+            background:linear-gradient(90deg, #000 0%, #191919 100%);
+            border-radius:18px;
+            padding:14px;
+            margin-bottom:16px;
+            color:#fff;
+        }
+
+        .quick-actions h3{
+            margin:0 0 12px;
+            font-size:17px;
+            font-weight:800;
+        }
+
+        .quick-grid{
+            display:grid;
+            grid-template-columns:repeat(2, minmax(0,1fr));
+            gap:10px;
+        }
+
+        .quick-btn{
+            min-height:56px;
+            border-radius:12px;
+            background:linear-gradient(90deg, #111 0%, #2a2a2a 100%);
+            color:#fff;
+            text-decoration:none;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            gap:6px;
+            font-size:14px;
+            border:1px solid rgba(255,255,255,0.04);
+            text-align:center;
+            padding:10px;
+        }
+
+        .quick-btn .ico{
+            font-size:18px;
+            line-height:1;
+        }
+
+        .quick-btn .txt{
+            font-size:14px;
+            line-height:1.2;
+        }
+
         .section{
             background:#fff;
             border:1px solid var(--line);
             border-radius:18px;
             padding:14px;
-            margin-bottom:14px;
+            margin-bottom:16px;
         }
 
         .section-header{
@@ -270,52 +318,15 @@
             white-space:nowrap;
         }
 
-        .quick-actions{
-            background:linear-gradient(90deg, #000 0%, #191919 100%);
-            border-radius:18px;
-            padding:14px;
-            margin-bottom:14px;
-            color:#fff;
-        }
-
-        .quick-actions h3{
-            margin:0 0 12px;
-            font-size:16px;
-            font-weight:800;
-        }
-
-        .quick-grid{
-            display:grid;
-            grid-template-columns:repeat(2, minmax(0,1fr));
-            gap:8px;
-        }
-
-        .quick-btn{
-            min-height:56px;
-            border-radius:12px;
-            background:linear-gradient(90deg, #111 0%, #2a2a2a 100%);
-            color:#fff;
-            text-decoration:none;
-            display:flex;
-            flex-direction:column;
-            align-items:center;
-            justify-content:center;
-            gap:6px;
-            font-size:14px;
-            border:1px solid rgba(255,255,255,0.04);
-            text-align:center;
-            padding:10px;
-        }
-
-        .quick-btn span:first-child{
-            font-size:18px;
-        }
-
         .property-mini{
             border:1px solid #dddddd;
             border-radius:14px;
             padding:14px;
             margin-bottom:12px;
+        }
+
+        .property-mini:last-child{
+            margin-bottom:0;
         }
 
         .property-top{
@@ -335,7 +346,7 @@
         .property-location{
             color:var(--muted);
             font-size:14px;
-            line-height:1.45;
+            line-height:1.5;
         }
 
         .type-pill{
@@ -400,6 +411,10 @@
             margin-bottom:12px;
         }
 
+        .bill-item:last-child{
+            margin-bottom:0;
+        }
+
         .bill-item.paid{
             background:#ecfdf3;
             border-color:#a7f3c0;
@@ -415,7 +430,6 @@
             align-items:flex-start;
             justify-content:space-between;
             gap:12px;
-            margin-bottom:10px;
         }
 
         .bill-number{
@@ -472,6 +486,7 @@
             font-size:14px;
             font-weight:700;
             padding:0 14px;
+            margin-top:14px;
         }
 
         .payment-row{
@@ -506,6 +521,7 @@
             color:var(--green);
             text-align:right;
             margin-bottom:4px;
+            white-space:nowrap;
         }
 
         .download-link{
@@ -513,6 +529,7 @@
             text-decoration:none;
             font-size:13px;
             font-weight:700;
+            white-space:nowrap;
         }
 
         .empty-box{
@@ -556,14 +573,48 @@
             margin-bottom:6px;
         }
 
-        @media (min-width: 768px){
+        @media (min-width: 700px){
             .page{
-                padding-left:18px;
-                padding-right:18px;
+                padding:22px 22px 118px;
+            }
+
+            .page-title{
+                font-size:34px;
+            }
+
+            .stats-grid{
+                grid-template-columns:repeat(4, minmax(0, 1fr));
+                gap:14px;
             }
 
             .quick-grid{
                 grid-template-columns:repeat(4, minmax(0,1fr));
+            }
+
+            .quick-btn{
+                min-height:54px;
+                flex-direction:row;
+                justify-content:flex-start;
+                padding:0 16px;
+                gap:12px;
+            }
+
+            .quick-btn .txt{
+                font-size:15px;
+            }
+        }
+
+        @media (min-width: 980px){
+            .section{
+                padding:22px;
+            }
+
+            .property-mini{
+                padding:16px;
+            }
+
+            .bill-item{
+                padding:16px;
             }
         }
     </style>
@@ -586,31 +637,25 @@
             <div class="drawer-top">
                 <div>
                     <h3>Menu</h3>
-                    <div class="drawer-email">
-                        {% if request.user.email %}
-                            {{ request.user.email }}
-                        {% else %}
-                            No email added
-                        {% endif %}
-                    </div>
+                    <div class="drawer-email">{{ display_email }}</div>
                 </div>
                 <button type="button" class="drawer-close" id="menuClose">×</button>
             </div>
 
             <nav class="drawer-nav">
-                <a href="{% url 'citizens:dashboard' %}" class="drawer-link active">
+                <a href="{{ section_links.dashboard|default:quick_links.pay_bills }}" class="drawer-link active">
                     <span>⌘</span><span>Dashboard</span>
                 </a>
-                <a href="{% url 'citizens:properties' %}" class="drawer-link">
+                <a href="{{ section_links.properties }}" class="drawer-link">
                     <span>🏢</span><span>Properties</span>
                 </a>
-                <a href="{% url 'citizens:bills' %}" class="drawer-link">
+                <a href="{{ section_links.bills }}" class="drawer-link">
                     <span>💳</span><span>Bills</span>
                 </a>
-                <a href="{% url 'citizens:certificates' %}" class="drawer-link">
+                <a href="{{ section_links.certificates }}" class="drawer-link">
                     <span>⌘</span><span>Certificates</span>
                 </a>
-                <a href="{% url 'citizens:profile' %}" class="drawer-link">
+                <a href="{{ section_links.profile }}" class="drawer-link">
                     <span>⚙</span><span>Profile</span>
                 </a>
             </nav>
@@ -625,7 +670,7 @@
     </div>
 
     <main class="page">
-        <h1>Welcome back, {{ owner_name }}</h1>
+        <h1 class="page-title">Welcome back, {{ owner_name }}</h1>
         <p class="page-subtitle">Manage your properties and bills</p>
 
         <section class="stats-grid">
@@ -657,21 +702,21 @@
         <section class="quick-actions">
             <h3>Quick Actions</h3>
             <div class="quick-grid">
-                <a href="{% url 'citizens:bills' %}" class="quick-btn">
-                    <span>▭</span>
-                    <span>Pay Bills</span>
+                <a href="{{ quick_links.pay_bills }}" class="quick-btn">
+                    <span class="ico">▭</span>
+                    <span class="txt">Pay Bills</span>
                 </a>
-                <a href="{% url 'citizens:certificates' %}" class="quick-btn">
-                    <span>⌘</span>
-                    <span>Certificates</span>
+                <a href="{{ quick_links.certificates }}" class="quick-btn">
+                    <span class="ico">⌘</span>
+                    <span class="txt">Certificates</span>
                 </a>
-                <a href="{% url 'citizens:profile' %}" class="quick-btn">
-                    <span>!</span>
-                    <span>Dispute</span>
+                <a href="{{ quick_links.dispute }}" class="quick-btn">
+                    <span class="ico">!</span>
+                    <span class="txt">Dispute</span>
                 </a>
-                <a href="{% url 'citizens:payment-history' %}" class="quick-btn">
-                    <span>⭳</span>
-                    <span>Receipts</span>
+                <a href="{{ quick_links.receipts }}" class="quick-btn">
+                    <span class="ico">⭳</span>
+                    <span class="txt">Receipts</span>
                 </a>
             </div>
         </section>
@@ -690,7 +735,7 @@
                                 <div class="property-location">{{ property.location }}</div>
                             </div>
 
-                            <div class="type-pill {% if 'commercial' in property.type_label|lower %}type-commercial{% elif 'mixed' in property.type_label|lower %}type-mixed{% else %}type-residential{% endif %}">
+                            <div class="type-pill {{ property.type_class }}">
                                 {{ property.type_label }}
                             </div>
                         </div>
@@ -703,7 +748,7 @@
                                 <div class="mini-value">{{ property.annual_rate }}</div>
                             </div>
 
-                            <a href="{% url 'citizens:properties' %}" class="details-link">View Details →</a>
+                            <a href="{{ property.details_url }}" class="details-link">View Details →</a>
                         </div>
                     </div>
                 {% endfor %}
@@ -715,12 +760,12 @@
         <section class="section" id="bills">
             <div class="section-header">
                 <h2 class="section-title">Bills &amp; Payments</h2>
-                <a href="{% url 'citizens:bills' %}" class="section-link">View All →</a>
+                <a href="{{ section_links.bills }}" class="section-link">View All →</a>
             </div>
 
             {% if bills %}
                 {% for bill in bills %}
-                    <div class="bill-item {% if bill.status_label == 'Paid' %}paid{% else %}unpaid{% endif %}">
+                    <div class="bill-item {{ bill.card_class }}">
                         <div class="bill-row-top">
                             <div>
                                 <div class="bill-number">{{ bill.bill_number }}</div>
@@ -730,14 +775,12 @@
                             </div>
 
                             <div style="text-align:right;">
-                                <div class="status-pill {% if bill.status_label == 'Paid' %}status-paid{% else %}status-unpaid{% endif %}">
+                                <div class="status-pill {{ bill.status_class }}">
                                     {{ bill.status_label }}
                                 </div>
 
-                                {% if bill.action_label %}
-                                    <div style="margin-top:16px;">
-                                        <a href="{% url 'citizens:bills' %}" class="bill-action">{{ bill.action_label }}</a>
-                                    </div>
+                                {% if bill.pay_url %}
+                                    <a href="{{ bill.pay_url }}" class="bill-action">Pay Now</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -751,7 +794,7 @@
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Recent Payments</h2>
-                <a href="{% url 'citizens:payment-history' %}" class="section-link">View All →</a>
+                <a href="{{ section_links.payments }}" class="section-link">View All →</a>
             </div>
 
             {% if payments %}
@@ -764,7 +807,7 @@
 
                         <div>
                             <div class="payment-amount">{{ payment.amount }}</div>
-                            <a href="{% url 'citizens:payment-history' %}" class="download-link">Download</a>
+                            <a href="{{ payment.receipt_url }}" class="download-link">Download</a>
                         </div>
                     </div>
                 {% endfor %}
@@ -779,19 +822,19 @@
             <span class="nav-ico">⌘</span>
             Dashboard
         </a>
-        <a href="{% url 'citizens:properties' %}">
+        <a href="{{ section_links.properties }}">
             <span class="nav-ico">🏢</span>
             Properties
         </a>
-        <a href="{% url 'citizens:bills' %}">
+        <a href="{{ section_links.bills }}">
             <span class="nav-ico">💳</span>
             Bills
         </a>
-        <a href="{% url 'citizens:certificates' %}">
+        <a href="{{ section_links.certificates }}">
             <span class="nav-ico">⌘</span>
             Certificates
         </a>
-        <a href="{% url 'citizens:profile' %}">
+        <a href="{{ section_links.profile }}">
             <span class="nav-ico">⚙</span>
             Profile
         </a>

@@ -34,7 +34,7 @@ from .models import CitizenPreference, PropertyCertificate
 import qrcode
 from django.conf import settings
 from django.http import Http404, HttpResponse
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
@@ -385,6 +385,13 @@ def _citizen_owner_or_none(request):
     return _find_owner_for_user(request.user)
 
 
+def _safe_reverse(name, fallback="#", *args, **kwargs):
+    try:
+        return reverse(name, args=args, kwargs=kwargs)
+    except NoReverseMatch:
+        return fallback
+
+
 @login_required
 def citizen_dashboard(request):
     if get_user_role(request.user) != "citizen":
@@ -393,32 +400,49 @@ def citizen_dashboard(request):
     context_assembly = _get_current_assembly(request)
     owner = _find_owner_for_user(request.user)
 
+    owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
+    owner_short_name = request.user.first_name or owner_name.split()[0]
+
     if not owner:
-        return render(
-            request,
-            "citizens/dashboard.html",
-            {
-                "page_title": "Owner Dashboard",
-                "owner_name": request.user.get_full_name() or request.user.username,
-                "owner_short_name": request.user.first_name or request.user.username,
-                "owner_role": "Property Owner",
-                "context_assembly": context_assembly,
-                "stats": {
-                    "properties_count": 0,
-                    "outstanding_total": "GH₵ 0",
-                    "paid_total": "GH₵ 0",
-                    "bills_count": 0,
-                },
-                "properties": [],
-                "bills": [],
-                "payments": [],
-                "has_owner_profile": False,
-                "current_year": timezone.localdate().year,
+        context = {
+            "page_title": "Owner Dashboard",
+            "owner_name": owner_name,
+            "owner_short_name": owner_short_name,
+            "owner_role": "Property Owner",
+            "current_year": timezone.localdate().year,
+            "stats": {
+                "properties_count": 0,
+                "outstanding_total": "GH₵ 0",
+                "paid_total": "GH₵ 0",
+                "bills_count": 0,
             },
-        )
+            "quick_links": {
+                "pay_bills": _safe_reverse("citizens:bills"),
+                "certificates": _safe_reverse("citizens:certificates"),
+                "dispute": _safe_reverse("citizens:profile"),
+                "receipts": _safe_reverse("citizens:payment-history"),
+            },
+            "section_links": {
+                "properties": _safe_reverse("citizens:properties"),
+                "bills": _safe_reverse("citizens:bills"),
+                "payments": _safe_reverse("citizens:payment-history"),
+                "profile": _safe_reverse("citizens:profile"),
+                "certificates": _safe_reverse("citizens:certificates"),
+            },
+            "properties": [],
+            "bills": [],
+            "payments": [],
+            "display_email": request.user.email or "No email added",
+        }
+        return render(request, "citizens/dashboard.html", context)
 
     properties_qs = _owner_properties_queryset(owner, context_assembly)
-    bills_qs = Bill.objects.filter(property_record__owner=owner).select_related("property_record").order_by("-created_at")
+
+    bills_qs = Bill.objects.filter(property_record__owner=owner).select_related(
+        "property_record",
+        "rate_policy",
+    ).order_by("-billing_year", "-created_at")
+
     if context_assembly:
         bills_qs = bills_qs.filter(assembly=context_assembly)
 
@@ -432,92 +456,111 @@ def citizen_dashboard(request):
 
     current_year = timezone.localdate().year
 
-    outstanding_expr = ExpressionWrapper(
-        F("amount_due") - F("amount_paid"),
-        output_field=MONEY_FIELD,
-    )
+    outstanding_total = Decimal("0.00")
+    for bill in bills_qs.exclude(status__in=["paid", "cancelled"]):
+        outstanding_total += _bill_balance(bill)
 
-    outstanding_total = bills_qs.exclude(status__in=["paid", "cancelled"]).aggregate(
-        total=Coalesce(Sum(outstanding_expr), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"]
-
-    paid_total = payments_qs.filter(paid_at__year=current_year).aggregate(
-        total=Coalesce(Sum("amount"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"]
+    paid_total = Decimal("0.00")
+    for payment in payments_qs:
+        payment_date = getattr(payment, "paid_at", None) or getattr(payment, "created_at", None)
+        if payment_date and payment_date.year == current_year:
+            paid_total += Decimal(getattr(payment, "amount", 0) or 0)
 
     properties_data = []
-    for prop in properties_qs[:5]:
+    for prop in properties_qs[:2]:
         latest_bill = _latest_property_bill(prop)
+        type_label = _property_type_label(prop)
+
+        if "commercial" in type_label.lower():
+            type_class = "type-commercial"
+        elif "mixed" in type_label.lower():
+            type_class = "type-mixed"
+        else:
+            type_class = "type-residential"
+
         properties_data.append(
             {
                 "id": prop.id,
                 "reference": prop.property_reference,
                 "location": _property_location(prop),
-                "type_label": _property_type_label(prop),
-                "type_class": "badge-commercial" if "commercial" in _property_type_label(prop).lower() else "badge-residential",
+                "type_label": type_label,
+                "type_class": type_class,
                 "annual_rate": _money_full(latest_bill.amount_due if latest_bill else 0),
+                "details_url": _safe_reverse("citizens:properties"),
             }
         )
 
     bills_data = []
-    for bill in bills_qs[:5]:
+    for bill in bills_qs[:2]:
         status = (bill.status or "").lower()
-        if status == "paid":
-            status_label = "Paid"
-            status_class = "bill-paid"
-            action_label = ""
-        else:
-            status_label = "Unpaid"
-            status_class = "bill-unpaid"
-            action_label = "Pay Now"
+        is_paid = status == "paid"
 
         bills_data.append(
             {
+                "id": bill.id,
                 "bill_number": bill.bill_number,
                 "property_reference": bill.property_record.property_reference,
                 "amount_due": _money_full(bill.amount_due),
                 "due_date": bill.due_date.strftime("%Y-%m-%d") if bill.due_date else "—",
-                "status_label": status_label,
-                "status_class": status_class,
-                "action_label": action_label,
+                "status_label": "Paid" if is_paid else "Unpaid",
+                "status_class": "status-paid" if is_paid else "status-unpaid",
+                "card_class": "paid" if is_paid else "unpaid",
+                "pay_url": _safe_reverse("citizens:payment-confirm") + f"?bill={bill.id}" if not is_paid else "",
+                "view_url": _safe_reverse("citizens:bill-detail", kwargs={"bill_id": bill.id}),
             }
         )
 
     payments_data = []
-    for payment in payments_qs[:5]:
-        property_reference = (
-            payment.property.property_reference
-            if getattr(payment, "property_id", None)
-            else payment.bill.property_record.property_reference
-            if getattr(payment, "bill_id", None)
-            else "Payment"
-        )
+    for payment in payments_qs[:2]:
+        prop = getattr(payment, "property", None)
+        bill = getattr(payment, "bill", None)
 
-        payment_date = payment.paid_at or payment.created_at
+        if not prop and bill:
+            prop = getattr(bill, "property_record", None)
+
+        property_reference = prop.property_reference if prop else "Payment"
+        payment_date = getattr(payment, "paid_at", None) or getattr(payment, "created_at", None)
+
         payments_data.append(
             {
                 "property_reference": property_reference,
                 "date_label": payment_date.strftime("%Y-%m-%d") if payment_date else "—",
-                "method": (payment.payment_method or "Payment").replace("_", " ").title(),
-                "amount": _money_full(payment.amount),
+                "method": (getattr(payment, "payment_method", "") or "Payment").replace("_", " ").title(),
+                "amount": _money_full(getattr(payment, "amount", 0)),
+                "receipt_url": _safe_reverse("citizens:payment-history"),
             }
         )
 
     context = {
         "page_title": "Owner Dashboard",
-        "owner_name": _owner_name(owner),
-        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_name": owner_name,
+        "owner_short_name": owner_short_name,
         "owner_role": "Property Owner",
+        "current_year": current_year,
+        "display_email": _display_owner_email(owner, request.user) if " _display_owner_email" else (request.user.email or "No email added"),
         "stats": {
             "properties_count": properties_qs.count(),
             "outstanding_total": _money(outstanding_total),
             "paid_total": _money(paid_total),
             "bills_count": bills_qs.count(),
         },
-        "properties": properties_data[:2],
-        "bills": bills_data[:2],
-        "payments": payments_data[:2],
-        "current_year": current_year,
+        "quick_links": {
+            "pay_bills": _safe_reverse("citizens:bills"),
+            "certificates": _safe_reverse("citizens:certificates"),
+            "dispute": _safe_reverse("citizens:profile"),
+            "receipts": _safe_reverse("citizens:payment-history"),
+        },
+        "section_links": {
+            "dashboard": _safe_reverse("citizens:dashboard"),
+            "properties": _safe_reverse("citizens:properties"),
+            "bills": _safe_reverse("citizens:bills"),
+            "payments": _safe_reverse("citizens:payment-history"),
+            "profile": _safe_reverse("citizens:profile"),
+            "certificates": _safe_reverse("citizens:certificates"),
+        },
+        "properties": properties_data,
+        "bills": bills_data,
+        "payments": payments_data,
     }
     return render(request, "citizens/dashboard.html", context)
 
