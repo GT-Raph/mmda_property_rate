@@ -383,31 +383,23 @@
     </main>
 
     <nav class="bottom-nav">
-        <a href="{{ section_links.dashboard }}" class="active">
+        <a href="{% url 'citizens:dashboard' %}">
             <span class="nav-ico">⌘</span>
             Dashboard
         </a>
-
-        <a href="{{ section_links.properties }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/property.png' %}" alt="Properties">
-            </span>
+        <a href="{% url 'citizens:properties' %}" class="active">
+            <span class="nav-ico">🏢</span>
             Properties
         </a>
-
-        <a href="{{ section_links.bills }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/bill.png' %}" alt="Bills">
-            </span>
+        <a href="{% url 'citizens:bills' %}">
+            <span class="nav-ico">💳</span>
             Bills
         </a>
-
-        <a href="{{ section_links.certificates }}">
+        <a href="{% url 'citizens:certificates' %}">
             <span class="nav-ico">⌘</span>
             Certificates
         </a>
-
-        <a href="{{ section_links.profile }}">
+        <a href="{% url 'citizens:profile' %}">
             <span class="nav-ico">⚙</span>
             Profile
         </a>
