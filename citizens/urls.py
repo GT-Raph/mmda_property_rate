@@ -30,7 +30,12 @@ urlpatterns = [
     path("", citizen_dashboard, name="dashboard"),
     path("properties/", citizen_properties, name="properties"),
     path("properties/<int:property_id>/bills/", citizen_property_bills, name="property-bills"),
+
+    # main certificate route
     path("properties/<int:property_id>/certificate/", citizen_property_certificate, name="property-certificate"),
+
+    # alias route so old templates using this name won't break
+    path("properties/<int:property_id>/certificate/qr/", citizen_property_certificate, name="property-certificate-qr-page"),
 
     path("bills/", citizen_bills, name="bills"),
     path("bills/<int:bill_id>/", citizen_bill_detail, name="bill-detail"),

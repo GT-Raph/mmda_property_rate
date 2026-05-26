@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,149 +6,263 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f5f5f5;
-            color: #111;
+        :root{
+            --bg:#f5f5f5;
+            --panel:#ffffff;
+            --line:#e7e7e7;
+            --text:#111111;
+            --muted:#737887;
+            --gold:#e5d29a;
+            --gold-deep:#c89c2c;
+            --green:#16a34a;
+            --blue-soft:#edf4ff;
+            --blue-line:#b8d0ff;
         }
-        .page {
-            max-width: 860px;
-            margin: 0 auto;
-            padding: 24px 18px 40px;
+        *{box-sizing:border-box}
+        body{
+            margin:0;
+            font-family:Arial, Helvetica, sans-serif;
+            background:var(--bg);
+            color:var(--text);
         }
-        .back-link {
-            display: inline-block;
-            margin-bottom: 16px;
-            text-decoration: none;
-            color: #777;
-            font-size: 14px;
-            font-weight: 700;
+        .topbar{
+            background:#000;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:12px 16px;
         }
-        .certificate {
-            background: #fff;
-            border: 1px solid #e7e7e7;
-            border-radius: 18px;
-            padding: 28px;
+        .topbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
         }
-        .title {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 6px;
+        .avatar{
+            width:38px;
+            height:38px;
+            border-radius:50%;
+            background:#2d2d2d;
+            display:grid;
+            place-items:center;
+            font-weight:700;
+            font-size:14px;
         }
-        .subtitle {
-            color: #6b7280;
-            margin-bottom: 24px;
+        .owner-meta strong{
+            display:block;
+            font-size:14px;
         }
-        .hero {
-            background: linear-gradient(90deg, #000 0%, #171717 100%);
-            color: #fff;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 22px;
+        .owner-meta small{
+            display:block;
+            font-size:12px;
+            color:#c5c5c5;
         }
-        .ref {
-            font-size: 14px;
-            color: #d3d3d3;
-            margin-bottom: 8px;
+        .page{
+            max-width:860px;
+            margin:0 auto;
+            padding:24px 16px 110px;
         }
-        .heading {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 8px;
+        .back-link{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            color:var(--gold-deep);
+            font-weight:700;
+            font-size:14px;
+            margin-bottom:18px;
         }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
+        .card{
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:20px;
+            padding:22px;
+            margin-bottom:18px;
         }
-        .item {
-            border: 1px solid #ececec;
-            border-radius: 14px;
-            padding: 16px;
+        .head{
+            text-align:center;
+            margin-bottom:20px;
         }
-        .label {
-            color: #6b7280;
-            font-size: 13px;
-            margin-bottom: 8px;
+        .head h1{
+            margin:0 0 8px;
+            font-size:26px;
+            font-weight:800;
         }
-        .value {
-            font-size: 18px;
-            font-weight: 800;
+        .head p{
+            margin:0;
+            color:var(--muted);
+            font-size:14px;
         }
-        .footer-note {
-            margin-top: 24px;
-            padding-top: 18px;
-            border-top: 1px solid #ececec;
-            color: #6b7280;
-            font-size: 14px;
-            line-height: 1.6;
+        .qr-wrap{
+            display:flex;
+            justify-content:center;
+            margin-bottom:20px;
         }
-        @media print {
-            .back-link {
-                display: none;
-            }
-            body {
-                background: #fff;
-            }
-            .page {
-                padding: 0;
-            }
-            .certificate {
-                border: none;
-                border-radius: 0;
-            }
+        .qr-box{
+            width:190px;
+            height:190px;
+            background:#faf8f2;
+            border:4px solid var(--gold);
+            border-radius:18px;
+            padding:12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
         }
-        @media (max-width: 640px) {
-            .grid {
-                grid-template-columns: 1fr;
+        .qr-box img{
+            width:100%;
+            height:100%;
+            object-fit:contain;
+            display:block;
+        }
+        .status-pill{
+            display:inline-block;
+            background:#dff5e7;
+            color:var(--green);
+            padding:8px 14px;
+            border-radius:999px;
+            font-size:13px;
+            font-weight:700;
+            margin:0 auto 18px;
+        }
+        .center{text-align:center}
+        .grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:16px 24px;
+            margin-top:8px;
+        }
+        .label{
+            color:var(--muted);
+            font-size:13px;
+            margin-bottom:6px;
+        }
+        .value{
+            font-size:16px;
+            font-weight:800;
+            line-height:1.45;
+            word-break:break-word;
+        }
+        .verify-box{
+            background:var(--blue-soft);
+            border:1px solid var(--blue-line);
+            border-radius:12px;
+            padding:14px;
+            color:#315cbd;
+            font-size:14px;
+            line-height:1.55;
+            margin-top:20px;
+        }
+        .actions{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+            margin-top:22px;
+        }
+        .btn{
+            height:46px;
+            border-radius:12px;
+            font-size:14px;
+            font-weight:700;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:8px;
+            text-decoration:none;
+        }
+        .btn-gold{
+            background:var(--gold);
+            color:#111;
+        }
+        .btn-white{
+            background:#fff;
+            color:#111;
+            border:1px solid #d9d9d9;
+        }
+        @media (max-width:640px){
+            .grid{grid-template-columns:1fr}
+            .actions{grid-template-columns:1fr}
+            .qr-box{
+                width:170px;
+                height:170px;
             }
         }
     </style>
 </head>
 <body>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
+            </div>
+        </div>
+        <div style="font-size:28px;">⌘</div>
+    </header>
+
     <main class="page">
         <a href="{% url 'citizens:properties' %}" class="back-link">← Back to My Properties</a>
 
-        <section class="certificate">
-            <div class="title">Property Certificate</div>
-            <div class="subtitle">{{ assembly_name }} • Issued on {{ issue_date }}</div>
+        <section class="card">
+            <div class="head">
+                <h1>Property Certificate</h1>
+                <p>Scan this QR code to verify this property</p>
+            </div>
 
-            <div class="hero">
-                <div class="ref">{{ property_reference }}</div>
-                <div class="heading">{{ property_heading }}</div>
-                <div>{{ property_location }}</div>
+            <div class="center">
+                <div class="status-pill">{{ status_label }}</div>
+            </div>
+
+            <div class="qr-wrap">
+                <div class="qr-box">
+                    <img src="{{ qr_url }}" alt="QR code for {{ property_reference }}">
+                </div>
             </div>
 
             <div class="grid">
-                <div class="item">
-                    <div class="label">Owner Name</div>
+                <div>
+                    <div class="label">Certificate ID</div>
+                    <div class="value">{{ certificate_number }}</div>
+                </div>
+                <div>
+                    <div class="label">Property ID</div>
+                    <div class="value">{{ property_reference }}</div>
+                </div>
+                <div>
+                    <div class="label">Property Type</div>
+                    <div class="value">{{ property_type }}</div>
+                </div>
+                <div>
+                    <div class="label">Owner</div>
                     <div class="value">{{ owner_name }}</div>
                 </div>
-                <div class="item">
-                    <div class="label">Status</div>
-                    <div class="value">{{ property_status }}</div>
+                <div>
+                    <div class="label">Address</div>
+                    <div class="value">{{ property_location }}</div>
                 </div>
-                <div class="item">
+                <div>
                     <div class="label">Digital Address</div>
                     <div class="value">{{ digital_address }}</div>
                 </div>
-                <div class="item">
+                <div>
                     <div class="label">Rateable Value</div>
                     <div class="value">{{ rateable_value }}</div>
                 </div>
-                <div class="item">
-                    <div class="label">Annual Rate</div>
-                    <div class="value">{{ annual_rate }}</div>
-                </div>
-                <div class="item">
-                    <div class="label">{{ metric_label }}</div>
-                    <div class="value">{{ metric_value }}</div>
+                <div>
+                    <div class="label">Registered Date</div>
+                    <div class="value">{{ registered_date }}</div>
                 </div>
             </div>
 
-            <div class="footer-note">
-                This certificate confirms that the above property record is registered in the Property Rate Management System under {{ assembly_name }}.
+            <div class="verify-box">
+                <strong>Verification Link:</strong><br>
+                {{ verify_url }}
+            </div>
+
+            <div class="actions">
+                <a href="{{ download_url }}" class="btn btn-gold">⭳ Download Certificate</a>
+                <a href="{{ verify_url }}" class="btn btn-white" target="_blank">⌘ Open Verification Page</a>
             </div>
         </section>
     </main>

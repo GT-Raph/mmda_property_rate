@@ -385,6 +385,68 @@ def _safe_reverse(name, fallback="#", *args, **kwargs):
         return fallback
 
 
+# -----------------------------
+# CERTIFICATE HELPERS
+# -----------------------------
+def _certificate_property_field_name():
+    field_names = {field.name for field in PropertyCertificate._meta.get_fields()}
+    if "property_record" in field_names:
+        return "property_record"
+    return "property"
+
+
+def _certificate_property_obj(certificate):
+    return getattr(certificate, _certificate_property_field_name())
+
+
+def _certificate_queryset():
+    field_name = _certificate_property_field_name()
+    return PropertyCertificate.objects.select_related(field_name)
+
+
+def _ensure_certificate_for_property(property_obj):
+    field_name = _certificate_property_field_name()
+    certificate, _ = PropertyCertificate.objects.get_or_create(**{field_name: property_obj})
+    return certificate
+
+
+def _certificate_verify_absolute_url(request, certificate):
+    relative_url = reverse("citizens:certificate-verify", args=[certificate.certificate_uuid])
+
+    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
+    if site_public_url:
+        return f"{site_public_url.rstrip('/')}{relative_url}"
+
+    return request.build_absolute_uri(relative_url)
+
+
+def _certificate_qr_absolute_url(request, certificate):
+    relative_url = reverse("citizens:certificate-qr", args=[certificate.certificate_uuid])
+
+    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
+    if site_public_url:
+        return f"{site_public_url.rstrip('/')}{relative_url}"
+
+    return request.build_absolute_uri(relative_url)
+
+
+def _certificate_number(certificate):
+    prop = _certificate_property_obj(certificate)
+    year = getattr(prop, "created_at", None)
+    year_value = year.year if year else 2026
+    return f"{prop.property_reference}-CERT-{year_value}"
+
+
+def _property_registered_date(prop):
+    created = getattr(prop, "created_at", None)
+    if created:
+        return created.strftime("%Y-%m-%d")
+    return "—"
+
+
+# -----------------------------
+# DASHBOARD
+# -----------------------------
 @login_required
 def citizen_dashboard(request):
     if get_user_role(request.user) != "citizen":
@@ -559,6 +621,9 @@ def citizen_dashboard(request):
     return render(request, "citizens/dashboard.html", context)
 
 
+# -----------------------------
+# PROPERTIES
+# -----------------------------
 @login_required
 def citizen_properties(request):
     if get_user_role(request.user) != "citizen":
@@ -682,8 +747,7 @@ def citizen_property_bills(request, property_id):
 @login_required
 def citizen_property_certificate(request, property_id):
     """
-    This route is already used by the 'View Certificate' button on the owner's
-    properties page. It now opens the QR certificate page for that exact property.
+    Opens the QR certificate page for the exact property.
     """
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
@@ -726,6 +790,9 @@ def citizen_property_certificate(request, property_id):
     return render(request, "citizens/property_certificate.html", context)
 
 
+# -----------------------------
+# BILLS / PAYMENTS
+# -----------------------------
 @login_required
 def citizen_bills(request):
     if get_user_role(request.user) != "citizen":
@@ -1069,6 +1136,9 @@ def citizen_payment_history(request):
     return render(request, "citizens/payment_history.html", context)
 
 
+# -----------------------------
+# PROFILE / SETTINGS
+# -----------------------------
 def _citizen_only(request):
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
@@ -1414,6 +1484,9 @@ def citizen_update_notifications(request):
     return render(request, "citizens/profile.html", context)
 
 
+# -----------------------------
+# CERTIFICATES
+# -----------------------------
 @login_required
 def citizen_certificates(request):
     if get_user_role(request.user) != "citizen":
@@ -1524,11 +1597,7 @@ def citizen_certificate_qr(request, certificate_uuid):
 
     verify_url = _certificate_verify_absolute_url(request, certificate)
 
-    qr = qrcode.QRCode(
-        version=1,
-        box_size=10,
-        border=2,
-    )
+    qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(verify_url)
     qr.make(fit=True)
 
@@ -1564,59 +1633,3 @@ def certificate_verify(request, certificate_uuid):
         "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
     }
     return render(request, "citizens/certificate_verify.html", context)
-
-
-def _certificate_property_field_name():
-    field_names = {field.name for field in PropertyCertificate._meta.get_fields()}
-    if "property_record" in field_names:
-        return "property_record"
-    return "property"
-
-
-def _certificate_property_obj(certificate):
-    return getattr(certificate, _certificate_property_field_name())
-
-
-def _certificate_queryset():
-    field_name = _certificate_property_field_name()
-    return PropertyCertificate.objects.select_related(field_name)
-
-
-def _ensure_certificate_for_property(property_obj):
-    field_name = _certificate_property_field_name()
-    certificate, _ = PropertyCertificate.objects.get_or_create(**{field_name: property_obj})
-    return certificate
-
-
-def _certificate_verify_absolute_url(request, certificate):
-    relative_url = reverse("citizens:certificate-verify", args=[certificate.certificate_uuid])
-
-    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
-    if site_public_url:
-        return f"{site_public_url.rstrip('/')}{relative_url}"
-
-    return request.build_absolute_uri(relative_url)
-
-
-def _certificate_qr_absolute_url(request, certificate):
-    relative_url = reverse("citizens:certificate-qr", args=[certificate.certificate_uuid])
-
-    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
-    if site_public_url:
-        return f"{site_public_url.rstrip('/')}{relative_url}"
-
-    return request.build_absolute_uri(relative_url)
-
-
-def _certificate_number(certificate):
-    prop = _certificate_property_obj(certificate)
-    year = getattr(prop, "created_at", None)
-    year_value = year.year if year else 2026
-    return f"{prop.property_reference}-CERT-{year_value}"
-
-
-def _property_registered_date(prop):
-    created = getattr(prop, "created_at", None)
-    if created:
-        return created.strftime("%Y-%m-%d")
-    return "—"
