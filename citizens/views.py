@@ -1,24 +1,25 @@
 import io
+import uuid
 from decimal import Decimal
 
+import qrcode
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.db.models import DecimalField, ExpressionWrapper, F, Q, Sum, Value
-from django.db.models.functions import Coalesce
-from django.http import Http404
+from django.db import transaction
+from django.db.models import Q
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from admins.access import get_user_role
 from admins.models import Assembly
 from billing.models import Bill
 from payments.models import Payment
 from properties.models import Property
-
-import uuid
-from django.db import transaction
-from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
-from django.views.decorators.http import require_POST
 
 from .forms import (
     CitizenAddressForm,
@@ -30,14 +31,6 @@ from .forms import (
     CitizenPaymentForm,
 )
 from .models import CitizenPreference, PropertyCertificate
-
-import qrcode
-from django.conf import settings
-from django.http import Http404, HttpResponse
-from django.urls import reverse, NoReverseMatch
-
-
-MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
 
 
 def _account_number_for_property(prop):
@@ -538,7 +531,7 @@ def citizen_dashboard(request):
         "owner_short_name": owner_short_name,
         "owner_role": "Property Owner",
         "current_year": current_year,
-        "display_email": _display_owner_email(owner, request.user) if " _display_owner_email" else (request.user.email or "No email added"),
+        "display_email": _display_owner_email(owner, request.user) or (request.user.email or "No email added"),
         "stats": {
             "properties_count": properties_qs.count(),
             "outstanding_total": _money(outstanding_total),
@@ -688,6 +681,10 @@ def citizen_property_bills(request, property_id):
 
 @login_required
 def citizen_property_certificate(request, property_id):
+    """
+    This route is already used by the 'View Certificate' button on the owner's
+    properties page. It now opens the QR certificate page for that exact property.
+    """
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
 
@@ -702,23 +699,29 @@ def citizen_property_certificate(request, property_id):
         property_qs = property_qs.filter(assembly=context_assembly)
 
     property_obj = get_object_or_404(property_qs, id=property_id)
-    latest_bill = _latest_property_bill(property_obj)
-    metric_label, metric_value = _property_secondary_metric(property_obj)
+    certificate = _ensure_certificate_for_property(property_obj)
 
     context = {
         "page_title": "Property Certificate",
         "owner_name": _owner_name(owner),
+        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_role": "Property Owner",
+        "certificate": certificate,
+        "certificate_number": _certificate_number(certificate),
         "property_reference": property_obj.property_reference,
         "property_heading": _property_heading(property_obj),
+        "property_type": _property_type_label(property_obj),
         "property_location": _property_location(property_obj),
         "property_status": _property_status(property_obj),
         "digital_address": _digital_address(property_obj),
         "rateable_value": _money_full(getattr(property_obj, "rateable_value", 0)),
-        "annual_rate": _money_full(latest_bill.amount_due if latest_bill else 0),
-        "metric_label": metric_label,
-        "metric_value": metric_value,
+        "registered_date": _property_registered_date(property_obj),
         "assembly_name": context_assembly.name if context_assembly else "MMDA",
         "issue_date": timezone.localdate().strftime("%Y-%m-%d"),
+        "qr_url": reverse("citizens:certificate-qr", args=[certificate.certificate_uuid]),
+        "verify_url": _certificate_verify_absolute_url(request, certificate),
+        "download_url": reverse("citizens:certificate-download", args=[certificate.certificate_uuid]),
+        "status_label": "Verified & Active" if getattr(property_obj, "is_active", True) else "Inactive",
     }
     return render(request, "citizens/property_certificate.html", context)
 
@@ -740,7 +743,10 @@ def citizen_bills(request):
     unpaid_count = 0
 
     if owner:
-        bills_qs = Bill.objects.filter(property_record__owner=owner).select_related("property_record", "rate_policy").order_by("-billing_year", "-created_at")
+        bills_qs = Bill.objects.filter(property_record__owner=owner).select_related(
+            "property_record",
+            "rate_policy",
+        ).order_by("-billing_year", "-created_at")
 
         if context_assembly:
             bills_qs = bills_qs.filter(assembly=context_assembly)
@@ -785,7 +791,9 @@ def citizen_bills(request):
                     "amount": _money_full(getattr(bill, "amount_due", 0)),
                     "paid_on": (
                         getattr(bill, "updated_at", None) or getattr(bill, "created_at", None)
-                    ).strftime("%Y-%m-%d") if (getattr(bill, "updated_at", None) or getattr(bill, "created_at", None)) else "—",
+                    ).strftime("%Y-%m-%d")
+                    if (getattr(bill, "updated_at", None) or getattr(bill, "created_at", None))
+                    else "—",
                 }
             )
 
@@ -1159,11 +1167,7 @@ def _build_citizen_profile_context(request, *, active_modal="", form_overrides=N
     owner = _find_owner_for_user(request.user)
     preference = _get_or_create_citizen_preference(request.user)
 
-    properties_qs = (
-        _owner_properties_queryset(owner, context_assembly)
-        if owner
-        else Property.objects.none()
-    )
+    properties_qs = _owner_properties_queryset(owner, context_assembly) if owner else Property.objects.none()
 
     owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
     owner_short_name = request.user.first_name or owner_name.split()[0]
@@ -1468,15 +1472,16 @@ def citizen_certificate_download(request, certificate_uuid):
 
     context_assembly = _get_current_assembly(request)
 
-    certificate_qs = PropertyCertificate.objects.select_related("property").filter(
-        property__owner=owner
-    )
+    prop_filter = f"{_certificate_property_field_name()}__owner"
+    assembly_filter = f"{_certificate_property_field_name()}__assembly"
+
+    certificate_qs = _certificate_queryset().filter(**{prop_filter: owner})
 
     if context_assembly:
-        certificate_qs = certificate_qs.filter(property__assembly=context_assembly)
+        certificate_qs = certificate_qs.filter(**{assembly_filter: context_assembly})
 
     certificate = get_object_or_404(certificate_qs, certificate_uuid=certificate_uuid)
-    prop = certificate.property
+    prop = _certificate_property_obj(certificate)
 
     context = {
         "certificate": certificate,
@@ -1507,12 +1512,13 @@ def citizen_certificate_qr(request, certificate_uuid):
 
     context_assembly = _get_current_assembly(request)
 
-    certificate_qs = PropertyCertificate.objects.select_related("property").filter(
-        property__owner=owner
-    )
+    prop_filter = f"{_certificate_property_field_name()}__owner"
+    assembly_filter = f"{_certificate_property_field_name()}__assembly"
+
+    certificate_qs = _certificate_queryset().filter(**{prop_filter: owner})
 
     if context_assembly:
-        certificate_qs = certificate_qs.filter(property__assembly=context_assembly)
+        certificate_qs = certificate_qs.filter(**{assembly_filter: context_assembly})
 
     certificate = get_object_or_404(certificate_qs, certificate_uuid=certificate_uuid)
 
@@ -1537,12 +1543,12 @@ def citizen_certificate_qr(request, certificate_uuid):
 
 def certificate_verify(request, certificate_uuid):
     certificate = get_object_or_404(
-        PropertyCertificate.objects.select_related("property"),
+        _certificate_queryset(),
         certificate_uuid=certificate_uuid,
         is_active=True,
     )
 
-    prop = certificate.property
+    prop = _certificate_property_obj(certificate)
     owner = getattr(prop, "owner", None)
 
     context = {
@@ -1560,8 +1566,25 @@ def certificate_verify(request, certificate_uuid):
     return render(request, "citizens/certificate_verify.html", context)
 
 
+def _certificate_property_field_name():
+    field_names = {field.name for field in PropertyCertificate._meta.get_fields()}
+    if "property_record" in field_names:
+        return "property_record"
+    return "property"
+
+
+def _certificate_property_obj(certificate):
+    return getattr(certificate, _certificate_property_field_name())
+
+
+def _certificate_queryset():
+    field_name = _certificate_property_field_name()
+    return PropertyCertificate.objects.select_related(field_name)
+
+
 def _ensure_certificate_for_property(property_obj):
-    certificate, _ = PropertyCertificate.objects.get_or_create(property=property_obj)
+    field_name = _certificate_property_field_name()
+    certificate, _ = PropertyCertificate.objects.get_or_create(**{field_name: property_obj})
     return certificate
 
 
@@ -1577,16 +1600,19 @@ def _certificate_verify_absolute_url(request, certificate):
 
 def _certificate_qr_absolute_url(request, certificate):
     relative_url = reverse("citizens:certificate-qr", args=[certificate.certificate_uuid])
+
     site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
     if site_public_url:
         return f"{site_public_url.rstrip('/')}{relative_url}"
+
     return request.build_absolute_uri(relative_url)
 
 
 def _certificate_number(certificate):
-    year = getattr(certificate.property, "created_at", None)
+    prop = _certificate_property_obj(certificate)
+    year = getattr(prop, "created_at", None)
     year_value = year.year if year else 2026
-    return f"{certificate.property.property_reference}-CERT-{year_value}"
+    return f"{prop.property_reference}-CERT-{year_value}"
 
 
 def _property_registered_date(prop):
