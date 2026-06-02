@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
+    <title>{{ page_title|default:"Profile" }}</title>
     <style>
         :root {
             --bg: #f5f5f5;
@@ -20,7 +20,9 @@
             --blue: #2a63f6;
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             margin: 0;
@@ -55,6 +57,7 @@
             display: grid;
             place-items: center;
             font-weight: 700;
+            font-size: 14px;
         }
 
         .topbar-meta strong {
@@ -74,6 +77,7 @@
             color: #fff;
             font-size: 28px;
             cursor: pointer;
+            line-height: 1;
         }
 
         .drawer-backdrop {
@@ -119,6 +123,7 @@
         .drawer-email {
             color: #bdbdbd;
             font-size: 14px;
+            word-break: break-word;
         }
 
         .drawer-close {
@@ -127,6 +132,7 @@
             color: #fff;
             font-size: 28px;
             cursor: pointer;
+            line-height: 1;
         }
 
         .drawer-nav {
@@ -214,6 +220,7 @@
         .hero-email {
             font-size: 14px;
             color: #bfbfbf;
+            word-break: break-word;
         }
 
         .card {
@@ -396,6 +403,27 @@
             display: block;
             font-size: 18px;
             margin-bottom: 6px;
+            line-height: 1;
+        }
+
+        .nav-img {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 6px;
+        }
+
+        .nav-img img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .bottom-nav a.active .nav-img img {
+            filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
         }
 
         .modal-backdrop {
@@ -642,7 +670,7 @@
                 <a href="{% url 'citizens:bills' %}" class="drawer-link">
                     <span>💳</span><span>Bills</span>
                 </a>
-                <a href="{% url 'citizens:properties' %}" class="drawer-link">
+                <a href="{% url 'citizens:certificates' %}" class="drawer-link">
                     <span>⌘</span><span>Certificates</span>
                 </a>
                 <a href="{% url 'citizens:profile' %}" class="drawer-link active">
@@ -829,18 +857,26 @@
             <span class="nav-ico">⌘</span>
             Dashboard
         </a>
+
         <a href="{% url 'citizens:properties' %}">
-            <span class="nav-ico">🏢</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
             Properties
         </a>
+
         <a href="{% url 'citizens:bills' %}">
-            <span class="nav-ico">💳</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
             Bills
         </a>
-        <a href="{% url 'citizens:properties' %}">
+
+        <a href="{% url 'citizens:certificates' %}">
             <span class="nav-ico">⌘</span>
             Certificates
         </a>
+
         <a href="{% url 'citizens:profile' %}" class="active">
             <span class="nav-ico">⚙</span>
             Profile
@@ -874,6 +910,7 @@
                             </div>
                         </form>
                     </div>
+
                 {% elif active_modal == "email" %}
                     <div class="modal-header">
                         <div class="modal-title">Edit Email Address</div>
@@ -898,6 +935,7 @@
                             </div>
                         </form>
                     </div>
+
                 {% elif active_modal == "phone" %}
                     <div class="modal-header">
                         <div class="modal-title">Edit Phone Number</div>
@@ -922,6 +960,7 @@
                             </div>
                         </form>
                     </div>
+
                 {% elif active_modal == "address" %}
                     <div class="modal-header">
                         <div class="modal-title">Edit Address</div>
@@ -946,6 +985,7 @@
                             </div>
                         </form>
                     </div>
+
                 {% elif active_modal == "password" %}
                     <div class="modal-header">
                         <div class="modal-title">Change Password</div>
@@ -989,6 +1029,7 @@
                             </div>
                         </form>
                     </div>
+
                 {% elif active_modal == "notifications" %}
                     <div class="modal-header">
                         <div class="modal-title">Notifications</div>
