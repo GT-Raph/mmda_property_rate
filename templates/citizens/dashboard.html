@@ -7,31 +7,43 @@
     <title>{{ page_title|default:"Owner Dashboard" }}</title>
     <style>
         :root{
-            --bg:#f5f5f5;
+            --bg:#f6f7fb;
             --panel:#ffffff;
-            --line:#e7e7e7;
+            --panel-soft:#fbfbfd;
+            --line:#e8eaf0;
             --text:#111111;
             --muted:#737887;
+            --muted-2:#98a0b3;
             --black:#050505;
             --gold:#e5d29a;
             --gold-deep:#c89c2c;
             --green:#16a34a;
-            --green-soft:#dff5e7;
+            --green-soft:#dcfce7;
             --red:#ef1111;
-            --red-soft:#fff0f0;
+            --red-soft:#fee2e2;
             --blue:#2a63f6;
             --blue-soft:#dbeafe;
             --purple:#9333ea;
             --purple-soft:#f3e8ff;
+            --shadow:0 8px 24px rgba(17, 24, 39, 0.06);
+            --shadow-soft:0 4px 14px rgba(17, 24, 39, 0.04);
         }
 
         *{box-sizing:border-box}
 
+        html{
+            scroll-behavior:smooth;
+        }
+
         body{
             margin:0;
             font-family:Arial, Helvetica, sans-serif;
-            background:var(--bg);
+            background:linear-gradient(180deg, #f7f8fc 0%, #f4f5f9 100%);
             color:var(--text);
+        }
+
+        a{
+            -webkit-tap-highlight-color: transparent;
         }
 
         .topbar{
@@ -44,30 +56,41 @@
             position:sticky;
             top:0;
             z-index:90;
+            box-shadow:0 4px 18px rgba(0,0,0,0.16);
         }
 
         .topbar-left{
             display:flex;
             align-items:center;
             gap:12px;
+            min-width:0;
         }
 
         .avatar{
-            width:38px;
-            height:38px;
+            width:40px;
+            height:40px;
             border-radius:50%;
-            background:#2d2d2d;
+            background:linear-gradient(135deg, #363636 0%, #1f1f1f 100%);
             display:grid;
             place-items:center;
-            font-weight:700;
+            font-weight:800;
             font-size:14px;
             flex-shrink:0;
+            border:1px solid rgba(255,255,255,0.08);
+        }
+
+        .owner-meta{
+            min-width:0;
         }
 
         .owner-meta strong{
             display:block;
             font-size:14px;
             line-height:1.2;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            max-width:180px;
         }
 
         .owner-meta small{
@@ -75,6 +98,10 @@
             font-size:12px;
             color:#c5c5c5;
             margin-top:2px;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            max-width:180px;
         }
 
         .menu-btn{
@@ -84,6 +111,16 @@
             font-size:28px;
             cursor:pointer;
             line-height:1;
+            width:40px;
+            height:40px;
+            border-radius:10px;
+            display:grid;
+            place-items:center;
+            transition:background .2s ease;
+        }
+
+        .menu-btn:hover{
+            background:rgba(255,255,255,0.08);
         }
 
         .drawer-backdrop{
@@ -102,14 +139,15 @@
             position:absolute;
             top:0;
             right:0;
-            width:290px;
-            max-width:88vw;
+            width:300px;
+            max-width:90vw;
             height:100%;
             background:#000;
             color:#fff;
             padding:18px 16px;
             display:flex;
             flex-direction:column;
+            box-shadow:-10px 0 30px rgba(0,0,0,0.28);
         }
 
         .drawer-top{
@@ -129,6 +167,8 @@
         .drawer-email{
             color:#bdbdbd;
             font-size:14px;
+            line-height:1.45;
+            word-break:break-word;
         }
 
         .drawer-close{
@@ -138,6 +178,15 @@
             font-size:28px;
             cursor:pointer;
             line-height:1;
+            width:38px;
+            height:38px;
+            border-radius:10px;
+            display:grid;
+            place-items:center;
+        }
+
+        .drawer-close:hover{
+            background:rgba(255,255,255,0.08);
         }
 
         .drawer-nav{
@@ -156,11 +205,13 @@
             padding:14px 10px;
             border-radius:12px;
             margin-bottom:6px;
+            transition:background .2s ease, transform .2s ease;
         }
 
         .drawer-link:hover,
         .drawer-link.active{
             background:#191919;
+            transform:translateX(2px);
         }
 
         .drawer-logout{
@@ -174,26 +225,75 @@
             gap:10px;
             cursor:pointer;
             padding:12px 10px;
+            border-radius:12px;
+        }
+
+        .drawer-logout:hover{
+            background:#191919;
         }
 
         .page{
             max-width:1280px;
             margin:0 auto;
-            padding:18px 14px 110px;
+            padding:18px 14px 112px;
         }
 
-        .page-title{
+        .hero{
+            background:linear-gradient(135deg, #000 0%, #141414 55%, #202020 100%);
+            color:#fff;
+            border-radius:24px;
+            padding:20px 18px;
+            margin-bottom:18px;
+            box-shadow:var(--shadow);
+            overflow:hidden;
+            position:relative;
+        }
+
+        .hero::after{
+            content:"";
+            position:absolute;
+            right:-40px;
+            top:-40px;
+            width:180px;
+            height:180px;
+            border-radius:50%;
+            background:radial-gradient(circle, rgba(229,210,154,0.18) 0%, rgba(229,210,154,0) 72%);
+            pointer-events:none;
+        }
+
+        .hero-top{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:16px;
+            position:relative;
+            z-index:1;
+        }
+
+        .hero-title{
             margin:0 0 8px;
             font-size:28px;
             font-weight:800;
             line-height:1.2;
-            max-width:760px;
         }
 
-        .page-subtitle{
-            margin:0 0 18px;
-            color:var(--muted);
+        .hero-subtitle{
+            margin:0;
+            color:#d4d4d8;
             font-size:14px;
+            line-height:1.5;
+            max-width:520px;
+        }
+
+        .hero-chip{
+            background:rgba(229,210,154,0.16);
+            color:var(--gold);
+            border:1px solid rgba(229,210,154,0.22);
+            padding:8px 12px;
+            border-radius:999px;
+            font-size:13px;
+            font-weight:700;
+            white-space:nowrap;
         }
 
         .stats-grid{
@@ -204,17 +304,24 @@
         }
 
         .stat-card{
-            background:#fff;
+            background:var(--panel);
             border:1px solid var(--line);
-            border-radius:16px;
-            padding:14px;
-            min-height:114px;
+            border-radius:18px;
+            padding:16px;
+            min-height:116px;
+            box-shadow:var(--shadow-soft);
+            transition:transform .2s ease, box-shadow .2s ease;
+        }
+
+        .stat-card:hover{
+            transform:translateY(-2px);
+            box-shadow:0 10px 24px rgba(17,24,39,0.08);
         }
 
         .stat-icon{
-            width:46px;
-            height:46px;
-            border-radius:12px;
+            width:48px;
+            height:48px;
+            border-radius:14px;
             display:flex;
             align-items:center;
             justify-content:center;
@@ -228,10 +335,10 @@
             display:block;
         }
 
-        .soft-green{background:#dcfce7;}
-        .soft-red{background:#fee2e2;}
-        .soft-blue{background:#dbeafe;}
-        .soft-purple{background:#f3e8ff;}
+        .soft-green{background:var(--green-soft);}
+        .soft-red{background:var(--red-soft);}
+        .soft-blue{background:var(--blue-soft);}
+        .soft-purple{background:var(--purple-soft);}
 
         .stat-label{
             color:var(--muted);
@@ -240,7 +347,7 @@
         }
 
         .stat-value{
-            font-size:19px;
+            font-size:20px;
             font-weight:800;
             line-height:1.2;
         }
@@ -250,10 +357,11 @@
 
         .quick-actions{
             background:linear-gradient(90deg, #000 0%, #191919 100%);
-            border-radius:18px;
-            padding:14px;
+            border-radius:20px;
+            padding:16px;
             margin-bottom:16px;
             color:#fff;
+            box-shadow:var(--shadow);
         }
 
         .quick-actions h3{
@@ -269,8 +377,8 @@
         }
 
         .quick-btn{
-            min-height:56px;
-            border-radius:12px;
+            min-height:58px;
+            border-radius:14px;
             background:linear-gradient(90deg, #111 0%, #2a2a2a 100%);
             color:#fff;
             text-decoration:none;
@@ -280,9 +388,15 @@
             justify-content:center;
             gap:6px;
             font-size:14px;
-            border:1px solid rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.05);
             text-align:center;
             padding:10px;
+            transition:transform .2s ease, background .2s ease;
+        }
+
+        .quick-btn:hover{
+            transform:translateY(-2px);
+            background:linear-gradient(90deg, #151515 0%, #323232 100%);
         }
 
         .quick-btn .ico{
@@ -310,12 +424,23 @@
             line-height:1.2;
         }
 
+        .content-grid{
+            display:grid;
+            grid-template-columns:1fr;
+            gap:16px;
+        }
+
+        .content-stack{
+            display:grid;
+            gap:16px;
+        }
+
         .section{
-            background:#fff;
+            background:var(--panel);
             border:1px solid var(--line);
-            border-radius:18px;
-            padding:14px;
-            margin-bottom:16px;
+            border-radius:20px;
+            padding:16px;
+            box-shadow:var(--shadow-soft);
         }
 
         .section-header{
@@ -340,11 +465,22 @@
             white-space:nowrap;
         }
 
+        .section-link:hover{
+            text-decoration:underline;
+        }
+
         .property-mini{
             border:1px solid #dddddd;
-            border-radius:14px;
+            border-radius:16px;
             padding:14px;
             margin-bottom:12px;
+            background:var(--panel-soft);
+            transition:border-color .2s ease, transform .2s ease;
+        }
+
+        .property-mini:hover{
+            border-color:#d2d7e2;
+            transform:translateY(-1px);
         }
 
         .property-mini:last-child{
@@ -419,18 +555,23 @@
         }
 
         .details-link{
-            color:var(--gold);
+            color:var(--gold-deep);
             text-decoration:none;
             font-size:14px;
             font-weight:700;
             white-space:nowrap;
         }
 
+        .details-link:hover{
+            text-decoration:underline;
+        }
+
         .bill-item{
             border:1px solid #e5e7eb;
-            border-radius:14px;
+            border-radius:16px;
             padding:14px;
             margin-bottom:12px;
+            background:var(--panel-soft);
         }
 
         .bill-item:last-child{
@@ -547,21 +688,26 @@
         }
 
         .download-link{
-            color:var(--gold);
+            color:var(--gold-deep);
             text-decoration:none;
             font-size:13px;
             font-weight:700;
             white-space:nowrap;
         }
 
+        .download-link:hover{
+            text-decoration:underline;
+        }
+
         .empty-box{
             background:#fff;
             border:1px dashed #d1d5db;
             border-radius:16px;
-            padding:22px 14px;
+            padding:24px 16px;
             color:var(--muted);
             text-align:center;
             font-size:14px;
+            line-height:1.5;
         }
 
         .bottom-nav{
@@ -574,6 +720,7 @@
             display:grid;
             grid-template-columns:repeat(5, 1fr);
             z-index:100;
+            box-shadow:0 -8px 24px rgba(17,24,39,0.06);
         }
 
         .bottom-nav a{
@@ -582,6 +729,7 @@
             text-decoration:none;
             color:#707784;
             font-size:12px;
+            transition:color .2s ease;
         }
 
         .bottom-nav a.active{
@@ -621,7 +769,11 @@
                 padding:22px 22px 118px;
             }
 
-            .page-title{
+            .hero{
+                padding:24px 22px;
+            }
+
+            .hero-title{
                 font-size:34px;
             }
 
@@ -635,7 +787,7 @@
             }
 
             .quick-btn{
-                min-height:54px;
+                min-height:56px;
                 flex-direction:row;
                 justify-content:flex-start;
                 padding:0 16px;
@@ -647,9 +799,16 @@
             }
         }
 
+        @media (min-width:1024px){
+            .content-grid{
+                grid-template-columns:1.08fr .92fr;
+                align-items:start;
+            }
+        }
+
         @media (min-width:980px){
             .section{
-                padding:22px;
+                padding:20px;
             }
 
             .property-mini{
@@ -672,15 +831,15 @@
             </div>
         </div>
 
-        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
+        <button type="button" class="menu-btn" id="menuOpen">☰</button>
     </header>
 
-    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
+    <div class="drawer-backdrop" id="drawerBackdrop">
         <aside class="drawer">
             <div class="drawer-top">
                 <div>
                     <h3>Menu</h3>
-                    <div class="drawer-email">{{ display_email }}</div>
+                    <div class="drawer-email">{{ display_email|default:"No email added" }}</div>
                 </div>
                 <button type="button" class="drawer-close" id="menuClose">×</button>
             </div>
@@ -710,11 +869,18 @@
                 </button>
             </form>
         </aside>
-    </div> -->
+    </div>
 
     <main class="page">
-        <h1 class="page-title">Welcome back, {{ owner_name }}</h1>
-        <p class="page-subtitle">Manage your properties and bills</p>
+        <section class="hero">
+            <div class="hero-top">
+                <div>
+                    <h1 class="hero-title">Welcome back, {{ owner_name }}</h1>
+                    <p class="hero-subtitle">Manage your properties, review bills, track payments, and access your certificates in one place.</p>
+                </div>
+                <div class="hero-chip">Owner Portal</div>
+            </div>
+        </section>
 
         <section class="stats-grid">
             <div class="stat-card">
@@ -727,7 +893,7 @@
 
             <div class="stat-card">
                 <div class="stat-icon soft-red">
-                    <img src="{% static 'images/mark.png' %}" alt="Outstanding">
+                    <img src="{% static 'images/bill.png' %}" alt="Outstanding">
                 </div>
                 <div class="stat-label">Outstanding</div>
                 <div class="stat-value red-text">{{ stats.outstanding_total }}</div>
@@ -761,7 +927,9 @@
                 </a>
 
                 <a href="{{ quick_links.certificates }}" class="quick-btn">
-                    <span class="ico">⌘</span>
+                    <span class="ico nav-img">
+                        <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+                    </span>
                     <span class="txt">Certificates</span>
                 </a>
 
@@ -777,99 +945,104 @@
             </div>
         </section>
 
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">My Properties</h2>
-            </div>
+        <section class="content-grid">
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">My Properties</h2>
+                    <a href="{{ section_links.properties }}" class="section-link">View All →</a>
+                </div>
 
-            {% if properties %}
-                {% for property in properties %}
-                    <div class="property-mini">
-                        <div class="property-top">
-                            <div>
-                                <div class="property-ref">{{ property.reference }}</div>
-                                <div class="property-location">{{ property.location }}</div>
-                            </div>
-
-                            <div class="type-pill {{ property.type_class }}">
-                                {{ property.type_label }}
-                            </div>
-                        </div>
-
-                        <div class="property-divider"></div>
-
-                        <div class="property-bottom">
-                            <div>
-                                <div class="mini-label">Annual Rate</div>
-                                <div class="mini-value">{{ property.annual_rate }}</div>
-                            </div>
-
-                            <a href="{{ property.details_url }}" class="details-link">View Details →</a>
-                        </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-box">No properties linked to this account yet.</div>
-            {% endif %}
-        </section>
-
-        <section class="section" id="bills">
-            <div class="section-header">
-                <h2 class="section-title">Bills &amp; Payments</h2>
-                <a href="{{ section_links.bills }}" class="section-link">View All →</a>
-            </div>
-
-            {% if bills %}
-                {% for bill in bills %}
-                    <div class="bill-item {{ bill.card_class }}">
-                        <div class="bill-row-top">
-                            <div>
-                                <div class="bill-number">{{ bill.bill_number }}</div>
-                                <div class="bill-ref">{{ bill.property_reference }}</div>
-                                <div class="bill-amount">{{ bill.amount_due }}</div>
-                                <div class="bill-date">🗓 Due: {{ bill.due_date }}</div>
-                            </div>
-
-                            <div style="text-align:right;">
-                                <div class="status-pill {{ bill.status_class }}">
-                                    {{ bill.status_label }}
+                {% if properties %}
+                    {% for property in properties %}
+                        <div class="property-mini">
+                            <div class="property-top">
+                                <div>
+                                    <div class="property-ref">{{ property.reference }}</div>
+                                    <div class="property-location">{{ property.location }}</div>
                                 </div>
 
-                                {% if bill.pay_url %}
-                                    <a href="{{ bill.pay_url }}" class="bill-action">Pay Now</a>
-                                {% endif %}
+                                <div class="type-pill {{ property.type_class }}">
+                                    {{ property.type_label }}
+                                </div>
+                            </div>
+
+                            <div class="property-divider"></div>
+
+                            <div class="property-bottom">
+                                <div>
+                                    <div class="mini-label">Annual Rate</div>
+                                    <div class="mini-value">{{ property.annual_rate }}</div>
+                                </div>
+
+                                <a href="{{ property.details_url }}" class="details-link">View Details →</a>
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-box">No bills available yet.</div>
-            {% endif %}
-        </section>
-
-        <section class="section">
-            <div class="section-header">
-                <h2 class="section-title">Recent Payments</h2>
-                <a href="{{ section_links.payments }}" class="section-link">View All →</a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-box">No properties linked to this account yet.</div>
+                {% endif %}
             </div>
 
-            {% if payments %}
-                {% for payment in payments %}
-                    <div class="payment-row">
-                        <div>
-                            <div class="payment-ref">{{ payment.property_reference }}</div>
-                            <div class="payment-meta">{{ payment.date_label }} • {{ payment.method }}</div>
-                        </div>
-
-                        <div>
-                            <div class="payment-amount">{{ payment.amount }}</div>
-                            <a href="{{ payment.receipt_url }}" class="download-link">Download</a>
-                        </div>
+            <div class="content-stack">
+                <section class="section" id="bills">
+                    <div class="section-header">
+                        <h2 class="section-title">Bills &amp; Payments</h2>
+                        <a href="{{ section_links.bills }}" class="section-link">View All →</a>
                     </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-box">No recent payments found.</div>
-            {% endif %}
+
+                    {% if bills %}
+                        {% for bill in bills %}
+                            <div class="bill-item {{ bill.card_class }}">
+                                <div class="bill-row-top">
+                                    <div>
+                                        <div class="bill-number">{{ bill.bill_number }}</div>
+                                        <div class="bill-ref">{{ bill.property_reference }}</div>
+                                        <div class="bill-amount">{{ bill.amount_due }}</div>
+                                        <div class="bill-date">🗓 Due: {{ bill.due_date }}</div>
+                                    </div>
+
+                                    <div style="text-align:right;">
+                                        <div class="status-pill {{ bill.status_class }}">
+                                            {{ bill.status_label }}
+                                        </div>
+
+                                        {% if bill.pay_url %}
+                                            <a href="{{ bill.pay_url }}" class="bill-action">Pay Now</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-box">No bills available yet.</div>
+                    {% endif %}
+                </section>
+
+                <section class="section">
+                    <div class="section-header">
+                        <h2 class="section-title">Recent Payments</h2>
+                        <a href="{{ section_links.payments }}" class="section-link">View All →</a>
+                    </div>
+
+                    {% if payments %}
+                        {% for payment in payments %}
+                            <div class="payment-row">
+                                <div>
+                                    <div class="payment-ref">{{ payment.property_reference }}</div>
+                                    <div class="payment-meta">{{ payment.date_label }} • {{ payment.method }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="payment-amount">{{ payment.amount }}</div>
+                                    <a href="{{ payment.receipt_url }}" class="download-link">Download</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-box">No recent payments found.</div>
+                    {% endif %}
+                </section>
+            </div>
         </section>
     </main>
 
@@ -902,7 +1075,7 @@
 
         <a href="{{ section_links.profile }}">
             <span class="nav-ico nav-img">
-                <img src="{% static 'images/setting.png' %}" alt="Settings">
+                <img src="{% static 'images/setting.png' %}" alt="Profile">
             </span>
             Profile
         </a>
