@@ -275,6 +275,27 @@
             display: block;
             font-size: 18px;
             margin-bottom: 6px;
+            line-height: 1;
+        }
+
+        .nav-img {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 6px;
+        }
+
+        .nav-img img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .bottom-nav a.active .nav-img img {
+            filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
         }
 
         @media (max-width: 700px) {
@@ -352,7 +373,7 @@
                         <div class="divider"></div>
 
                         <div class="actions">
-                            <a href="{% url 'citizens:property-certificate-qr-page' property.id %}" class="btn btn-gold">
+                            <a href="{% url 'citizens:property-certificate' property.id %}" class="btn btn-gold">
                                 <span>⌘</span>
                                 <span>View Certificate</span>
                             </a>
@@ -387,18 +408,26 @@
             <span class="nav-ico">⌘</span>
             Dashboard
         </a>
+
         <a href="{% url 'citizens:properties' %}" class="active">
-            <span class="nav-ico">🏢</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
             Properties
         </a>
+
         <a href="{% url 'citizens:bills' %}">
-            <span class="nav-ico">💳</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
             Bills
         </a>
+
         <a href="{% url 'citizens:certificates' %}">
             <span class="nav-ico">⌘</span>
             Certificates
         </a>
+
         <a href="{% url 'citizens:profile' %}">
             <span class="nav-ico">⚙</span>
             Profile
