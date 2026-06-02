@@ -1,9 +1,10 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Property Certificates</title>
+    <title>{{ page_title|default:"Property Certificates" }}</title>
     <style>
         :root {
             --bg: #f5f5f5;
@@ -18,13 +19,18 @@
             --blue-soft: #edf4ff;
             --blue-line: #b8d0ff;
         }
-        * { box-sizing: border-box; }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             font-family: Arial, Helvetica, sans-serif;
             background: var(--bg);
             color: var(--text);
         }
+
         .topbar {
             background: #000;
             color: #fff;
@@ -33,11 +39,13 @@
             justify-content: space-between;
             padding: 12px 16px;
         }
+
         .topbar-left {
             display: flex;
             align-items: center;
             gap: 12px;
         }
+
         .avatar {
             width: 38px;
             height: 38px;
@@ -46,31 +54,38 @@
             display: grid;
             place-items: center;
             font-weight: 700;
+            font-size: 14px;
         }
+
         .owner-meta strong {
             display: block;
             font-size: 14px;
         }
+
         .owner-meta small {
             display: block;
             font-size: 12px;
             color: #c5c5c5;
         }
+
         .page {
             max-width: 980px;
             margin: 0 auto;
             padding: 24px 18px 120px;
         }
+
         h1 {
             margin: 0 0 8px;
             font-size: 30px;
             font-weight: 800;
         }
+
         .sub {
             margin: 0 0 24px;
             color: var(--muted);
             font-size: 14px;
         }
+
         .certificate-card {
             background: #fff;
             border: 1px solid var(--line);
@@ -78,28 +93,34 @@
             padding: 20px;
             margin-bottom: 22px;
         }
+
         .cert-head {
             text-align: center;
             margin-bottom: 18px;
         }
+
         .cert-title {
             font-size: 18px;
             font-weight: 800;
             margin-bottom: 8px;
         }
+
         .cert-sub {
             color: var(--muted);
             font-size: 14px;
         }
+
         .dash {
             border-top: 1px dashed #d8d8d8;
             margin: 18px 0 22px;
         }
+
         .qr-wrap {
             display: flex;
             justify-content: center;
             margin-bottom: 18px;
         }
+
         .qr-box {
             position: relative;
             width: 170px;
@@ -109,12 +130,14 @@
             padding: 10px;
             background: #faf8f2;
         }
+
         .qr-box img {
             width: 100%;
             height: 100%;
             object-fit: contain;
             display: block;
         }
+
         .qr-badge {
             position: absolute;
             top: -10px;
@@ -129,22 +152,27 @@
             place-items: center;
             font-weight: 700;
         }
+
         .cert-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 14px 36px;
             margin-bottom: 14px;
         }
+
         .label {
             color: var(--muted);
             font-size: 13px;
             margin-bottom: 6px;
         }
+
         .value {
             font-size: 16px;
             font-weight: 800;
             line-height: 1.4;
+            word-break: break-word;
         }
+
         .status-row {
             border-top: 1px solid var(--line);
             padding-top: 14px;
@@ -154,12 +182,14 @@
             font-size: 15px;
             font-weight: 700;
         }
+
         .actions {
             display: grid;
             grid-template-columns: 1fr auto;
             gap: 10px;
             margin-bottom: 16px;
         }
+
         .btn-gold,
         .btn-white {
             height: 42px;
@@ -174,16 +204,19 @@
             border: 0;
             cursor: pointer;
         }
+
         .btn-gold {
             background: var(--gold);
             color: #fff;
         }
+
         .btn-white {
             background: #fff;
             border: 1px solid #d9d9d9;
             color: #111;
             padding: 0 18px;
         }
+
         .verify-box {
             background: var(--blue-soft);
             border: 1px solid var(--blue-line);
@@ -194,12 +227,14 @@
             line-height: 1.5;
             margin-bottom: 16px;
         }
+
         .cert-foot {
             text-align: center;
             color: var(--muted);
             font-size: 13px;
             line-height: 1.6;
         }
+
         .about-box {
             background: linear-gradient(90deg, #000 0%, #1b1b1b 100%);
             color: #fff;
@@ -207,20 +242,24 @@
             padding: 18px 16px;
             margin-top: 8px;
         }
+
         .about-title {
             font-size: 16px;
             font-weight: 800;
             margin-bottom: 16px;
         }
+
         .about-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 14px;
         }
+
         .about-item {
             display: flex;
             gap: 10px;
         }
+
         .about-icon {
             width: 46px;
             height: 46px;
@@ -230,17 +269,20 @@
             place-items: center;
             flex-shrink: 0;
         }
+
         .about-item strong {
             display: block;
             margin-bottom: 6px;
             font-size: 16px;
         }
+
         .about-item span {
             display: block;
             color: #d3d3d3;
             font-size: 14px;
             line-height: 1.45;
         }
+
         .bottom-nav {
             position: fixed;
             left: 0;
@@ -252,6 +294,7 @@
             grid-template-columns: repeat(5, 1fr);
             z-index: 100;
         }
+
         .bottom-nav a {
             padding: 12px 8px 14px;
             text-align: center;
@@ -259,14 +302,37 @@
             color: #707784;
             font-size: 12px;
         }
+
         .bottom-nav a.active {
             color: var(--gold-deep);
             font-weight: 700;
         }
+
         .nav-ico {
             display: block;
             font-size: 18px;
             margin-bottom: 6px;
+            line-height: 1;
+        }
+
+        .nav-img {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin: 0 auto 6px;
+        }
+
+        .nav-img img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .bottom-nav a.active .nav-img img {
+            filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
         }
 
         @media (max-width: 760px) {
@@ -274,6 +340,7 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 12px 18px;
             }
+
             .about-grid {
                 grid-template-columns: 1fr;
             }
@@ -283,15 +350,19 @@
             .page {
                 padding: 20px 12px 120px;
             }
+
             h1 {
                 font-size: 26px;
             }
+
             .cert-grid {
                 grid-template-columns: 1fr 1fr;
             }
+
             .actions {
                 grid-template-columns: 1fr auto;
             }
+
             .qr-box {
                 width: 160px;
                 height: 160px;
@@ -300,171 +371,184 @@
     </style>
 </head>
 <body>
-<header class="topbar">
-    <div class="topbar-left">
-        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
-        <div class="owner-meta">
-            <strong>{{ owner_short_name }}</strong>
-            <small>{{ owner_role }}</small>
-        </div>
-    </div>
-    <!-- <div style="font-size:28px;">☰</div> -->
-</header>
-
-<main class="page">
-    <h1>Property Certificates</h1>
-    <p class="sub">Digital certificates with QR codes for your properties</p>
-
-    {% for item in certificate_cards %}
-        <section class="certificate-card">
-            <div class="cert-head">
-                <div class="cert-title">Official Property Certificate</div>
-                <div class="cert-sub">Ghana MMDA - Property Rate System</div>
-            </div>
-
-            <div class="dash"></div>
-
-            <div class="qr-wrap">
-                <div class="qr-box">
-                    <img src="{{ item.qr_url }}" alt="QR code for {{ item.property_reference }}">
-                    <div class="qr-badge">✓</div>
-                </div>
-            </div>
-
-            <div class="cert-grid">
-                <div>
-                    <div class="label">Property ID</div>
-                    <div class="value" style="color:#d7b86e;">{{ item.property_reference }}</div>
-                </div>
-                <div>
-                    <div class="label">Type</div>
-                    <div class="value">{{ item.property_type }}</div>
-                </div>
-
-                <div>
-                    <div class="label">Address</div>
-                    <div class="value">{{ item.property_location }}</div>
-                </div>
-                <div></div>
-
-                <div>
-                    <div class="label">Digital Address</div>
-                    <div class="value">{{ item.digital_address }}</div>
-                </div>
-                <div>
-                    <div class="label">Rateable Value</div>
-                    <div class="value">{{ item.rateable_value }}</div>
-                </div>
-
-                <div>
-                    <div class="label">Owner</div>
-                    <div class="value">{{ item.owner_name }}</div>
-                </div>
-                <div>
-                    <div class="label">Registered</div>
-                    <div class="value">{{ item.registered_date }}</div>
-                </div>
-            </div>
-
-            <div class="status-row">● {{ item.status_label }}</div>
-
-            <div class="actions">
-                <a href="{{ item.download_url }}" class="btn-gold">⭳ Download Certificate</a>
-                <button
-                    type="button"
-                    class="btn-white share-btn"
-                    data-url="{{ item.verify_url }}"
-                >⌘ Share QR</button>
-            </div>
-
-            <div class="verify-box">
-                <strong>Verification Instructions:</strong>
-                Scan the QR code with the PRMS mobile app or any QR scanner to instantly verify property details and payment status. Valid for official use.
-            </div>
-
-            <div class="cert-foot">
-                Certificate ID: {{ item.certificate_number }}<br>
-                Issued by: Ghana MMDA Property Rate Management System
-            </div>
-        </section>
-    {% empty %}
-        <section class="certificate-card">
-            No certificates available for this account yet.
-        </section>
-    {% endfor %}
-
-    <section class="about-box">
-        <div class="about-title">About Digital Property Certificates</div>
-
-        <div class="about-grid">
-            <div class="about-item">
-                <div class="about-icon">🛡</div>
-                <div>
-                    <strong>Secure & Official</strong>
-                    <span>Government-issued digital certificate with property verification</span>
-                </div>
-            </div>
-
-            <div class="about-item">
-                <div class="about-icon">⌘</div>
-                <div>
-                    <strong>QR Code Access</strong>
-                    <span>Instant verification for field officers and officials</span>
-                </div>
-            </div>
-
-            <div class="about-item">
-                <div class="about-icon">⭳</div>
-                <div>
-                    <strong>Download & Print</strong>
-                    <span>High-quality printable version available for official use</span>
-                </div>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
             </div>
         </div>
-    </section>
-</main>
+        <!-- <div style="font-size:28px;">☰</div> -->
+    </header>
 
-<nav class="bottom-nav">
-    <a href="{% url 'citizens:dashboard' %}">
-        <span class="nav-ico">⌘</span>Dashboard
-    </a>
-    <a href="{% url 'citizens:properties' %}">
-        <span class="nav-ico">🏢</span>Properties
-    </a>
-    <a href="{% url 'citizens:bills' %}">
-        <span class="nav-ico">💳</span>Bills
-    </a>
-    <a href="{% url 'citizens:certificates' %}" class="active">
-        <span class="nav-ico">⌘</span>Certificates
-    </a>
-    <a href="{% url 'citizens:profile' %}">
-        <span class="nav-ico">⚙</span>Profile
-    </a>
-</nav>
+    <main class="page">
+        <h1>Property Certificates</h1>
+        <p class="sub">Digital certificates with QR codes for your properties</p>
 
-<script>
-    document.querySelectorAll(".share-btn").forEach(function (button) {
-        button.addEventListener("click", async function () {
-            const url = button.dataset.url;
+        {% for item in certificate_cards %}
+            <section class="certificate-card">
+                <div class="cert-head">
+                    <div class="cert-title">Official Property Certificate</div>
+                    <div class="cert-sub">Ghana MMDA - Property Rate System</div>
+                </div>
 
-            if (navigator.share) {
-                try {
-                    await navigator.share({
-                        title: "Property Certificate Verification",
-                        text: "Verify this property certificate",
-                        url: url
-                    });
-                } catch (error) {}
-            } else {
-                try {
-                    await navigator.clipboard.writeText(url);
-                    alert("Verification link copied.");
-                } catch (error) {
-                    alert(url);
+                <div class="dash"></div>
+
+                <div class="qr-wrap">
+                    <div class="qr-box">
+                        <img src="{{ item.qr_url }}" alt="QR code for {{ item.property_reference }}">
+                        <div class="qr-badge">✓</div>
+                    </div>
+                </div>
+
+                <div class="cert-grid">
+                    <div>
+                        <div class="label">Property ID</div>
+                        <div class="value" style="color:#d7b86e;">{{ item.property_reference }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Type</div>
+                        <div class="value">{{ item.property_type }}</div>
+                    </div>
+
+                    <div>
+                        <div class="label">Address</div>
+                        <div class="value">{{ item.property_location }}</div>
+                    </div>
+                    <div></div>
+
+                    <div>
+                        <div class="label">Digital Address</div>
+                        <div class="value">{{ item.digital_address }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Rateable Value</div>
+                        <div class="value">{{ item.rateable_value }}</div>
+                    </div>
+
+                    <div>
+                        <div class="label">Owner</div>
+                        <div class="value">{{ item.owner_name }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Registered</div>
+                        <div class="value">{{ item.registered_date }}</div>
+                    </div>
+                </div>
+
+                <div class="status-row">● {{ item.status_label }}</div>
+
+                <div class="actions">
+                    <a href="{{ item.download_url }}" class="btn-gold">⭳ Download Certificate</a>
+                    <button
+                        type="button"
+                        class="btn-white share-btn"
+                        data-url="{{ item.verify_url }}"
+                    >⌘ Share QR</button>
+                </div>
+
+                <div class="verify-box">
+                    <strong>Verification Instructions:</strong>
+                    Scan the QR code with the PRMS mobile app or any QR scanner to instantly verify property details and payment status. Valid for official use.
+                </div>
+
+                <div class="cert-foot">
+                    Certificate ID: {{ item.certificate_number }}<br>
+                    Issued by: Ghana MMDA Property Rate Management System
+                </div>
+            </section>
+        {% empty %}
+            <section class="certificate-card">
+                No certificates available for this account yet.
+            </section>
+        {% endfor %}
+
+        <section class="about-box">
+            <div class="about-title">About Digital Property Certificates</div>
+
+            <div class="about-grid">
+                <div class="about-item">
+                    <div class="about-icon">🛡</div>
+                    <div>
+                        <strong>Secure & Official</strong>
+                        <span>Government-issued digital certificate with property verification</span>
+                    </div>
+                </div>
+
+                <div class="about-item">
+                    <div class="about-icon">⌘</div>
+                    <div>
+                        <strong>QR Code Access</strong>
+                        <span>Instant verification for field officers and officials</span>
+                    </div>
+                </div>
+
+                <div class="about-item">
+                    <div class="about-icon">⭳</div>
+                    <div>
+                        <strong>Download & Print</strong>
+                        <span>High-quality printable version available for official use</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{% url 'citizens:dashboard' %}">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
+            Properties
+        </a>
+
+        <a href="{% url 'citizens:bills' %}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
+            Bills
+        </a>
+
+        <a href="{% url 'citizens:certificates' %}" class="active">
+            <span class="nav-ico">⌘</span>
+            Certificates
+        </a>
+
+        <a href="{% url 'citizens:profile' %}">
+            <span class="nav-ico">⚙</span>
+            Profile
+        </a>
+    </nav>
+
+    <script>
+        document.querySelectorAll(".share-btn").forEach(function (button) {
+            button.addEventListener("click", async function () {
+                const url = button.dataset.url;
+
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: "Property Certificate Verification",
+                            text: "Verify this property certificate",
+                            url: url
+                        });
+                    } catch (error) {}
+                } else {
+                    try {
+                        await navigator.clipboard.writeText(url);
+                        alert("Verification link copied.");
+                    } catch (error) {
+                        alert(url);
+                    }
                 }
-            }
+            });
         });
-    });
-</script>
+    </script>
 </body>
 </html>
