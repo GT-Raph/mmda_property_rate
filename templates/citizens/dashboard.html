@@ -373,24 +373,24 @@
         .quick-grid{
             display:grid;
             grid-template-columns:repeat(2, minmax(0,1fr));
-            gap:10px;
+            gap:12px;
         }
 
         .quick-btn{
-            min-height:58px;
-            border-radius:14px;
+            min-height:68px;
+            border-radius:16px;
             background:linear-gradient(90deg, #111 0%, #2a2a2a 100%);
             color:#fff;
             text-decoration:none;
             display:flex;
-            flex-direction:column;
             align-items:center;
             justify-content:center;
-            gap:6px;
+            gap:12px;
             font-size:14px;
-            border:1px solid rgba(255,255,255,0.05);
+            font-weight:600;
+            border:1px solid rgba(255,255,255,0.06);
             text-align:center;
-            padding:10px;
+            padding:0 18px;
             transition:transform .2s ease, background .2s ease;
         }
 
@@ -400,12 +400,15 @@
         }
 
         .quick-btn .ico{
-            width:20px;
-            height:20px;
+            width:22px;
+            height:22px;
             display:flex;
             align-items:center;
             justify-content:center;
+            flex:0 0 22px;
             line-height:1;
+            font-size:18px;
+            color:#fff;
         }
 
         .quick-btn .ico img{
@@ -415,13 +418,19 @@
             display:block;
         }
 
-        .quick-btn .ico-white img{
-            filter:invert(1);
+        .quick-btn .ico-white img,
+        .quick-btn .ico-cert img{
+            filter:brightness(0) invert(1);
         }
 
         .quick-btn .txt{
-            font-size:14px;
-            line-height:1.2;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            line-height:1;
+            font-size:15px;
+            font-weight:600;
+            color:#fff;
         }
 
         .content-grid{
@@ -787,11 +796,9 @@
             }
 
             .quick-btn{
-                min-height:56px;
-                flex-direction:row;
-                justify-content:flex-start;
-                padding:0 16px;
-                gap:12px;
+                min-height:70px;
+                justify-content:center;
+                padding:0 20px;
             }
 
             .quick-btn .txt{
@@ -927,7 +934,7 @@
                 </a>
 
                 <a href="{{ quick_links.certificates }}" class="quick-btn">
-                    <span class="ico nav-img">
+                    <span class="ico ico-cert">
                         <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
                     </span>
                     <span class="txt">Certificates</span>
@@ -939,7 +946,7 @@
                 </a>
 
                 <a href="{{ quick_links.receipts }}" class="quick-btn">
-                    <span class="ico">⭳</span>
+                    <span class="ico">↓</span>
                     <span class="txt">Receipts</span>
                 </a>
             </div>
