@@ -1,0 +1,655 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default:"Submit Dispute" }}</title>
+    <style>
+        :root{
+            --bg:#f6f7fb;
+            --panel:#ffffff;
+            --line:#e8eaf0;
+            --text:#111111;
+            --muted:#737887;
+            --gold:#e5d29a;
+            --gold-deep:#c89c2c;
+            --blue:#2a63f6;
+            --blue-soft:#edf4ff;
+            --blue-line:#b8d0ff;
+        }
+
+        *{box-sizing:border-box}
+
+        body{
+            margin:0;
+            font-family:Arial, Helvetica, sans-serif;
+            background:#f7f8fc;
+            color:var(--text);
+        }
+
+        .topbar{
+            background:#000;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:12px 16px;
+            position:sticky;
+            top:0;
+            z-index:90;
+        }
+
+        .topbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width:0;
+        }
+
+        .avatar{
+            width:40px;
+            height:40px;
+            border-radius:50%;
+            background:#2d2d2d;
+            display:grid;
+            place-items:center;
+            font-weight:800;
+            font-size:14px;
+            flex-shrink:0;
+        }
+
+        .owner-meta strong{
+            display:block;
+            font-size:14px;
+        }
+
+        .owner-meta small{
+            display:block;
+            font-size:12px;
+            color:#c5c5c5;
+            margin-top:2px;
+        }
+
+        .menu-btn{
+            background:transparent;
+            border:0;
+            color:#fff;
+            font-size:28px;
+            cursor:pointer;
+            line-height:1;
+        }
+
+        .drawer-backdrop{
+            position:fixed;
+            inset:0;
+            background:rgba(0,0,0,0.45);
+            display:none;
+            z-index:120;
+        }
+
+        .drawer-backdrop.show{
+            display:block;
+        }
+
+        .drawer{
+            position:absolute;
+            top:0;
+            right:0;
+            width:300px;
+            max-width:90vw;
+            height:100%;
+            background:#000;
+            color:#fff;
+            padding:18px 16px;
+            display:flex;
+            flex-direction:column;
+        }
+
+        .drawer-top{
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:16px;
+        }
+
+        .drawer h3{
+            margin:0 0 6px;
+            font-size:18px;
+            font-weight:800;
+        }
+
+        .drawer-email{
+            color:#bdbdbd;
+            font-size:14px;
+            line-height:1.45;
+            word-break:break-word;
+        }
+
+        .drawer-close{
+            background:transparent;
+            border:0;
+            color:#fff;
+            font-size:28px;
+            cursor:pointer;
+            line-height:1;
+        }
+
+        .drawer-nav{
+            border-top:1px solid rgba(255,255,255,0.08);
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            padding:18px 0;
+            margin-bottom:18px;
+        }
+
+        .drawer-link{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            color:#fff;
+            text-decoration:none;
+            padding:14px 10px;
+            border-radius:12px;
+            margin-bottom:6px;
+        }
+
+        .drawer-link:hover{
+            background:#191919;
+        }
+
+        .drawer-logout{
+            margin-top:auto;
+            background:transparent;
+            border:0;
+            color:#fff;
+            font-size:16px;
+            display:flex;
+            align-items:center;
+            gap:10px;
+            cursor:pointer;
+            padding:12px 10px;
+        }
+
+        .page{
+            max-width:900px;
+            margin:0 auto;
+            padding:24px 16px 120px;
+        }
+
+        .page-title{
+            margin:0 0 8px;
+            font-size:28px;
+            font-weight:800;
+        }
+
+        .page-subtitle{
+            margin:0 0 18px;
+            color:var(--muted);
+            font-size:14px;
+            line-height:1.5;
+        }
+
+        .info-box{
+            background:var(--blue-soft);
+            border:1px solid var(--blue-line);
+            border-radius:16px;
+            padding:14px 16px;
+            color:#315cbd;
+            margin-bottom:18px;
+        }
+
+        .info-box strong{
+            display:block;
+            margin-bottom:8px;
+        }
+
+        .info-box ul{
+            margin:0;
+            padding-left:18px;
+        }
+
+        .info-box li{
+            margin:6px 0;
+        }
+
+        .card{
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:20px;
+            padding:20px;
+        }
+
+        .field-group{
+            margin-bottom:18px;
+        }
+
+        .field-group label{
+            display:block;
+            font-size:14px;
+            font-weight:700;
+            margin-bottom:8px;
+        }
+
+        .field-group label .required{
+            color:#ef4444;
+        }
+
+        .field-group input,
+        .field-group select,
+        .field-group textarea{
+            width:100%;
+            border:1px solid #d9dce5;
+            border-radius:12px;
+            font-size:15px;
+            outline:none;
+            background:#fff;
+        }
+
+        .field-group input,
+        .field-group select{
+            height:48px;
+            padding:0 14px;
+        }
+
+        .field-group textarea{
+            min-height:150px;
+            padding:14px;
+            resize:vertical;
+            line-height:1.5;
+        }
+
+        .field-group input:focus,
+        .field-group select:focus,
+        .field-group textarea:focus{
+            border-color:#cdb56f;
+            box-shadow:0 0 0 4px rgba(200,156,44,0.10);
+        }
+
+        .hint{
+            margin-top:8px;
+            color:var(--muted);
+            font-size:13px;
+        }
+
+        .upload-box{
+            border:2px dashed #d9dce5;
+            background:#fcfcfd;
+            border-radius:16px;
+            padding:22px 16px;
+            text-align:center;
+        }
+
+        .upload-icon{
+            font-size:42px;
+            color:#6b7280;
+            margin-bottom:10px;
+        }
+
+        .upload-title{
+            color:var(--muted);
+            font-size:14px;
+            line-height:1.5;
+            margin-bottom:14px;
+        }
+
+        .file-trigger{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:110px;
+            height:38px;
+            padding:0 16px;
+            border:1px solid #d9dce5;
+            border-radius:10px;
+            background:#fff;
+            font-size:14px;
+            font-weight:700;
+            color:#111;
+            cursor:pointer;
+        }
+
+        .hidden-file{
+            display:none;
+        }
+
+        .file-list{
+            margin-top:12px;
+            display:grid;
+            gap:8px;
+            text-align:left;
+        }
+
+        .file-item{
+            padding:10px 12px;
+            border:1px solid #e5e7eb;
+            background:#fff;
+            border-radius:10px;
+            font-size:13px;
+            color:#374151;
+            word-break:break-word;
+        }
+
+        .errors{
+            margin-bottom:16px;
+            background:#fff5f5;
+            border:1px solid #fecaca;
+            color:#b91c1c;
+            border-radius:14px;
+            padding:12px 14px;
+            font-size:14px;
+        }
+
+        .field-error{
+            margin-top:8px;
+            color:#b91c1c;
+            font-size:13px;
+        }
+
+        .actions{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px;
+            margin-top:8px;
+        }
+
+        .btn{
+            height:48px;
+            border-radius:12px;
+            font-size:16px;
+            font-weight:700;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            text-decoration:none;
+            border:0;
+            cursor:pointer;
+        }
+
+        .btn-secondary{
+            background:#fff;
+            color:#111;
+            border:1px solid #d9dce5;
+        }
+
+        .btn-primary{
+            background:var(--gold);
+            color:#111;
+        }
+
+        .bottom-nav{
+            position:fixed;
+            left:0;
+            right:0;
+            bottom:0;
+            background:#fff;
+            border-top:1px solid var(--line);
+            display:grid;
+            grid-template-columns:repeat(5, 1fr);
+            z-index:100;
+        }
+
+        .bottom-nav a{
+            padding:12px 8px 14px;
+            text-align:center;
+            text-decoration:none;
+            color:#707784;
+            font-size:12px;
+        }
+
+        .nav-ico{
+            display:block;
+            font-size:18px;
+            margin-bottom:6px;
+            line-height:1;
+        }
+
+        .nav-img{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            width:20px;
+            height:20px;
+            margin:0 auto 6px;
+        }
+
+        .nav-img img{
+            width:18px;
+            height:18px;
+            object-fit:contain;
+            display:block;
+        }
+
+        @media (max-width:560px){
+            .page{
+                padding:20px 14px 118px;
+            }
+
+            .page-title{
+                font-size:26px;
+            }
+
+            .card{
+                padding:16px;
+            }
+
+            .actions{
+                grid-template-columns:1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role|default:"Property Owner" }}</small>
+            </div>
+        </div>
+
+        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
+    </header>
+
+    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
+        <aside class="drawer">
+            <div class="drawer-top">
+                <div>
+                    <h3>Menu</h3>
+                    <div class="drawer-email">{{ display_email|default:"No email added" }}</div>
+                </div>
+                <button type="button" class="drawer-close" id="menuClose">×</button>
+            </div>
+
+            <nav class="drawer-nav">
+                <a href="{{ section_links.dashboard }}" class="drawer-link">⌘ Dashboard</a>
+                <a href="{{ section_links.properties }}" class="drawer-link">🏢 Properties</a>
+                <a href="{{ section_links.bills }}" class="drawer-link">💳 Bills</a>
+                <a href="{{ section_links.certificates }}" class="drawer-link">⌘ Certificates</a>
+                <a href="{{ section_links.profile }}" class="drawer-link">⚙ Profile</a>
+            </nav>
+
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="drawer-logout">↪ Logout</button>
+            </form>
+        </aside>
+    </div> -->
+
+    <main class="page">
+        <h1 class="page-title">Submit Dispute</h1>
+        <p class="page-subtitle">Raise a concern about your property rate assessment or billing.</p>
+
+        <section class="info-box">
+            <strong>Before You Submit</strong>
+            <ul>
+                <li>Ensure all information is accurate.</li>
+                <li>Provide supporting documents if available.</li>
+                <li>Response time is usually 5–7 business days.</li>
+            </ul>
+        </section>
+
+        <section class="card">
+            {% if form.non_field_errors %}
+                <div class="errors">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="field-group">
+                    <label for="{{ form.property_record.id_for_label }}">
+                        Select Property <span class="required">*</span>
+                    </label>
+                    {{ form.property_record }}
+                    {% for error in form.property_record.errors %}
+                        <div class="field-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.bill.id_for_label }}">Bill Number (Optional)</label>
+                    {{ form.bill }}
+                    <div class="hint">Leave blank if this is not about a specific bill.</div>
+                    {% for error in form.bill.errors %}
+                        <div class="field-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.dispute_type.id_for_label }}">
+                        Dispute Type <span class="required">*</span>
+                    </label>
+                    {{ form.dispute_type }}
+                    {% for error in form.dispute_type.errors %}
+                        <div class="field-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.description.id_for_label }}">
+                        Description <span class="required">*</span>
+                    </label>
+                    {{ form.description }}
+                    <div class="hint">Minimum 50 characters required.</div>
+                    {% for error in form.description.errors %}
+                        <div class="field-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="id_supporting_documents">Supporting Documents (Optional)</label>
+
+                    <div class="upload-box">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-title">Upload supporting documents (PDF, JPG, PNG)</div>
+
+                        <label for="id_supporting_documents" class="file-trigger">Choose Files</label>
+                        <input
+                            type="file"
+                            name="supporting_documents"
+                            id="id_supporting_documents"
+                            class="hidden-file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            multiple
+                        >
+
+                        <div class="file-list" id="fileList"></div>
+                    </div>
+
+                    {% for error in form.supporting_documents.errors %}
+                        <div class="field-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="actions">
+                    <a href="{{ cancel_url|default:section_links.dashboard }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Submit Dispute</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{{ section_links.dashboard }}">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+
+        <a href="{{ section_links.properties }}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
+            Properties
+        </a>
+
+        <a href="{{ section_links.bills }}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
+            Bills
+        </a>
+
+        <a href="{{ section_links.certificates }}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
+            Certificates
+        </a>
+
+        <a href="{{ section_links.profile }}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/setting.png' %}" alt="Profile">
+            </span>
+            Profile
+        </a>
+    </nav>
+
+    <script>
+        const menuOpen = document.getElementById("menuOpen");
+        const menuClose = document.getElementById("menuClose");
+        const drawerBackdrop = document.getElementById("drawerBackdrop");
+
+        if (menuOpen && drawerBackdrop) {
+            menuOpen.addEventListener("click", function () {
+                drawerBackdrop.classList.add("show");
+            });
+        }
+
+        if (menuClose && drawerBackdrop) {
+            menuClose.addEventListener("click", function () {
+                drawerBackdrop.classList.remove("show");
+            });
+        }
+
+        if (drawerBackdrop) {
+            drawerBackdrop.addEventListener("click", function (event) {
+                if (event.target === drawerBackdrop) {
+                    drawerBackdrop.classList.remove("show");
+                }
+            });
+        }
+
+        const fileInput = document.getElementById("id_supporting_documents");
+        const fileList = document.getElementById("fileList");
+
+        if (fileInput && fileList) {
+            fileInput.addEventListener("change", function () {
+                fileList.innerHTML = "";
+
+                if (!fileInput.files.length) return;
+
+                Array.from(fileInput.files).forEach(function(file) {
+                    const item = document.createElement("div");
+                    item.className = "file-item";
+                    item.textContent = file.name;
+                    fileList.appendChild(item);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

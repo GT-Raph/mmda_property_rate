@@ -12,6 +12,7 @@ from .views import (
     citizen_payment_success,
     citizen_payment_history,
     citizen_profile,
+    citizen_submit_dispute,
     citizen_update_name,
     citizen_update_email,
     citizen_update_phone,
@@ -58,4 +59,6 @@ urlpatterns = [
     path("certificates/<uuid:certificate_uuid>/qr.png", citizen_certificate_qr, name="certificate-qr"),
 
     path("verify/certificate/<uuid:certificate_uuid>/", certificate_verify, name="certificate-verify"),
+
+    path("disputes/submit/", citizen_submit_dispute, name="submit-dispute"),
 ]

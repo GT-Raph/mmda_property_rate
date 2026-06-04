@@ -21,6 +21,9 @@ from billing.models import Bill
 from payments.models import Payment
 from properties.models import Property
 
+
+from .models import CitizenPreference, PropertyCertificate, CitizenDispute, CitizenDisputeAttachment
+
 from .forms import (
     CitizenAddressForm,
     CitizenEmailForm,
@@ -29,8 +32,8 @@ from .forms import (
     CitizenPasswordForm,
     CitizenPhoneForm,
     CitizenPaymentForm,
+    CitizenDisputeForm,
 )
-from .models import CitizenPreference, PropertyCertificate
 
 
 def _account_number_for_property(prop):
@@ -474,7 +477,7 @@ def citizen_dashboard(request):
             "quick_links": {
                 "pay_bills": _safe_reverse("citizens:bills"),
                 "certificates": _safe_reverse("citizens:certificates"),
-                "dispute": _safe_reverse("citizens:profile"),
+                "dispute": _safe_reverse("citizens:submit-dispute"),
                 "receipts": _safe_reverse("citizens:payment-history"),
             },
             "section_links": {
@@ -603,7 +606,7 @@ def citizen_dashboard(request):
         "quick_links": {
             "pay_bills": _safe_reverse("citizens:bills"),
             "certificates": _safe_reverse("citizens:certificates"),
-            "dispute": _safe_reverse("citizens:profile"),
+            "dispute": _safe_reverse("citizens:submit-dispute"),
             "receipts": _safe_reverse("citizens:payment-history"),
         },
         "section_links": {
@@ -1633,3 +1636,92 @@ def certificate_verify(request, certificate_uuid):
         "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
     }
     return render(request, "citizens/certificate_verify.html", context)
+
+
+@login_required
+def citizen_submit_dispute(request):
+    if get_user_role(request.user) != "citizen":
+        return redirect("portal-login")
+
+    context_assembly = _get_current_assembly(request)
+    owner = _citizen_owner_or_none(request)
+
+    if not owner:
+        return redirect("citizens:dashboard")
+
+    owner_name = _owner_name(owner)
+    owner_short_name = request.user.first_name or owner_name.split()[0]
+    display_email = _display_owner_email(owner, request.user)
+
+    properties_qs = _owner_properties_queryset(owner, context_assembly)
+
+    bills_qs = Bill.objects.filter(
+        property_record__owner=owner
+    ).select_related("property_record").order_by("-billing_year", "-created_at")
+
+    if context_assembly:
+        bills_qs = bills_qs.filter(assembly=context_assembly)
+
+    if request.method == "POST":
+        form = CitizenDisputeForm(
+            request.POST,
+            request.FILES,
+            property_queryset=properties_qs,
+            bill_queryset=bills_qs,
+        )
+
+        if form.is_valid():
+            with transaction.atomic():
+                dispute = form.save(commit=False)
+                dispute.user = request.user
+                dispute.assembly = context_assembly
+                dispute.save()
+
+                for file in request.FILES.getlist("supporting_documents"):
+                    CitizenDisputeAttachment.objects.create(
+                        dispute=dispute,
+                        file=file,
+                        original_name=file.name,
+                    )
+
+            messages.success(
+                request,
+                f"Your dispute {dispute.dispute_number} has been submitted successfully."
+            )
+            return redirect("citizens:dashboard")
+    else:
+        initial = {}
+        property_id = request.GET.get("property")
+        bill_id = request.GET.get("bill")
+
+        if property_id and properties_qs.filter(id=property_id).exists():
+            initial["property_record"] = property_id
+
+        if bill_id and bills_qs.filter(id=bill_id).exists():
+            initial["bill"] = bill_id
+            bill_obj = bills_qs.filter(id=bill_id).first()
+            if bill_obj:
+                initial["property_record"] = bill_obj.property_record_id
+
+        form = CitizenDisputeForm(
+            initial=initial,
+            property_queryset=properties_qs,
+            bill_queryset=bills_qs,
+        )
+
+    context = {
+        "page_title": "Submit Dispute",
+        "owner_short_name": owner_short_name,
+        "owner_role": "Property Owner",
+        "display_email": display_email or "No email added",
+        "section_links": {
+            "dashboard": reverse("citizens:dashboard"),
+            "properties": reverse("citizens:properties"),
+            "bills": reverse("citizens:bills"),
+            "certificates": reverse("citizens:certificates"),
+            "profile": reverse("citizens:profile"),
+        },
+        "cancel_url": reverse("citizens:dashboard"),
+        "form": form,
+    }
+    return render(request, "citizens/submit_dispute.html", context)
