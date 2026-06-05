@@ -1,104 +1,447 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment History</title>
+    <title>{{ page_title|default:"Payment History" }}</title>
     <style>
-        :root{--bg:#f5f5f5;--panel:#fff;--line:#e7e7e7;--text:#111;--muted:#737887;--green:#08c043;--gold:#e5d29a}
-        *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
-        .topbar{background:#000;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
-        .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}.owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}
-        .page{max-width:980px;margin:0 auto;padding:24px 18px 120px}.page h1{margin:0 0 8px;font-size:30px;font-weight:800}.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
-        .summary{background:#08c043;border-radius:18px;color:#fff;padding:22px 24px;margin-bottom:24px}
-        .summary .title{font-size:16px;margin-bottom:10px}.summary .value{font-size:40px;font-weight:800;margin-bottom:8px}.summary .meta{font-size:14px}
-        .payment-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 16px;margin-bottom:14px}
-        .top{display:flex;justify-content:space-between;gap:16px}.ref{font-size:16px;font-weight:800}.bill-number{color:var(--muted);font-size:14px;margin-top:4px}.loc{color:var(--muted);font-size:14px;margin-top:10px}
-        .amount{text-align:right}.amount strong{display:block;color:#16a34a;font-size:18px}.amount span{color:var(--muted);font-size:14px}
-        .divider{height:1px;background:var(--line);margin:16px 0}
-        .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:end}
-        .label{color:var(--muted);font-size:13px;margin-bottom:6px}.value{font-weight:800;font-size:16px}
-        .receipt-btn{display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 14px;border-radius:10px;background:#e9d497;color:#fff;font-weight:700;text-decoration:none}
-        .export-wrap{text-align:center;margin-top:26px}.export-btn{display:inline-flex;align-items:center;justify-content:center;min-width:280px;height:46px;border-radius:12px;border:1px solid #ddd;background:#fff;color:#111;font-size:14px;font-weight:700;text-decoration:none}
-        .empty{background:#fff;border:1px dashed #d0d0d0;border-radius:18px;padding:24px;color:var(--muted);font-size:14px;text-align:center}
-        .bottom-nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);z-index:100}
-        .bottom-nav a{padding:12px 8px 14px;text-align:center;text-decoration:none;color:#707784;font-size:12px}.nav-ico{display:block;font-size:18px;margin-bottom:6px}
-        @media (max-width:700px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        :root{
+            --bg:#f6f7fb;
+            --panel:#ffffff;
+            --line:#e7e7e7;
+            --text:#111111;
+            --muted:#737887;
+            --green:#08c043;
+            --green-dark:#16a34a;
+            --gold:#e5d29a;
+            --gold-deep:#c89c2c;
+            --shadow:0 8px 24px rgba(17,24,39,0.06);
+            --shadow-soft:0 4px 14px rgba(17,24,39,0.04);
+        }
+
+        *{
+            box-sizing:border-box;
+        }
+
+        body{
+            margin:0;
+            font-family:Arial, Helvetica, sans-serif;
+            background:var(--bg);
+            color:var(--text);
+        }
+
+        .topbar{
+            background:#000;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding:12px 16px;
+            position:sticky;
+            top:0;
+            z-index:90;
+        }
+
+        .topbar-left{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            min-width:0;
+        }
+
+        .avatar{
+            width:38px;
+            height:38px;
+            border-radius:50%;
+            background:#2d2d2d;
+            display:grid;
+            place-items:center;
+            font-weight:700;
+            font-size:14px;
+            flex-shrink:0;
+        }
+
+        .owner-meta strong{
+            display:block;
+            font-size:14px;
+            line-height:1.2;
+        }
+
+        .owner-meta small{
+            display:block;
+            font-size:12px;
+            color:#c5c5c5;
+            margin-top:2px;
+        }
+
+        .page{
+            max-width:980px;
+            margin:0 auto;
+            padding:24px 18px 120px;
+        }
+
+        .page h1{
+            margin:0 0 8px;
+            font-size:30px;
+            font-weight:800;
+        }
+
+        .sub{
+            margin:0 0 24px;
+            color:var(--muted);
+            font-size:14px;
+        }
+
+        .summary{
+            background:linear-gradient(135deg, #08c043 0%, #16a34a 100%);
+            border-radius:20px;
+            color:#fff;
+            padding:22px 24px;
+            margin-bottom:24px;
+            box-shadow:var(--shadow);
+        }
+
+        .summary .title{
+            font-size:16px;
+            margin-bottom:10px;
+        }
+
+        .summary .value{
+            font-size:40px;
+            font-weight:800;
+            margin-bottom:8px;
+            line-height:1.1;
+        }
+
+        .summary .meta{
+            font-size:14px;
+            opacity:.95;
+        }
+
+        .payment-card{
+            background:var(--panel);
+            border:1px solid var(--line);
+            border-radius:18px;
+            padding:18px 16px;
+            margin-bottom:14px;
+            box-shadow:var(--shadow-soft);
+        }
+
+        .top{
+            display:flex;
+            justify-content:space-between;
+            gap:16px;
+            align-items:flex-start;
+        }
+
+        .ref{
+            font-size:16px;
+            font-weight:800;
+            line-height:1.3;
+            word-break:break-word;
+        }
+
+        .bill-number{
+            color:var(--muted);
+            font-size:14px;
+            margin-top:4px;
+        }
+
+        .loc{
+            color:var(--muted);
+            font-size:14px;
+            margin-top:10px;
+            line-height:1.45;
+        }
+
+        .amount{
+            text-align:right;
+            flex-shrink:0;
+        }
+
+        .amount strong{
+            display:block;
+            color:var(--green-dark);
+            font-size:18px;
+            line-height:1.2;
+        }
+
+        .amount span{
+            color:var(--muted);
+            font-size:14px;
+            margin-top:4px;
+            display:block;
+        }
+
+        .divider{
+            height:1px;
+            background:var(--line);
+            margin:16px 0;
+        }
+
+        .grid{
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0,1fr));
+            gap:14px;
+            align-items:end;
+        }
+
+        .label{
+            color:var(--muted);
+            font-size:13px;
+            margin-bottom:6px;
+        }
+
+        .value{
+            font-weight:800;
+            font-size:16px;
+            line-height:1.35;
+            word-break:break-word;
+        }
+
+        .receipt-wrap{
+            text-align:right;
+        }
+
+        .receipt-btn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            height:36px;
+            padding:0 14px;
+            border-radius:10px;
+            background:var(--gold);
+            color:#111;
+            font-weight:700;
+            text-decoration:none;
+            font-size:14px;
+        }
+
+        .export-wrap{
+            text-align:center;
+            margin-top:26px;
+        }
+
+        .export-btn{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:280px;
+            height:46px;
+            border-radius:12px;
+            border:1px solid #ddd;
+            background:#fff;
+            color:#111;
+            font-size:14px;
+            font-weight:700;
+            text-decoration:none;
+            padding:0 16px;
+        }
+
+        .empty{
+            background:#fff;
+            border:1px dashed #d0d0d0;
+            border-radius:18px;
+            padding:24px;
+            color:var(--muted);
+            font-size:14px;
+            text-align:center;
+        }
+
+        .bottom-nav{
+            position:fixed;
+            left:0;
+            right:0;
+            bottom:0;
+            background:#fff;
+            border-top:1px solid var(--line);
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            z-index:100;
+            box-shadow:0 -6px 20px rgba(17,24,39,0.05);
+        }
+
+        .bottom-nav a{
+            padding:12px 8px 14px;
+            text-align:center;
+            text-decoration:none;
+            color:#707784;
+            font-size:12px;
+        }
+
+        .bottom-nav a.active{
+            color:var(--gold-deep);
+            font-weight:700;
+        }
+
+        .nav-ico{
+            display:block;
+            font-size:18px;
+            margin-bottom:6px;
+            line-height:1;
+        }
+
+        .nav-img{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            width:20px;
+            height:20px;
+            margin:0 auto 6px;
+        }
+
+        .nav-img img{
+            width:18px;
+            height:18px;
+            object-fit:contain;
+            display:block;
+        }
+
+        .bottom-nav a.active .nav-img img{
+            filter:sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
+        }
+
+        @media (max-width:700px){
+            .page{
+                padding:20px 14px 120px;
+            }
+
+            .page h1{
+                font-size:26px;
+            }
+
+            .summary .value{
+                font-size:34px;
+            }
+
+            .grid{
+                grid-template-columns:repeat(2, minmax(0,1fr));
+            }
+        }
+
+        @media (max-width:520px){
+            .top{
+                flex-direction:column;
+                align-items:flex-start;
+            }
+
+            .amount{
+                text-align:left;
+            }
+
+            .receipt-wrap{
+                text-align:left;
+            }
+
+            .export-btn{
+                width:100%;
+                min-width:0;
+            }
+        }
     </style>
 </head>
 <body>
-<header class="topbar">
-    <div class="topbar-left">
-        <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
-        <div class="owner-meta">
-            <strong>{{ owner_short_name }}</strong>
-            <small>{{ owner_role }}</small>
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
+            <div class="owner-meta">
+                <strong>{{ owner_short_name }}</strong>
+                <small>{{ owner_role }}</small>
+            </div>
         </div>
-    </div>
-    <!-- <div style="font-size:28px;">☰</div> -->
-</header>
+    </header>
 
-<main class="page">
-    <h1>Payment History</h1>
-    <p class="sub">All your property rate payments</p>
+    <main class="page">
+        <h1>Payment History</h1>
+        <p class="sub">All your property rate payments</p>
 
-    <section class="summary">
-        <div class="title">Total Amount Paid</div>
-        <div class="value">{{ total_amount }}</div>
-        <div class="meta">{{ payments_count }} successful transactions</div>
-    </section>
+        <section class="summary">
+            <div class="title">Total Amount Paid</div>
+            <div class="value">{{ total_amount }}</div>
+            <div class="meta">{{ payments_count }} successful transactions</div>
+        </section>
 
-    {% if payments %}
-        {% for payment in payments %}
-            <section class="payment-card">
-                <div class="top">
-                    <div>
-                        <div class="ref">{{ payment.transaction_reference }}</div>
-                        <div class="bill-number">{{ payment.bill_number }}</div>
-                        <div class="loc">{{ payment.location }}</div>
+        {% if payments %}
+            {% for payment in payments %}
+                <section class="payment-card">
+                    <div class="top">
+                        <div>
+                            <div class="ref">{{ payment.transaction_reference }}</div>
+                            <div class="bill-number">{{ payment.bill_number }}</div>
+                            <div class="loc">{{ payment.location }}</div>
+                        </div>
+
+                        <div class="amount">
+                            <strong>{{ payment.amount }}</strong>
+                            <span>{{ payment.date_label }}</span>
+                        </div>
                     </div>
-                    <div class="amount">
-                        <strong>{{ payment.amount }}</strong>
-                        <span>{{ payment.date_label }}</span>
-                    </div>
-                </div>
 
-                <div class="divider"></div>
+                    <div class="divider"></div>
 
-                <div class="grid">
-                    <div>
-                        <div class="label">Payment Method</div>
-                        <div class="value">{{ payment.payment_method }}</div>
-                    </div>
-                    <div>
-                        <div class="label">Reference</div>
-                        <div class="value">{{ payment.reference_code }}</div>
-                    </div>
-                    <div>
-                        <div class="label">Time</div>
-                        <div class="value">{{ payment.time_label }}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <a href="#" class="receipt-btn">⭳ Receipt</a>
-                    </div>
-                </div>
-            </section>
-        {% endfor %}
+                    <div class="grid">
+                        <div>
+                            <div class="label">Payment Method</div>
+                            <div class="value">{{ payment.payment_method }}</div>
+                        </div>
 
-        <div class="export-wrap">
-            <a href="#" class="export-btn">⭳ Export All Receipts as PDF</a>
-        </div>
-    {% else %}
-        <div class="empty">No successful payments found yet.</div>
-    {% endif %}
-</main>
+                        <div>
+                            <div class="label">Reference</div>
+                            <div class="value">{{ payment.reference_code }}</div>
+                        </div>
 
-<nav class="bottom-nav">
-    <a href="{% url 'citizens:dashboard' %}"><span class="nav-ico">⌘</span>Dashboard</a>
-    <a href="{% url 'citizens:properties' %}"><span class="nav-ico">🏢</span>Properties</a>
-    <a href="{% url 'citizens:bills' %}"><span class="nav-ico">💳</span>Bills</a>
-    <a href="{% url 'citizens:certificates' %}"><span class="nav-ico">⌘</span>Certificates</a>
-    <a href="{% url 'admins:settings' %}?tab=profile"><span class="nav-ico">⚙</span>Profile</a>
-</nav>
+                        <div>
+                            <div class="label">Time</div>
+                            <div class="value">{{ payment.time_label }}</div>
+                        </div>
+
+                        <div class="receipt-wrap">
+                            <a href="#" class="receipt-btn">⭳ Receipt</a>
+                        </div>
+                    </div>
+                </section>
+            {% endfor %}
+
+            <div class="export-wrap">
+                <a href="#" class="export-btn">⭳ Export All Receipts as PDF</a>
+            </div>
+        {% else %}
+            <div class="empty">No successful payments found yet.</div>
+        {% endif %}
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="{% url 'citizens:dashboard' %}">
+            <span class="nav-ico">⌘</span>
+            Dashboard
+        </a>
+
+        <a href="{% url 'citizens:properties' %}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/property.png' %}" alt="Properties">
+            </span>
+            Properties
+        </a>
+
+        <a href="{% url 'citizens:bills' %}" class="active">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/bill.png' %}" alt="Bills">
+            </span>
+            Bills
+        </a>
+
+        <a href="{% url 'citizens:certificates' %}">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
+            Certificates
+        </a>
+
+        <a href="{% url 'citizens:profile' %}">
+            <span class="nav-ico">⚙</span>
+            Profile
+        </a>
+    </nav>
 </body>
 </html>
