@@ -1080,10 +1080,8 @@
             Certificates
         </a>
 
-        <a href="{{ section_links.profile }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/setting.png' %}" alt="Profile">
-            </span>
+        <a href="{% url 'citizens:profile' %}" class="active">
+            <span class="nav-ico">⚙</span>
             Profile
         </a>
     </nav>
