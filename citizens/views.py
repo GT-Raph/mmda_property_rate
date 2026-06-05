@@ -119,60 +119,53 @@ def _payment_model_field_names():
 
 def _create_payment_record(bill, amount, network, mobile_number, transaction_reference):
     payment = Payment()
-    field_names = _payment_model_field_names()
 
-    if "bill" in field_names:
-        payment.bill = bill
+    payment.bill = bill
+    payment.property = getattr(bill, "property_record", None)
+    payment.assembly = getattr(bill, "assembly", None)
 
-    if "property" in field_names:
-        payment.property = getattr(bill, "property_record", None)
-
-    if "assembly" in field_names and hasattr(bill, "assembly"):
-        payment.assembly = bill.assembly
-
-    if "amount" in field_names:
-        payment.amount = amount
-
-    if "status" in field_names:
-        payment.status = "successful"
-
-    if "payment_method" in field_names:
-        payment.payment_method = "mobile_money"
-
-    if "network" in field_names:
-        payment.network = network
-
-    if "mobile_number" in field_names:
-        payment.mobile_number = mobile_number
-
-    for field_name in ["transaction_reference", "reference", "external_reference"]:
-        if field_name in field_names:
-            setattr(payment, field_name, transaction_reference)
-            break
-
-    if "paid_at" in field_names:
-        payment.paid_at = timezone.now()
+    payment.amount = amount
+    payment.status = "successful"
+    payment.payment_method = "momo"
+    payment.provider = (network or "").strip().lower()
+    payment.payer_phone = mobile_number or ""
+    payment.payer_name = _owner_name(getattr(bill.property_record, "owner", None))
+    payment.property_reference_entered = getattr(bill.property_record, "property_reference", "") or ""
+    payment.transaction_reference = transaction_reference
+    payment.external_reference = transaction_reference
+    payment.reconciliation_status = "matched"
+    payment.applied_to_bill = True
+    payment.paid_at = timezone.now()
 
     payment.save()
     return payment
 
 
-def _mark_bill_paid(bill):
-    balance = _bill_balance(bill)
-    update_fields = []
+def _mark_bill_paid(bill, payment_amount):
+    payment_amount = _safe_decimal(payment_amount)
+    current_paid = _safe_decimal(getattr(bill, "amount_paid", 0))
+    amount_due = _safe_decimal(getattr(bill, "amount_due", 0))
 
-    if hasattr(bill, "amount_paid"):
-        bill.amount_paid = _safe_decimal(getattr(bill, "amount_paid", 0)) + balance
-        update_fields.append("amount_paid")
+    new_amount_paid = current_paid + payment_amount
+    if new_amount_paid > amount_due:
+        new_amount_paid = amount_due
 
-    if hasattr(bill, "status"):
-        bill.status = "paid"
-        update_fields.append("status")
+    bill.amount_paid = new_amount_paid
+    bill.last_payment_at = timezone.now()
 
-    if update_fields:
-        bill.save(update_fields=update_fields)
+    if hasattr(bill, "refresh_status"):
+        bill.refresh_status()
+        bill.save(update_fields=["amount_paid", "last_payment_at", "status"])
+    else:
+        if new_amount_paid >= amount_due:
+            bill.status = "paid"
+        elif new_amount_paid > 0:
+            bill.status = "part_paid"
+        else:
+            bill.status = "pending"
+        bill.save(update_fields=["amount_paid", "last_payment_at", "status"])
 
-    return balance
+    return payment_amount
 
 
 def _get_current_assembly(request):
@@ -1008,6 +1001,7 @@ def citizen_payment_processing(request):
 
 
 @login_required
+@login_required
 def citizen_payment_success(request):
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
@@ -1027,12 +1021,12 @@ def citizen_payment_success(request):
         bill_ids = payload.get("bill_ids", [])
         network = payload.get("network")
         mobile_number = payload.get("mobile_number")
-        transaction_reference = f"TXN-{uuid.uuid4().hex[:16].upper()}"
+        master_reference = f"TXN-{uuid.uuid4().hex[:16].upper()}"
 
         bills_qs = Bill.objects.filter(
             id__in=bill_ids,
             property_record__owner=owner,
-        ).select_related("property_record")
+        ).select_related("property_record").order_by("id")
 
         if context_assembly:
             bills_qs = bills_qs.filter(assembly=context_assembly)
@@ -1042,24 +1036,33 @@ def citizen_payment_success(request):
 
         with transaction.atomic():
             for bill in bills_qs:
-                amount_paid_now = _mark_bill_paid(bill)
-                total_paid += amount_paid_now
+                balance = _bill_balance(bill)
+
+                if balance <= 0:
+                    continue
+
+                bill_payment_reference = f"{master_reference}-B{bill.id}"
+
                 _create_payment_record(
                     bill=bill,
-                    amount=amount_paid_now,
+                    amount=balance,
                     network=network,
                     mobile_number=mobile_number,
-                    transaction_reference=transaction_reference,
+                    transaction_reference=bill_payment_reference,
                 )
+
+                _mark_bill_paid(bill, balance)
+                total_paid += balance
+
                 bills_paid.append(
                     {
                         "account_number": _account_number_for_property(bill.property_record),
-                        "amount": _money_full(amount_paid_now),
+                        "amount": _money_full(balance),
                     }
                 )
 
         result = {
-            "transaction_reference": transaction_reference,
+            "transaction_reference": master_reference,
             "payment_date": timezone.localdate().strftime("%d/%m/%Y"),
             "payment_method": "Mobile Money",
             "total_paid": _money_full(total_paid),
