@@ -15,19 +15,19 @@
             --sidebar: #050505;
             --sidebar-line: rgba(255, 255, 255, 0.08);
             --gold: #d2ad4e;
-            --gold-bg: #e1c36f;
+            --gold-bg: #ead79f;
             --gold-soft: #f4e8bf;
             --green: #1fc84b;
             --green-soft: #d9f7df;
+            --red: #e75252;
+            --red-soft: #fde2e2;
             --shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
             --radius: 18px;
             --sidebar-width: 230px;
             --topbar-height: 78px;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         html, body {
             margin: 0;
@@ -37,18 +37,14 @@
             color: var(--text);
         }
 
-        body {
-            min-height: 100vh;
-        }
+        body { min-height: 100vh; }
 
         a {
             color: inherit;
             text-decoration: none;
         }
 
-        .layout {
-            min-height: 100vh;
-        }
+        .layout { min-height: 100vh; }
 
         .sidebar {
             position: fixed;
@@ -111,9 +107,32 @@
         }
 
         .nav-icon {
-            width: 16px;
-            text-align: center;
+            width: 18px;
+            height: 18px;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon-img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+            filter: brightness(0) invert(1);
+            opacity: 0.96;
+            transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .nav a:hover .nav-icon-img {
+            opacity: 1;
+            transform: scale(1.03);
+        }
+
+        .nav a.active .nav-icon-img {
+            filter: none;
+            opacity: 1;
         }
 
         .sidebar-footer {
@@ -445,6 +464,182 @@
             color: #111;
         }
 
+        .message-stack {
+            margin-bottom: 14px;
+        }
+
+        .message-box {
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background: #ebfaef;
+            border: 1px solid #b9e4c2;
+            color: #166534;
+        }
+
+        .message-error {
+            background: #fff1f1;
+            border: 1px solid #f3c2c2;
+            color: #b42318;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 1200;
+        }
+
+        .modal-backdrop.show {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 720px;
+            background: #fff;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+        }
+
+        .modal-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .modal-close {
+            border: none;
+            background: transparent;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #171717;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 14px;
+            color: #222;
+            outline: none;
+            padding: 0 14px;
+        }
+
+        .form-input {
+            height: 46px;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            padding-top: 12px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            border-color: #d0b059;
+            box-shadow: 0 0 0 3px rgba(210, 173, 78, 0.12);
+        }
+
+        .check-row {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 4px;
+        }
+
+        .form-check-input {
+            width: 18px;
+            height: 18px;
+            accent-color: #d2ad4e;
+        }
+
+        .field-error {
+            font-size: 13px;
+            color: #b42318;
+            margin-top: -2px;
+        }
+
+        .modal-actions {
+            padding: 18px 20px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-secondary,
+        .btn-primary {
+            height: 42px;
+            border-radius: 10px;
+            padding: 0 18px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            border: 1px solid #dddddd;
+            color: #222;
+        }
+
+        .btn-primary {
+            background: #d2ad4e;
+            border: none;
+            color: #fff;
+        }
+
         .mobile-overlay {
             display: none;
         }
@@ -532,13 +727,19 @@
             }
 
             .info-grid,
-            .stats-grid {
+            .stats-grid,
+            .form-grid {
                 grid-template-columns: 1fr;
             }
 
             .info-card,
             .stat-card {
                 padding: 18px;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>
@@ -556,43 +757,62 @@
         <nav class="nav">
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">⌂</span><span>Dashboard</span>
+                    <span class="nav-ico">⌘</span>
+                    <span>Dashboard</span>
                 </a>
             {% endif %}
 
             {% if portal_access.properties %}
                 <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">🏢</span><span>Properties</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
+                    </span>
+                    <span>Properties</span>
                 </a>
             {% endif %}
 
             {% if portal_access.billing %}
                 <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">💳</span><span>Billing & Payments</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
+                    </span>
+                    <span>Billing & Payments</span>
                 </a>
             {% endif %}
 
             {% if portal_access.field_operations %}
                 <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📍</span><span>Field Officers</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
+                    </span>
+                    <span>Field Officers</span>
                 </a>
             {% endif %}
 
             {% if portal_access.reports %}
                 <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📊</span><span>Reports</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
+                    </span>
+                    <span>Reports</span>
                 </a>
             {% endif %}
 
             {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">ⓘ</span><span>Assembly</span>
+                <a href="{% url 'admins:assembly-management' %}" class="active">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
+                    </span>
+                    <span>Assembly</span>
                 </a>
             {% endif %}
 
             {% if portal_access.settings %}
                 <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">⚙</span><span>Settings</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
+                    </span>
+                    <span>Settings</span>
                 </a>
             {% endif %}
         </nav>
@@ -651,83 +871,140 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
-            <section class="card hero-card">
-                <div class="hero-left">
-                    <div class="hero-icon">🏢</div>
+            {% if messages %}
+                <div class="message-stack">
+                    {% for message in messages %}
+                        <div class="message-box {% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
-                    <div class="hero-text">
-                        <div class="hero-title">{{ assembly.name }}</div>
-                        <div class="hero-subtitle">{{ assembly.region }}</div>
+            {% if assembly %}
+                <section class="card hero-card">
+                    <div class="hero-left">
+                        <div class="hero-icon">🏢</div>
 
-                        <div class="hero-meta">
-                            <span class="status-badge {{ assembly_status_class }}">{{ assembly_status }}</span>
-                            <span class="hero-id">ID: {{ assembly.short_code }}</span>
+                        <div class="hero-text">
+                            <div class="hero-title">{{ assembly.name }}</div>
+                            <div class="hero-subtitle">{{ assembly.region|default:"No region added" }}</div>
+
+                            <div class="hero-meta">
+                                <span class="status-badge {{ assembly_status_class }}">{{ assembly_status }}</span>
+                                <span class="hero-id">ID: {{ assembly.short_code|default:"—" }}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <a href="#" class="hero-btn">
-                    <span>✎</span>
-                    <span>Edit Information</span>
-                </a>
-            </section>
+                    <a href="{% url 'admins:assembly-management' %}?edit=1" class="hero-btn">
+                        <span>✎</span>
+                        <span>Edit Information</span>
+                    </a>
+                </section>
 
-            <section class="card info-card">
-                <h3 class="section-title">Assembly Information</h3>
+                <section class="card info-card">
+                    <h3 class="section-title">Assembly Information</h3>
 
-                <div class="info-grid">
-                    <div class="info-item">
-                        <label>Assembly Name</label>
-                        <div class="info-value">{{ assembly.name }}</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Assembly Name</label>
+                            <div class="info-value">{{ assembly.name|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Region</label>
+                            <div class="info-value">{{ assembly.region|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>District</label>
+                            <div class="info-value">{{ assembly.district|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Contact Email</label>
+                            <div class="info-value">{{ assembly.contact_email|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Contact Phone</label>
+                            <div class="info-value">{{ assembly.contact_phone|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Address</label>
+                            <div class="info-value">{{ assembly.address|default:"—" }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Registration Date</label>
+                            <div class="info-value">{{ registration_date }}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Assembly ID</label>
+                            <div class="info-value">{{ assembly.short_code|default:"—" }}</div>
+                        </div>
                     </div>
+                </section>
 
-                    <div class="info-item">
-                        <label>Region</label>
-                        <div class="info-value">{{ assembly.region }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>District</label>
-                        <div class="info-value">{{ assembly.district|default:"—" }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>Contact Email</label>
-                        <div class="info-value">{{ assembly.contact_email|default:"—" }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>Contact Phone</label>
-                        <div class="info-value">{{ assembly.contact_phone|default:"—" }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>Address</label>
-                        <div class="info-value">{{ assembly.address|default:"—" }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>Registration Date</label>
-                        <div class="info-value">{{ registration_date }}</div>
-                    </div>
-
-                    <div class="info-item">
-                        <label>Assembly ID</label>
-                        <div class="info-value">{{ assembly.short_code }}</div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="stats-grid">
-                {% for stat in stats %}
-                <div class="card stat-card">
-                    <div class="stat-label">{{ stat.label }}</div>
-                    <div class="stat-value">{{ stat.value }}</div>
-                </div>
-                {% endfor %}
-            </section>
+                <section class="stats-grid">
+                    {% for stat in stats %}
+                        <div class="card stat-card">
+                            <div class="stat-label">{{ stat.label }}</div>
+                            <div class="stat-value">{{ stat.value }}</div>
+                        </div>
+                    {% endfor %}
+                </section>
+            {% endif %}
         </div>
     </main>
+</div>
+
+<div class="modal-backdrop {% if show_edit_modal %}show{% endif %}" id="editModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Assembly Information</h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()">×</button>
+        </div>
+
+        {% if form %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_assembly">
+
+                <div class="modal-body">
+                    <div class="form-grid">
+                        {% for field in form.visible_fields %}
+                            {% if field.field.widget.input_type == 'checkbox' %}
+                                <div class="check-row">
+                                    {{ field }}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                </div>
+                                {% for error in field.errors %}
+                                    <div class="field-error">{{ error }}</div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="form-group {% if field.name == 'address' %}full{% endif %}">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% for error in field.errors %}
+                                        <div class="field-error">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        {% endif %}
+    </div>
 </div>
 
 <script>
@@ -739,6 +1016,10 @@
     function closeSidebar() {
         document.getElementById("sidebar").classList.remove("open");
         document.getElementById("mobileOverlay").classList.remove("show");
+    }
+
+    function closeEditModal() {
+        window.location.href = "{% url 'admins:assembly-management' %}";
     }
 </script>
 </body>

@@ -17,6 +17,7 @@
             --sidebar-line: rgba(255, 255, 255, 0.08);
             --gold: #d1ac4c;
             --gold-bg: #e9d59a;
+            --active-text: #1f1f1f;
             --green: #19a54a;
             --green-soft: #d8f3df;
             --blue: #3b82f6;
@@ -96,7 +97,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            color: rgba(255, 255, 255, 0.9);
+            color: rgba(255, 255, 255, 0.92);
             padding: 12px 14px;
             border-radius: 12px;
             font-size: 15px;
@@ -110,14 +111,36 @@
 
         .nav a.active {
             background: var(--gold-bg);
-            color: #1f1f1f;
+            color: var(--active-text);
             font-weight: 700;
         }
 
         .nav-icon {
-            width: 16px;
-            text-align: center;
+            width: 18px;
+            height: 18px;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon-img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+            filter: brightness(0) invert(1);
+            opacity: 0.95;
+            transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .nav a:hover .nav-icon-img {
+            transform: scale(1.03);
+        }
+
+        .nav a.active .nav-icon-img {
+            filter: brightness(0) saturate(100%);
+            opacity: 1;
         }
 
         .sidebar-footer {
@@ -537,21 +560,21 @@
             border-color: #ecd86d;
         }
 
-        .alert-warning a { color: #d8c58a; }
+        .alert-warning a { color: #8f740d; }
 
         .alert-info {
             background: #edf4ff;
             border-color: #bdd4ff;
         }
 
-        .alert-info a { color: #d9c38a; }
+        .alert-info a { color: #3567ca; }
 
         .alert-success {
             background: #ebfaef;
             border-color: #b9e4c2;
         }
 
-        .alert-success a { color: #d1c291; }
+        .alert-success a { color: #17874b; }
 
         .mobile-overlay {
             display: none;
@@ -675,43 +698,62 @@
         <nav class="nav">
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">⌂</span><span>Dashboard</span>
+                    <span class="nav-ico">⌘</span>
+                    <span>Dashboard</span>
                 </a>
             {% endif %}
 
             {% if portal_access.properties %}
                 <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">🏢</span><span>Properties</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
+                    </span>
+                    <span>Properties</span>
                 </a>
             {% endif %}
 
             {% if portal_access.billing %}
                 <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">💳</span><span>Billing & Payments</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
+                    </span>
+                    <span>Billing & Payments</span>
                 </a>
             {% endif %}
 
             {% if portal_access.field_operations %}
                 <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📍</span><span>Field Officers</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
+                    </span>
+                    <span>Field Officers</span>
                 </a>
             {% endif %}
 
             {% if portal_access.reports %}
                 <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📊</span><span>Reports</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
+                    </span>
+                    <span>Reports</span>
                 </a>
             {% endif %}
 
             {% if portal_access.assembly %}
                 <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">ⓘ</span><span>Assembly</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
+                    </span>
+                    <span>Assembly</span>
                 </a>
             {% endif %}
 
             {% if portal_access.settings %}
                 <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">⚙</span><span>Settings</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
+                    </span>
+                    <span>Settings</span>
                 </a>
             {% endif %}
         </nav>

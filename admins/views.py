@@ -23,6 +23,7 @@ from openpyxl.styles import Font
 
 from admins.decorators import module_required
 from admins.forms import (
+    AssemblyEditForm,
     NotificationSettingsForm,
     PRMSPasswordChangeForm,
     ProfileSettingsForm,
@@ -1063,6 +1064,21 @@ def assembly_management(request):
     if not assembly:
         return redirect("portal-login")
 
+    show_edit_modal = request.GET.get("edit") == "1"
+
+    if request.method == "POST" and request.POST.get("action") == "update_assembly":
+        form = AssemblyEditForm(request.POST, instance=assembly)
+        show_edit_modal = True
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Assembly information updated successfully.")
+            return redirect("admins:assembly-management")
+        else:
+            messages.error(request, "Please correct the errors below and try again.")
+    else:
+        form = AssemblyEditForm(instance=assembly)
+
     total_properties = Property.objects.filter(assembly=assembly).count()
     total_bills = Bill.objects.filter(assembly=assembly).count()
     field_officers = UserProfile.objects.filter(assembly=assembly, role="field_officer").count()
@@ -1076,13 +1092,15 @@ def assembly_management(request):
         "assembly": assembly,
         "assembly_status": "Active" if assembly.is_active else "Inactive",
         "assembly_status_class": "status-active" if assembly.is_active else "status-inactive",
-        "registration_date": assembly.created_at.strftime("%Y-%m-%d") if assembly.created_at else "—",
+        "registration_date": assembly.created_at.strftime("%Y-%m-%d") if getattr(assembly, "created_at", None) else "—",
         "stats": [
             {"label": "Total Properties", "value": f"{total_properties:,}"},
             {"label": "Total Bills", "value": f"{total_bills:,}"},
             {"label": "Field Officers", "value": f"{field_officers:,}"},
             {"label": "Total Users", "value": f"{total_users:,}"},
         ],
+        "form": form,
+        "show_edit_modal": show_edit_modal,
         "portal_access": portal_access,
         "allowed_modules": portal_access,
     }

@@ -107,9 +107,32 @@
         }
 
         .nav-icon {
-            width: 16px;
-            text-align: center;
+            width: 18px;
+            height: 18px;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon-img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+            filter: brightness(0) invert(1);
+            opacity: 0.96;
+            transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .nav a:hover .nav-icon-img {
+            opacity: 1;
+            transform: scale(1.03);
+        }
+
+        .nav a.active .nav-icon-img {
+            filter: none;
+            opacity: 1;
         }
 
         .sidebar-footer {
@@ -612,43 +635,62 @@
         <nav class="nav">
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">⌂</span><span>Dashboard</span>
+                    <span class="nav-ico">⌘</span>
+                    <span>Dashboard</span>
                 </a>
             {% endif %}
 
             {% if portal_access.properties %}
                 <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">🏢</span><span>Properties</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
+                    </span>
+                    <span>Properties</span>
                 </a>
             {% endif %}
 
             {% if portal_access.billing %}
                 <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">💳</span><span>Billing & Payments</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
+                    </span>
+                    <span>Billing & Payments</span>
                 </a>
             {% endif %}
 
             {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📍</span><span>Field Officers</span>
+                <a href="{% url 'field_operations:field-operations' %}" class="active">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
+                    </span>
+                    <span>Field Officers</span>
                 </a>
             {% endif %}
 
             {% if portal_access.reports %}
                 <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">📊</span><span>Reports</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
+                    </span>
+                    <span>Reports</span>
                 </a>
             {% endif %}
 
             {% if portal_access.assembly %}
                 <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">ⓘ</span><span>Assembly</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
+                    </span>
+                    <span>Assembly</span>
                 </a>
             {% endif %}
 
             {% if portal_access.settings %}
                 <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">⚙</span><span>Settings</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
+                    </span>
+                    <span>Settings</span>
                 </a>
             {% endif %}
         </nav>
