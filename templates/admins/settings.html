@@ -726,9 +726,7 @@
         <nav class="nav">
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
-                    </span>
+                    <span class="nav-ico">⌘</span>
                     <span>Dashboard</span>
                 </a>
             {% endif %}
@@ -775,7 +773,7 @@
             {% if portal_access.settings %}
                 <a href="{% url 'admins:settings' %}" class="active">
                     <span class="nav-icon">
-                        <img src="{% static 'images/setting.png' %}" alt="Settings" class="nav-icon-img">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
                     </span>
                     <span>Settings</span>
                 </a>
