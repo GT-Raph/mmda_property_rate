@@ -17,7 +17,6 @@
             --sidebar-line: rgba(255, 255, 255, 0.08);
             --gold: #d1ac4c;
             --gold-bg: #e9d59a;
-            --active-text: #1f1f1f;
             --green: #19a54a;
             --green-soft: #d8f3df;
             --blue: #3b82f6;
@@ -31,9 +30,7 @@
             --topbar-height: 78px;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         html, body {
             margin: 0;
@@ -43,9 +40,7 @@
             color: var(--text);
         }
 
-        body {
-            min-height: 100vh;
-        }
+        body { min-height: 100vh; }
 
         a {
             text-decoration: none;
@@ -97,7 +92,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            color: rgba(255, 255, 255, 0.92);
+            color: rgba(255, 255, 255, 0.9);
             padding: 12px 14px;
             border-radius: 12px;
             font-size: 15px;
@@ -111,7 +106,7 @@
 
         .nav a.active {
             background: var(--gold-bg);
-            color: var(--active-text);
+            color: #1f1f1f;
             font-weight: 700;
         }
 
@@ -130,16 +125,17 @@
             object-fit: contain;
             display: block;
             filter: brightness(0) invert(1);
-            opacity: 0.95;
+            opacity: 0.96;
             transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
         }
 
         .nav a:hover .nav-icon-img {
+            opacity: 1;
             transform: scale(1.03);
         }
 
         .nav a.active .nav-icon-img {
-            filter: brightness(0) saturate(100%);
+            filter: none;
             opacity: 1;
         }
 
@@ -186,9 +182,26 @@
             border: 1px solid var(--line);
             border-radius: 10px;
             background: #fff;
-            font-size: 18px;
             cursor: pointer;
             flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .menu-bars {
+            width: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .menu-bars span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: #333;
+            border-radius: 2px;
         }
 
         .search-wrap {
@@ -203,7 +216,7 @@
             border: 1px solid transparent;
             background: #f4f4f4;
             border-radius: 10px;
-            padding: 0 16px 0 40px;
+            padding: 0 16px 0 44px;
             font-size: 14px;
             outline: none;
         }
@@ -213,12 +226,14 @@
             border-color: #ddd;
         }
 
-        .search-wrap span {
+        .search-icon {
             position: absolute;
             left: 14px;
             top: 12px;
-            color: #8b8b8b;
-            font-size: 16px;
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
         }
 
         .topbar-right {
@@ -228,17 +243,31 @@
             flex-shrink: 0;
         }
 
-        .notification {
+        .notification-btn {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
             position: relative;
-            font-size: 20px;
-            line-height: 1;
+            padding: 0;
+            cursor: pointer;
         }
 
-        .notification::after {
+        .notification-btn img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .notification-btn::after {
             content: "";
             position: absolute;
-            top: 0;
-            right: -3px;
+            top: 8px;
+            right: 9px;
             width: 8px;
             height: 8px;
             border-radius: 50%;
@@ -289,10 +318,14 @@
             text-overflow: ellipsis;
         }
 
-        .user-caret {
-            color: #9a9a9a;
-            font-size: 12px;
+        .caret {
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #9a9a9a;
+            border-bottom: 2px solid #9a9a9a;
+            transform: rotate(45deg);
             flex-shrink: 0;
+            margin-top: -3px;
         }
 
         .page {
@@ -351,13 +384,19 @@
             border-radius: 10px;
             display: grid;
             place-items: center;
-            font-size: 18px;
         }
 
-        .soft-gold { background: #f6edcf; color: var(--gold); }
-        .soft-blue { background: var(--blue-soft); color: var(--blue); }
-        .soft-green { background: var(--green-soft); color: var(--green); }
-        .soft-yellow { background: var(--yellow-soft); color: var(--yellow); }
+        .icon-chip img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .soft-gold { background: #f6edcf; }
+        .soft-blue { background: var(--blue-soft); }
+        .soft-green { background: var(--green-soft); }
+        .soft-yellow { background: var(--yellow-soft); }
 
         .trend {
             font-size: 12px;
@@ -501,8 +540,14 @@
             border-radius: 10px;
             display: grid;
             place-items: center;
-            font-size: 16px;
             flex-shrink: 0;
+        }
+
+        .activity-icon img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            display: block;
         }
 
         .activity-body {
@@ -619,8 +664,6 @@
 
             .menu-toggle {
                 display: inline-flex;
-                align-items: center;
-                justify-content: center;
             }
 
             .search-wrap {
@@ -698,7 +741,9 @@
         <nav class="nav">
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-ico">⌘</span>
+                    <span class="nav-icon">
+                        <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
+                    </span>
                     <span>Dashboard</span>
                 </a>
             {% endif %}
@@ -706,7 +751,7 @@
             {% if portal_access.properties %}
                 <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
+                        <img src="{% static 'images/icons/property.png' %}" alt="Properties" class="nav-icon-img">
                     </span>
                     <span>Properties</span>
                 </a>
@@ -715,7 +760,7 @@
             {% if portal_access.billing %}
                 <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
+                        <img src="{% static 'images/icons/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
                     </span>
                     <span>Billing & Payments</span>
                 </a>
@@ -724,7 +769,7 @@
             {% if portal_access.field_operations %}
                 <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
+                        <img src="{% static 'images/icons/field.png' %}" alt="Field Officers" class="nav-icon-img">
                     </span>
                     <span>Field Officers</span>
                 </a>
@@ -733,7 +778,7 @@
             {% if portal_access.reports %}
                 <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
+                        <img src="{% static 'images/icons/report.png' %}" alt="Reports" class="nav-icon-img">
                     </span>
                     <span>Reports</span>
                 </a>
@@ -742,7 +787,7 @@
             {% if portal_access.assembly %}
                 <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
+                        <img src="{% static 'images/icons/assembly.png' %}" alt="Assembly" class="nav-icon-img">
                     </span>
                     <span>Assembly</span>
                 </a>
@@ -751,7 +796,7 @@
             {% if portal_access.settings %}
                 <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
+                        <img src="{% static 'images/icons/settings.png' %}" alt="Settings" class="nav-icon-img">
                     </span>
                     <span>Settings</span>
                 </a>
@@ -767,16 +812,24 @@
     <main class="content">
         <div class="topbar">
             <div class="topbar-left">
-                <button class="menu-toggle" type="button" onclick="openSidebar()">☰</button>
+                <button class="menu-toggle" type="button" onclick="openSidebar()">
+                    <span class="menu-bars">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </button>
 
                 <div class="search-wrap">
-                    <span>⌕</span>
+                    <img src="{% static 'images/icons/search.png' %}" alt="Search" class="search-icon">
                     <input type="text" placeholder="Search properties, bills, payments...">
                 </div>
             </div>
 
             <div class="topbar-right">
-                <div class="notification">🔔</div>
+                <button class="notification-btn" type="button" aria-label="Notifications">
+                    <img src="{% static 'images/icons/notification.png' %}" alt="Notifications">
+                </button>
 
                 <div class="user-box">
                     <div class="avatar">
@@ -803,7 +856,7 @@
                         {% endif %}
                     </div>
 
-                    <div class="user-caret">⌄</div>
+                    <div class="caret"></div>
                 </div>
             </div>
         </div>
@@ -824,11 +877,11 @@
                             {% elif 'Revenue' in card.title %}soft-green
                             {% elif 'Outstanding' in card.title %}soft-yellow
                             {% else %}soft-gold{% endif %}">
-                            {{ card.icon }}
+                            <img src="{% static 'images/icons/' %}{{ card.icon_key }}.png" alt="{{ card.title }}">
                         </div>
 
                         <div class="trend {{ card.change_class }}">
-                            {{ card.change_symbol }} {{ card.change }}%
+                            {{ card.change_prefix }} {{ card.change }}%
                         </div>
                     </div>
 
@@ -889,7 +942,9 @@
                 <div class="activity-list">
                     {% for item in recent_activities %}
                     <div class="activity-item">
-                        <div class="activity-icon {{ item.icon_class }}">{{ item.icon }}</div>
+                        <div class="activity-icon {{ item.icon_class }}">
+                            <img src="{% static 'images/icons/' %}{{ item.icon_key }}.png" alt="">
+                        </div>
                         <div class="activity-body">
                             <div class="activity-title {% if item.highlight %}highlight{% endif %}">
                                 {{ item.title }}
@@ -919,7 +974,7 @@
                     {% for alert in alerts %}
                     <div class="alert-box {{ alert.alert_class }}">
                         <strong>{{ alert.message }}</strong>
-                        <a href="#">{{ alert.action }} →</a>
+                        <a href="#">{{ alert.action }}</a>
                     </div>
                     {% endfor %}
                 </div>

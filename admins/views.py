@@ -696,36 +696,36 @@ def dashboard(request):
             "value": _number(total_properties),
             "meta": "vs last month",
             "change": abs(property_change),
-            "change_symbol": "↗" if property_change >= 0 else "↘",
+            "change_prefix": "+" if property_change >= 0 else "-",
             "change_class": "green" if property_change >= 0 else "red",
-            "icon": "🏢",
+            "icon_key": "property",
         },
         {
             "title": "Bills Generated",
             "value": _number(bills_this_month),
             "meta": "this month",
             "change": abs(bills_change),
-            "change_symbol": "↗" if bills_change >= 0 else "↘",
+            "change_prefix": "+" if bills_change >= 0 else "-",
             "change_class": "green" if bills_change >= 0 else "red",
-            "icon": "📄",
+            "icon_key": "bill",
         },
         {
             "title": "Revenue Collected",
             "value": _money(revenue_this_month),
             "meta": "this month",
             "change": abs(revenue_change),
-            "change_symbol": "↗" if revenue_change >= 0 else "↘",
+            "change_prefix": "+" if revenue_change >= 0 else "-",
             "change_class": "green" if revenue_change >= 0 else "red",
-            "icon": "💲",
+            "icon_key": "paid",
         },
         {
             "title": "Outstanding",
             "value": _money(outstanding_total),
             "meta": "vs last month",
             "change": abs(outstanding_change),
-            "change_symbol": "↘" if outstanding_total <= outstanding_previous else "↗",
-            "change_class": "red" if outstanding_total > outstanding_previous else "green",
-            "icon": "⚠",
+            "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
+            "change_class": "green" if outstanding_total <= outstanding_previous else "red",
+            "icon_key": "alert",
         },
     ]
 
@@ -793,7 +793,7 @@ def dashboard(request):
         recent_items.append(
             {
                 "sort_at": dt,
-                "icon": "💲",
+                "icon_key": "paid",
                 "icon_class": "soft-green",
                 "title": f"Payment received: {_money(payment.amount)}",
                 "subtitle": f"{prop_ref} • {owner_name}",
@@ -806,7 +806,7 @@ def dashboard(request):
         recent_items.append(
             {
                 "sort_at": prop.created_at,
-                "icon": "🏢",
+                "icon_key": "property",
                 "icon_class": "soft-blue",
                 "title": f"New property registered in {prop.area_town}",
                 "subtitle": f"{prop.property_reference} • {prop.owner.full_name}",
@@ -819,7 +819,7 @@ def dashboard(request):
         recent_items.append(
             {
                 "sort_at": dispute.created_at,
-                "icon": "⚠",
+                "icon_key": "alert",
                 "icon_class": "soft-yellow",
                 "title": "Rate calculation dispute",
                 "subtitle": (
@@ -836,7 +836,7 @@ def dashboard(request):
         recent_items.append(
             {
                 "sort_at": dt,
-                "icon": "📍",
+                "icon_key": "field",
                 "icon_class": "soft-blue",
                 "title": visit.get_visit_type_display() if hasattr(visit, "get_visit_type_display") else "Field Visit",
                 "subtitle": f"{visit.property.property_reference} • {visit.property.owner.full_name}",
