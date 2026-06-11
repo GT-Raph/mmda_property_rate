@@ -733,7 +733,7 @@
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
+                        <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
                     </span>
                     <span>Dashboard</span>
                 </a>
@@ -769,7 +769,7 @@
             {% if portal_access.reports %}
                 <a href="{% url 'admins:reports-analytics' %}" class="active">
                     <span class="nav-icon">
-                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
+                        <img src="{% static 'images/icons/reports.png' %}" alt="Reports" class="nav-icon-img">
                     </span>
                     <span>Reports</span>
                 </a>
