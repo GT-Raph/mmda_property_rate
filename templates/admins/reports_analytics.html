@@ -14,17 +14,14 @@
             --muted: #7d7d7d;
             --sidebar: #050505;
             --sidebar-line: rgba(255,255,255,0.08);
-            --gold: #d1ac4c;
+            --gold: #c7a541;
             --gold-bg: #ead79f;
-            --gold-soft: #f5ecd0;
+            --gold-soft: #efe1b3;
+            --gold-light: #decc95;
             --green: #16a34a;
             --green-soft: #d9f7df;
-            --blue-soft: #eaf2ff;
-            --blue-border: #bcd3ff;
-            --red: #ef4444;
-            --red-soft: #fff1f1;
-            --yellow-soft: #fff8df;
-            --yellow-border: #f0db85;
+            --blue: #2563eb;
+            --blue-soft: #dbeafe;
             --shadow: 0 4px 18px rgba(0,0,0,0.04);
             --radius: 18px;
             --sidebar-width: 230px;
@@ -353,29 +350,11 @@
             color: #7c8188;
         }
 
-        .message-box {
-            border-radius: 10px;
-            padding: 12px 14px;
-            margin-bottom: 12px;
-            font-size: 14px;
-        }
-
-        .message-success {
-            background: #ebfaef;
-            border: 1px solid #b9e4c2;
-            color: #166534;
-        }
-
-        .message-error {
-            background: #fff1f1;
-            border: 1px solid #f3c2c2;
-            color: #b42318;
-        }
-
-        .message-info {
-            background: #edf4ff;
-            border: 1px solid #bdd4ff;
-            color: #1d4ed8;
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
         }
 
         .card {
@@ -385,345 +364,273 @@
             box-shadow: var(--shadow);
         }
 
-        .tabs-card {
-            padding: 16px;
-            margin-bottom: 24px;
+        .stat-card {
+            padding: 18px;
+            min-height: 126px;
         }
 
-        .tab-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 13px 16px;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 8px;
+        .stat-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 12px;
         }
 
-        .tab-link.active {
-            background: var(--gold-bg);
-            color: #fff;
-        }
-
-        .tab-icon {
+        .stat-icon img {
             width: 18px;
             height: 18px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .tab-icon svg {
-            width: 18px;
-            height: 18px;
+            object-fit: contain;
             display: block;
         }
 
-        .section-card {
-            padding: 24px;
+        .icon-green { background: var(--green-soft); }
+        .icon-blue { background: var(--blue-soft); }
+        .icon-gold { background: #f7efcf; }
+
+        .stat-title {
+            font-size: 14px;
+            color: #8a8a8a;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .stat-meta {
+            font-size: 14px;
+            color: #8a8a8a;
+        }
+
+        .chart-card {
+            padding: 18px 18px 14px;
+            margin-bottom: 20px;
         }
 
         .section-title {
+            margin: 0;
             font-size: 18px;
             font-weight: 800;
-            margin: 0 0 24px;
         }
 
-        .field-group {
-            margin-bottom: 18px;
+        .chart-box {
+            margin-top: 18px;
+            border-left: 2px solid #cbcbcb;
+            border-bottom: 2px solid #cbcbcb;
+            height: 310px;
+            position: relative;
+            padding: 16px 14px 0 14px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 18px;
         }
 
-        .field-group label {
-            display: block;
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #222;
+        .chart-grid-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            border-top: 1px dashed #dddddd;
         }
 
-        .field-group input,
-        .field-group select,
-        .field-group textarea {
-            width: 100%;
-            min-height: 46px;
-            border: 1px solid #dddddd;
-            border-radius: 10px;
-            background: #fff;
-            padding: 0 14px;
-            font-size: 14px;
-            outline: none;
+        .grid-1 { top: 60px; }
+        .grid-2 { top: 115px; }
+        .grid-3 { top: 170px; }
+        .grid-4 { top: 225px; }
+
+        .y-labels {
+            position: absolute;
+            left: -54px;
+            top: -8px;
+            width: 48px;
+            font-size: 12px;
+            color: #8a8a8a;
+            text-align: right;
+            line-height: 55px;
         }
 
-        .field-group textarea {
-            padding-top: 12px;
-            min-height: 96px;
-        }
-
-        .field-group input[readonly] {
-            background: #f3f3f3;
-            color: #888;
-        }
-
-        .help-text {
-            margin-top: 6px;
-            font-size: 13px;
-            color: #7d7d7d;
-        }
-
-        .btn {
-            height: 42px;
-            border: none;
-            border-radius: 10px;
-            padding: 0 22px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: var(--gold-bg);
-            color: #fff;
-        }
-
-        .btn-secondary {
-            background: #f3f3f3;
-            color: #222;
-        }
-
-        .prefs-list {
+        .month-group {
+            position: relative;
+            z-index: 2;
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 18px;
-            margin-bottom: 18px;
+            align-items: center;
+            justify-content: flex-end;
+            min-width: 0;
         }
 
-        .pref-item {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 18px 16px;
+        .bars {
+            width: 100%;
+            max-width: 95px;
+            height: 250px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .bar {
+            width: 42%;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .bar-collected {
+            background: var(--gold);
+        }
+
+        .bar-target {
+            background: var(--gold-light);
+        }
+
+        .month-label {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #8a8a8a;
+        }
+
+        .chart-legend {
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            font-size: 14px;
+            color: #8a8a8a;
+        }
+
+        .legend-item {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 16px;
+            gap: 6px;
         }
 
-        .pref-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 4px;
+        .legend-box {
+            width: 12px;
+            height: 12px;
         }
 
-        .pref-desc {
-            font-size: 14px;
-            color: #7c8188;
+        .reports-card {
+            overflow: hidden;
         }
 
-        .switch {
-            position: relative;
-            width: 46px;
-            height: 24px;
-            flex-shrink: 0;
+        .reports-head {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .switch input {
-            display: none;
-        }
-
-        .slider {
-            position: absolute;
-            inset: 0;
-            background: #d8dbe2;
-            border-radius: 999px;
-            cursor: pointer;
-            transition: 0.2s ease;
-        }
-
-        .slider::before {
-            content: "";
-            position: absolute;
-            width: 18px;
-            height: 18px;
-            left: 3px;
-            top: 3px;
-            background: #fff;
-            border-radius: 50%;
-            transition: 0.2s ease;
-        }
-
-        .switch input:checked + .slider {
-            background: var(--gold-bg);
-        }
-
-        .switch input:checked + .slider::before {
-            transform: translateX(22px);
-        }
-
-        .security-box {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 18px 16px;
-            margin-bottom: 18px;
-        }
-
-        .security-box h3 {
-            margin: 0 0 8px;
-            font-size: 16px;
+        .reports-head h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
             font-weight: 800;
         }
 
-        .security-box p {
-            margin: 0 0 14px;
+        .reports-head p {
+            margin: 0;
             font-size: 14px;
-            color: #7c8188;
+            color: #8a8a8a;
         }
 
-        .twofa-enabled {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #15803d;
-            margin-bottom: 12px;
-        }
-
-        .twofa-enabled svg {
-            width: 16px;
-            height: 16px;
-            display: block;
-        }
-
-        .qr-box {
-            padding: 14px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #fafafa;
-            margin-bottom: 16px;
-        }
-
-        .qr-box img {
-            width: 180px;
-            height: 180px;
-            display: block;
-            margin-bottom: 12px;
-            background: #fff;
-            padding: 10px;
-            border-radius: 10px;
-        }
-
-        .code-box {
-            padding: 12px;
-            border-radius: 10px;
-            background: var(--blue-soft);
-            border: 1px solid var(--blue-border);
-            margin-bottom: 14px;
-            font-size: 14px;
-            word-break: break-all;
-            line-height: 1.5;
-        }
-
-        .session-item {
+        .report-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            padding: 14px 12px;
+            gap: 18px;
+            padding: 18px 20px;
             border-top: 1px solid var(--line);
         }
 
-        .session-item:first-child {
+        .report-row:first-of-type {
             border-top: 0;
         }
 
-        .session-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 4px;
+        .report-main {
+            min-width: 0;
         }
 
-        .session-meta {
-            font-size: 13px;
-            color: #7c8188;
-        }
-
-        .session-status {
-            font-size: 14px;
-            font-weight: 700;
-            color: #16a34a;
-        }
-
-        .danger-box {
-            margin-top: 22px;
-            padding: 18px 16px;
-            border-radius: 12px;
-            background: var(--red-soft);
-            border: 1px solid #f3b1b1;
-        }
-
-        .danger-box h3 {
-            margin: 0 0 8px;
-            color: #dc2626;
+        .report-title {
             font-size: 16px;
             font-weight: 800;
+            margin-bottom: 6px;
         }
 
-        .danger-box p {
-            margin: 0;
-            color: #7c8188;
+        .report-desc {
             font-size: 14px;
-        }
-
-        .logout-box {
-            margin-top: 22px;
-            padding: 18px 16px;
-            border-radius: 12px;
-            background: var(--yellow-soft);
-            border: 1px solid var(--yellow-border);
-        }
-
-        .logout-box h3 {
-            margin: 0 0 8px;
-            color: #9a6700;
-            font-size: 16px;
-            font-weight: 800;
-        }
-
-        .logout-box p {
-            margin: 0 0 14px;
             color: #7c8188;
-            font-size: 14px;
+            margin-bottom: 8px;
         }
 
-        .logout-action {
-            display: flex;
-            justify-content: flex-start;
+        .report-meta {
+            font-size: 12px;
+            color: #8f96a3;
         }
 
-        .btn-logout {
-            height: 42px;
+        .report-meta span {
+            margin-right: 10px;
+        }
+
+        .report-form {
+            flex-shrink: 0;
+        }
+
+        .generate-btn {
+            height: 34px;
             border: none;
-            border-radius: 10px;
-            padding: 0 18px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            background: #111;
+            border-radius: 8px;
+            background: var(--gold-bg);
             color: #fff;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 0 16px;
+            cursor: pointer;
         }
 
-        .btn-logout svg {
-            width: 16px;
-            height: 16px;
-            display: block;
+        .message-stack {
+            margin-bottom: 14px;
+        }
+
+        .message-box {
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background: #ebfaef;
+            border: 1px solid #b9e4c2;
+            color: #166534;
+        }
+
+        .message-info {
+            background: #edf4ff;
+            border: 1px solid #bdd4ff;
+            color: #1d4ed8;
+        }
+
+        .message-warning {
+            background: #fff8df;
+            border: 1px solid #f0db85;
+            color: #9a6700;
+        }
+
+        .message-error {
+            background: #fff1f1;
+            border: 1px solid #f3c2c2;
+            color: #b42318;
         }
 
         .mobile-overlay {
             display: none;
+        }
+
+        @media (max-width: 1024px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 860px) {
@@ -795,8 +702,17 @@
                 font-size: 24px;
             }
 
-            .pref-item,
-            .session-item {
+            .chart-box {
+                gap: 10px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
+            .bars {
+                max-width: 60px;
+            }
+
+            .report-row {
                 flex-direction: column;
                 align-items: flex-start;
             }
@@ -817,7 +733,7 @@
             {% if portal_access.dashboard %}
                 <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
+                        <img src="{% static 'images/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
                     </span>
                     <span>Dashboard</span>
                 </a>
@@ -851,9 +767,9 @@
             {% endif %}
 
             {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
+                <a href="{% url 'admins:reports-analytics' %}" class="active">
                     <span class="nav-icon">
-                        <img src="{% static 'images/icons/reports.png' %}" alt="Reports" class="nav-icon-img">
+                        <img src="{% static 'images/bar-chart.png' %}" alt="Reports" class="nav-icon-img">
                     </span>
                     <span>Reports</span>
                 </a>
@@ -869,9 +785,9 @@
             {% endif %}
 
             {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}" class="active">
+                <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
                     <span class="nav-icon">
-                        <img src="{% static 'images/setting.png' %}" alt="Settings" class="nav-icon-img">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
                     </span>
                     <span>Settings</span>
                 </a>
@@ -922,6 +838,7 @@
                             {{ request.user.username|slice:":1"|upper }}
                         {% endif %}
                     </div>
+
                     <div class="user-meta">
                         <strong>
                             {% if request.user.first_name or request.user.last_name %}
@@ -930,8 +847,14 @@
                                 {{ request.user.username }}
                             {% endif %}
                         </strong>
-                        <small>{{ request.user.email|default:"No email added" }}</small>
+
+                        {% if request.user.email %}
+                            <small>{{ request.user.email }}</small>
+                        {% else %}
+                            <small>No email added</small>
+                        {% endif %}
                     </div>
+
                     <div class="user-caret"></div>
                 </div>
             </div>
@@ -942,286 +865,98 @@
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
             {% if messages %}
-                {% for message in messages %}
-                    <div class="message-box {% if message.tags == 'success' %}message-success{% elif message.tags == 'info' %}message-info{% else %}message-error{% endif %}">
-                        {{ message }}
+                <div class="message-stack">
+                    {% for message in messages %}
+                        <div class="message-box
+                            {% if message.tags == 'success' %}message-success
+                            {% elif message.tags == 'info' %}message-info
+                            {% elif message.tags == 'warning' %}message-warning
+                            {% else %}message-error{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <section class="cards-grid">
+                {% for stat in stats %}
+                    <div class="card stat-card">
+                        <div class="stat-icon {{ stat.icon_class }}">
+                            <img src="{% static 'images/icons/' %}{{ stat.icon_key }}.png" alt="{{ stat.title }}">
+                        </div>
+                        <div class="stat-title">{{ stat.title }}</div>
+                        <div class="stat-value">{{ stat.value }}</div>
+                        <div class="stat-meta">{{ stat.meta }}</div>
                     </div>
                 {% endfor %}
-            {% endif %}
-
-            <section class="card tabs-card">
-                <a href="?tab=profile" class="tab-link {% if active_tab == 'profile' %}active{% endif %}">
-                    <span class="tab-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle>
-                            <path d="M4 20C5.8 16.8 8.5 15.2 12 15.2C15.5 15.2 18.2 16.8 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <span>Profile</span>
-                </a>
-
-                <a href="?tab=password" class="tab-link {% if active_tab == 'password' %}active{% endif %}">
-                    <span class="tab-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"></rect>
-                            <path d="M8 10V7.8C8 5.7 9.7 4 11.8 4H12.2C14.3 4 16 5.7 16 7.8V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <span>Change Password</span>
-                </a>
-
-                <a href="?tab=notifications" class="tab-link {% if active_tab == 'notifications' %}active{% endif %}">
-                    <span class="tab-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"/>
-                            <path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        </svg>
-                    </span>
-                    <span>Notifications</span>
-                </a>
-
-                <a href="?tab=security" class="tab-link {% if active_tab == 'security' %}active{% endif %}">
-                    <span class="tab-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <path d="M12 3L19 6V11C19 15.5 16.3 19.1 12 21C7.7 19.1 5 15.5 5 11V6L12 3Z" stroke="currentColor" stroke-width="2"></path>
-                        </svg>
-                    </span>
-                    <span>Security</span>
-                </a>
             </section>
 
-            {% if active_tab == 'profile' %}
-                <section class="card section-card">
-                    <h2 class="section-title">Profile Information</h2>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="save_profile">
+            <section class="card chart-card">
+                <h2 class="section-title">Collection vs Target</h2>
 
-                        <div class="field-group">
-                            <label for="id_full_name">Full Name</label>
-                            {{ profile_form.full_name }}
-                        </div>
+                <div class="chart-box">
+                    <div class="chart-grid-line grid-1"></div>
+                    <div class="chart-grid-line grid-2"></div>
+                    <div class="chart-grid-line grid-3"></div>
+                    <div class="chart-grid-line grid-4"></div>
 
-                        <div class="field-group">
-                            <label for="id_email">Email Address</label>
-                            {{ profile_form.email }}
-                        </div>
-
-                        <div class="field-group">
-                            <label for="id_phone_number">Phone Number</label>
-                            {{ profile_form.phone_number }}
-                        </div>
-
-                        <div class="field-group">
-                            <label>Role</label>
-                            <input type="text" value="{{ profile_data.role }}" readonly>
-                            <div class="help-text">Contact super admin to change your role</div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </form>
-                </section>
-            {% endif %}
-
-            {% if active_tab == 'password' %}
-                <section class="card section-card">
-                    <h2 class="section-title">Change Password</h2>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="change_password">
-
-                        <div class="field-group">
-                            <label for="id_current_password">Current Password</label>
-                            {{ password_form.current_password }}
-                        </div>
-
-                        <div class="field-group">
-                            <label for="id_new_password">New Password</label>
-                            {{ password_form.new_password }}
-                        </div>
-
-                        <div class="field-group">
-                            <label for="id_confirm_new_password">Confirm New Password</label>
-                            {{ password_form.confirm_new_password }}
-                        </div>
-
-                        <div class="code-box">
-                            <strong>Password requirements:</strong><br>
-                            • At least 8 characters long<br>
-                            • Mix of uppercase and lowercase letters<br>
-                            • Include numbers and special characters
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Update Password</button>
-                    </form>
-                </section>
-            {% endif %}
-
-            {% if active_tab == 'notifications' %}
-                <section class="card section-card">
-                    <h2 class="section-title">Notification Preferences</h2>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="save_notifications">
-
-                        <div class="prefs-list">
-                            <div class="pref-item">
-                                <div>
-                                    <div class="pref-title">Email Notifications</div>
-                                    <div class="pref-desc">Receive email updates about system activity</div>
-                                </div>
-                                <label class="switch">
-                                    {{ notification_form.email_notifications }}
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="pref-item">
-                                <div>
-                                    <div class="pref-title">Payment Alerts</div>
-                                    <div class="pref-desc">Get notified when payments are received</div>
-                                </div>
-                                <label class="switch">
-                                    {{ notification_form.payment_alerts }}
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="pref-item">
-                                <div>
-                                    <div class="pref-title">Dispute Alerts</div>
-                                    <div class="pref-desc">Notifications for new disputes and resolutions</div>
-                                </div>
-                                <label class="switch">
-                                    {{ notification_form.dispute_alerts }}
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="pref-item">
-                                <div>
-                                    <div class="pref-title">System Updates</div>
-                                    <div class="pref-desc">Updates about new features and maintenance</div>
-                                </div>
-                                <label class="switch">
-                                    {{ notification_form.system_updates }}
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Save Preferences</button>
-                    </form>
-                </section>
-            {% endif %}
-
-            {% if active_tab == 'security' %}
-                <section class="card section-card">
-                    <h2 class="section-title">Security Settings</h2>
-
-                    <div class="security-box">
-                        <h3>Two-Factor Authentication</h3>
-                        <p>Add an extra layer of security to your account</p>
-
-                        {% if two_factor_enabled %}
-                            <div class="twofa-enabled">
-                                <svg viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 12.5L9.2 16.7L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                </svg>
-                                <span>Two-factor authentication is enabled</span>
-                            </div>
-                            <form method="post" action="{% url 'admins:disable-2fa' %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-secondary">Disable 2FA</button>
-                            </form>
-                        {% else %}
-                            <form method="post" action="{% url 'admins:begin-2fa-setup' %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-primary">Enable 2FA</button>
-                            </form>
-                        {% endif %}
-
-                        {% if show_2fa_setup and pending_device %}
-                            <div class="qr-box" style="margin-top:16px;">
-                                <img src="{{ qr_code_data_uri }}" alt="2FA QR Code">
-                                <div class="code-box">
-                                    <strong>Manual setup key:</strong><br>
-                                    {{ manual_key }}
-                                </div>
-
-                                <form method="post" action="{% url 'admins:confirm-2fa-setup' %}">
-                                    {% csrf_token %}
-                                    <div class="field-group">
-                                        <label for="id_token">Enter 6-digit code</label>
-                                        {{ verify_form.token }}
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Verify and Enable</button>
-                                </form>
-                            </div>
-                        {% endif %}
+                    <div class="y-labels">
+                        800000<br>
+                        600000<br>
+                        400000<br>
+                        200000<br>
+                        0
                     </div>
 
-                    <div class="security-box">
-                        <h3>Active Sessions</h3>
-                        <p>Manage devices where you're currently logged in</p>
-
-                        {% for session in active_sessions %}
-                            <div class="session-item">
-                                <div>
-                                    <div class="session-title">{{ session.device_name|default:"Session" }}</div>
-                                    <div class="session-meta">
-                                        {% if request.session.session_key == session.session_key %}
-                                            Current session
-                                        {% else %}
-                                            Last seen {{ session.last_seen|date:"M d, Y H:i" }}
-                                        {% endif %}
-                                        • {{ session.location_label|default:"Unknown" }}
-                                    </div>
-                                </div>
-
-                                {% if request.session.session_key == session.session_key %}
-                                    <div class="session-status">Active</div>
-                                {% else %}
-                                    <form method="post" action="{% url 'admins:revoke-session' session.id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-secondary">Revoke</button>
-                                    </form>
-                                {% endif %}
+                    {% for month in chart_months %}
+                        <div class="month-group">
+                            <div class="bars" title="Collected: {{ month.collected_display }} | Target: {{ month.target_display }}">
+                                <div class="bar bar-collected" style="height: {{ month.collected_height }}px;"></div>
+                                <div class="bar bar-target" style="height: {{ month.target_height }}px;"></div>
                             </div>
-                        {% empty %}
-                            <div class="session-item">
-                                <div>
-                                    <div class="session-title">No active session records found</div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="danger-box">
-                        <h3>Account Deactivation</h3>
-                        <p>Contact your system administrator to deactivate your account.</p>
-                    </div>
-
-                    <div class="logout-box">
-                        <h3>Logout</h3>
-                        <p>Sign out of your current admin session securely.</p>
-
-                        <div class="logout-action">
-                            <form method="post" action="{% url 'logout' %}">
-                                {% csrf_token %}
-                                <button type="submit" class="btn-logout">
-                                    <svg viewBox="0 0 24 24" fill="none">
-                                        <path d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                        <path d="M13 8L17 12L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                        <path d="M8 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                    </svg>
-                                    <span>Logout</span>
-                                </button>
-                            </form>
+                            <div class="month-label">{{ month.label }}</div>
                         </div>
+                    {% endfor %}
+                </div>
+
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <span class="legend-box" style="background: var(--gold);"></span>
+                        <span>Collected</span>
                     </div>
-                </section>
-            {% endif %}
+                    <div class="legend-item">
+                        <span class="legend-box" style="background: var(--gold-light);"></span>
+                        <span>Target</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card reports-card">
+                <div class="reports-head">
+                    <h2>Available Reports</h2>
+                    <p>Generate and download system reports</p>
+                </div>
+
+                {% for report in reports %}
+                    <div class="report-row">
+                        <div class="report-main">
+                            <div class="report-title">{{ report.title }}</div>
+                            <div class="report-desc">{{ report.description }}</div>
+                            <div class="report-meta">
+                                <span>Last generated: {{ report.generated }}</span>
+                                <span>•</span>
+                                <span>Format: {{ report.format }}</span>
+                            </div>
+                        </div>
+
+                        <form method="post" class="report-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="report_key" value="{{ report.key }}">
+                            <button type="submit" class="generate-btn">Generate</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </section>
         </div>
     </main>
 </div>

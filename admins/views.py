@@ -953,21 +953,21 @@ def reports_analytics(request):
 
     stats = [
         {
-            "icon": "↗",
+            "icon_key": "collection",
             "icon_class": "icon-green",
             "title": "Collection Rate",
             "value": f"{collection_rate}%",
             "meta": f"vs {previous_collection_rate}% last month",
         },
         {
-            "icon": "📄",
+            "icon_key": "bill",
             "icon_class": "icon-blue",
             "title": "Bills Generated",
             "value": f"{bills_generated_this_month:,}",
             "meta": "this month",
         },
         {
-            "icon": "⭳",
+            "icon_key": "report-download",
             "icon_class": "icon-gold",
             "title": "Reports Generated",
             "value": f"{reports_generated_this_week:,}",
