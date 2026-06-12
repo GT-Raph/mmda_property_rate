@@ -418,6 +418,13 @@
             display:block;
         }
 
+        .quick-btn .ico-svg svg{
+            width:18px;
+            height:18px;
+            display:block;
+            color:#fff;
+        }
+
         .quick-btn .ico-white img,
         .quick-btn .ico-cert img{
             filter:brightness(0) invert(1);
@@ -838,45 +845,10 @@
             </div>
         </div>
 
-        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
+        
     </header>
 
-    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
-        <aside class="drawer">
-            <div class="drawer-top">
-                <div>
-                    <h3>Menu</h3>
-                    <div class="drawer-email">{{ display_email|default:"No email added" }}</div>
-                </div>
-                <button type="button" class="drawer-close" id="menuClose">×</button>
-            </div>
-
-            <nav class="drawer-nav">
-                <a href="{{ section_links.dashboard }}" class="drawer-link active">
-                    <span>⌘</span><span>Dashboard</span>
-                </a>
-                <a href="{{ section_links.properties }}" class="drawer-link">
-                    <span>🏢</span><span>Properties</span>
-                </a>
-                <a href="{{ section_links.bills }}" class="drawer-link">
-                    <span>💳</span><span>Bills</span>
-                </a>
-                <a href="{{ section_links.certificates }}" class="drawer-link">
-                    <span>⌘</span><span>Certificates</span>
-                </a>
-                <a href="{{ section_links.profile }}" class="drawer-link">
-                    <span>⚙</span><span>Profile</span>
-                </a>
-            </nav>
-
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="drawer-logout">
-                    <span>↪</span><span>Logout</span>
-                </button>
-            </form>
-        </aside>
-    </div> -->
+    
 
     <main class="page">
         <section class="hero">
@@ -941,12 +913,12 @@
                 </a>
 
                 <a href="{{ quick_links.dispute }}" class="quick-btn">
-                    <span class="ico">!</span>
+                    <span class="ico ico-svg"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4L20 19H4L12 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.5" r="1" fill="currentColor"/></svg></span>
                     <span class="txt">Dispute</span>
                 </a>
 
                 <a href="{{ quick_links.receipts }}" class="quick-btn">
-                    <span class="ico">↓</span>
+                    <span class="ico ico-svg"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11L12 15L16 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
                     <span class="txt">Receipts</span>
                 </a>
             </div>
@@ -1005,7 +977,7 @@
                                         <div class="bill-number">{{ bill.bill_number }}</div>
                                         <div class="bill-ref">{{ bill.property_reference }}</div>
                                         <div class="bill-amount">{{ bill.amount_due }}</div>
-                                        <div class="bill-date">🗓 Due: {{ bill.due_date }}</div>
+                                        <div class="bill-date">Due: {{ bill.due_date }}</div>
                                     </div>
 
                                     <div style="text-align:right;">
@@ -1055,8 +1027,8 @@
 
     <nav class="bottom-nav">
         <a href="{{ section_links.dashboard }}" class="active">
-            <span class="nav-icon">
-                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard">
             </span>
             Dashboard
         </a>
@@ -1083,7 +1055,9 @@
         </a>
 
         <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>

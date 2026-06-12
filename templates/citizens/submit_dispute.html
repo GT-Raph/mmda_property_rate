@@ -281,9 +281,19 @@
         }
 
         .upload-icon{
-            font-size:42px;
+            width:48px;
+            height:48px;
             color:#6b7280;
-            margin-bottom:10px;
+            margin:0 auto 10px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+
+        .upload-icon svg{
+            width:40px;
+            height:40px;
+            display:block;
         }
 
         .upload-title{
@@ -449,33 +459,10 @@
             </div>
         </div>
 
-        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
+        
     </header>
 
-    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
-        <aside class="drawer">
-            <div class="drawer-top">
-                <div>
-                    <h3>Menu</h3>
-                    <div class="drawer-email">{{ display_email|default:"No email added" }}</div>
-                </div>
-                <button type="button" class="drawer-close" id="menuClose">×</button>
-            </div>
-
-            <nav class="drawer-nav">
-                <a href="{{ section_links.dashboard }}" class="drawer-link">⌘ Dashboard</a>
-                <a href="{{ section_links.properties }}" class="drawer-link">🏢 Properties</a>
-                <a href="{{ section_links.bills }}" class="drawer-link">💳 Bills</a>
-                <a href="{{ section_links.certificates }}" class="drawer-link">⌘ Certificates</a>
-                <a href="{{ section_links.profile }}" class="drawer-link">⚙ Profile</a>
-            </nav>
-
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="drawer-logout">↪ Logout</button>
-            </form>
-        </aside>
-    </div> -->
+    
 
     <main class="page">
         <h1 class="page-title">Submit Dispute</h1>
@@ -544,7 +531,7 @@
                     <label for="id_supporting_documents">Supporting Documents (Optional)</label>
 
                     <div class="upload-box">
-                        <div class="upload-icon">📄</div>
+                        <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M8 3H14L19 8V20C19 20.6 18.6 21 18 21H8C7.4 21 7 20.6 7 20V4C7 3.4 7.4 3 8 3Z" stroke="currentColor" stroke-width="1.8"></path><path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8"></path><path d="M10 13H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M10 17H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></div>
                         <div class="upload-title">Upload supporting documents (PDF, JPG, PNG)</div>
 
                         <label for="id_supporting_documents" class="file-trigger">Choose Files</label>
@@ -575,7 +562,9 @@
 
     <nav class="bottom-nav">
         <a href="{{ section_links.dashboard }}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard">
+            </span>
             Dashboard
         </a>
 
@@ -602,7 +591,7 @@
 
         <a href="{{ section_links.profile }}">
             <span class="nav-ico nav-img">
-                <img src="{% static 'images/setting.png' %}" alt="Profile">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
             </span>
             Profile
         </a>

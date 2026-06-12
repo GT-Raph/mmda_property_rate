@@ -397,14 +397,14 @@
                         </div>
 
                         <div class="receipt-wrap">
-                            <a href="#" class="receipt-btn">⭳ Receipt</a>
+                            <a href="#" class="receipt-btn">Receipt</a>
                         </div>
                     </div>
                 </section>
             {% endfor %}
 
             <div class="export-wrap">
-                <a href="#" class="export-btn">⭳ Export All Receipts as PDF</a>
+                <a href="#" class="export-btn">Export All Receipts as PDF</a>
             </div>
         {% else %}
             <div class="empty">No successful payments found yet.</div>
@@ -413,7 +413,9 @@
 
     <nav class="bottom-nav">
         <a href="{% url 'citizens:dashboard' %}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard">
+            </span>
             Dashboard
         </a>
 
@@ -439,7 +441,9 @@
         </a>
 
         <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>

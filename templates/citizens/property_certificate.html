@@ -198,11 +198,11 @@
                 <small>{{ owner_role }}</small>
             </div>
         </div>
-        <div style="font-size:28px;">⌘</div>
+        
     </header>
 
     <main class="page">
-        <a href="{% url 'citizens:properties' %}" class="back-link">← Back to My Properties</a>
+        <a href="{% url 'citizens:properties' %}" class="back-link">Back to My Properties</a>
 
         <section class="card">
             <div class="head">
@@ -261,8 +261,8 @@
             </div>
 
             <div class="actions">
-                <a href="{{ download_url }}" class="btn btn-gold">⭳ Download Certificate</a>
-                <a href="{{ verify_url }}" class="btn btn-white" target="_blank">⌘ Open Verification Page</a>
+                <a href="{{ download_url }}" class="btn btn-gold">Download Certificate</a>
+                <a href="{{ verify_url }}" class="btn btn-white" target="_blank">Open Verification Page</a>
             </div>
         </section>
     </main>

@@ -265,10 +265,20 @@
 
         .item-icon {
             width: 22px;
-            text-align: center;
+            height: 22px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
             color: var(--gold-deep);
-            font-size: 22px;
             flex-shrink: 0;
+        }
+
+        .item-icon svg,
+        .item-icon img {
+            width: 20px;
+            height: 20px;
+            display:block;
+            object-fit:contain;
         }
 
         .item-text {
@@ -538,7 +548,7 @@
             flex-shrink: 0;
         }
 
-        .switch-input {
+        .switch input[type="checkbox"] {
             appearance: none;
             -webkit-appearance: none;
             width: 46px;
@@ -549,9 +559,10 @@
             cursor: pointer;
             position: relative;
             transition: background .2s ease;
+            margin:0;
         }
 
-        .switch-input::before {
+        .switch input[type="checkbox"]::before {
             content: "";
             position: absolute;
             top: 3px;
@@ -564,11 +575,11 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.18);
         }
 
-        .switch-input:checked {
+        .switch input[type="checkbox"]:checked {
             background: #caa53d;
         }
 
-        .switch-input:checked::before {
+        .switch input[type="checkbox"]:checked::before {
             transform: translateX(18px);
         }
 
@@ -647,45 +658,10 @@
             </div>
         </div>
 
-        <!-- <button type="button" class="menu-btn" id="menuOpen">☰</button> -->
+        
     </header>
 
-    <!-- <div class="drawer-backdrop" id="drawerBackdrop">
-        <aside class="drawer">
-            <div class="drawer-top">
-                <div>
-                    <h3>Menu</h3>
-                    <div class="drawer-email">{{ display_email }}</div>
-                </div>
-                <button type="button" class="drawer-close" id="menuClose">×</button>
-            </div>
-
-            <nav class="drawer-nav">
-                <a href="{% url 'citizens:dashboard' %}" class="drawer-link">
-                    <span>⌘</span><span>Dashboard</span>
-                </a>
-                <a href="{% url 'citizens:properties' %}" class="drawer-link">
-                    <span>🏢</span><span>Properties</span>
-                </a>
-                <a href="{% url 'citizens:bills' %}" class="drawer-link">
-                    <span>💳</span><span>Bills</span>
-                </a>
-                <a href="{% url 'citizens:certificates' %}" class="drawer-link">
-                    <span>⌘</span><span>Certificates</span>
-                </a>
-                <a href="{% url 'citizens:profile' %}" class="drawer-link active">
-                    <span>⚙</span><span>Profile</span>
-                </a>
-            </nav>
-
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button type="submit" class="drawer-logout">
-                    <span>↪</span><span>Logout</span>
-                </button>
-            </form>
-        </aside>
-    </div> -->
+    
 
     <main class="page">
         <!-- <section class="hero">
@@ -715,7 +691,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=name" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">👤</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle><path d="M4 20C5.8 16.8 8.5 15.2 12 15.2C15.5 15.2 18.2 16.8 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Full Name</div>
                         <div class="item-subtitle">{{ owner_name }}</div>
@@ -726,7 +702,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=email" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">✉</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="2"></rect><path d="M5 8L12 13L19 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Email</div>
                         <div class="item-subtitle">{{ display_email }}</div>
@@ -737,7 +713,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=phone" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">📞</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7.5 5.5C8 5 8.7 4.8 9.3 5L11 5.6C11.7 5.8 12.1 6.6 11.9 7.4L11.5 9C11.4 9.4 11.5 9.8 11.8 10.1L13.9 12.2C14.2 12.5 14.6 12.6 15 12.5L16.6 12.1C17.4 11.9 18.2 12.3 18.4 13L19 14.7C19.2 15.3 19 16 18.5 16.5L17.3 17.7C16.6 18.4 15.5 18.7 14.5 18.4C11.8 17.6 9.3 16 7.3 14C5.3 12 3.7 9.5 2.9 6.8C2.6 5.8 2.9 4.7 3.6 4L4.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Phone Number</div>
                         <div class="item-subtitle">{{ display_phone }}</div>
@@ -748,7 +724,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=address" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">⌖</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21C16 16.8 18 13.7 18 10.5C18 6.9 15.3 4 12 4C8.7 4 6 6.9 6 10.5C6 13.7 8 16.8 12 21Z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10.5" r="2.5" stroke="currentColor" stroke-width="2"/></svg></div>
                     <div class="item-text">
                         <div class="item-title">Address</div>
                         <div class="item-subtitle">{{ display_address }}</div>
@@ -763,7 +739,7 @@
 
             <a href="{% url 'citizens:properties' %}" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">🏢</div>
+                    <div class="item-icon item-icon-img"><img src="{% static 'images/property.png' %}" alt="Properties"></div>
                     <div class="item-text">
                         <div class="item-title">Registered Properties</div>
                         <div class="item-subtitle">{{ properties_count }} propert{{ properties_count|pluralize:"y,ies" }}</div>
@@ -792,7 +768,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=password" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">🔒</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"></rect><path d="M8 10V7.8C8 5.7 9.7 4 11.8 4H12.2C14.3 4 16 5.7 16 7.8V10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Change Password</div>
                         <div class="item-subtitle">Update your password</div>
@@ -803,7 +779,7 @@
 
             <a href="{% url 'citizens:profile' %}?modal=notifications" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">🔔</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"/><path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
                     <div class="item-text">
                         <div class="item-title">Notifications</div>
                         <div class="item-subtitle">Manage notification preferences</div>
@@ -818,7 +794,7 @@
 
             <a href="tel:{{ support_phone }}" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">📞</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7.5 5.5C8 5 8.7 4.8 9.3 5L11 5.6C11.7 5.8 12.1 6.6 11.9 7.4L11.5 9C11.4 9.4 11.5 9.8 11.8 10.1L13.9 12.2C14.2 12.5 14.6 12.6 15 12.5L16.6 12.1C17.4 11.9 18.2 12.3 18.4 13L19 14.7C19.2 15.3 19 16 18.5 16.5L17.3 17.7C16.6 18.4 15.5 18.7 14.5 18.4C11.8 17.6 9.3 16 7.3 14C5.3 12 3.7 9.5 2.9 6.8C2.6 5.8 2.9 4.7 3.6 4L4.8 2.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Contact MMDA</div>
                         <div class="item-subtitle">{{ support_phone }}</div>
@@ -829,7 +805,7 @@
 
             <a href="mailto:{{ support_email }}" class="item-link">
                 <div class="item-left">
-                    <div class="item-icon">✉</div>
+                    <div class="item-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="12" rx="2" stroke="currentColor" stroke-width="2"></rect><path d="M5 8L12 13L19 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></div>
                     <div class="item-text">
                         <div class="item-title">Email Support</div>
                         <div class="item-subtitle">{{ support_email }}</div>
@@ -842,7 +818,7 @@
         <section class="logout-box">
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
-                <button type="submit" class="logout-btn">↪ Logout</button>
+                <button type="submit" class="logout-btn">Logout</button>
             </form>
         </section>
 
@@ -875,12 +851,16 @@
         </a>
 
         <a href="{% url 'citizens:certificates' %}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
             Certificates
         </a>
 
         <a href="{% url 'citizens:profile' %}" class="active">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>

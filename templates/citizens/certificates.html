@@ -147,10 +147,14 @@
             border-radius: 50%;
             background: #22c55e;
             color: #fff;
-            font-size: 20px;
             display: grid;
             place-items: center;
-            font-weight: 700;
+        }
+
+        .qr-badge svg {
+            width: 18px;
+            height: 18px;
+            display: block;
         }
 
         .cert-grid {
@@ -268,6 +272,19 @@
             display: grid;
             place-items: center;
             flex-shrink: 0;
+            color:#fff;
+        }
+
+        .about-icon svg,
+        .about-icon img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .about-icon img {
+            filter: brightness(0) invert(1);
         }
 
         .about-item strong {
@@ -398,7 +415,7 @@
                 <div class="qr-wrap">
                     <div class="qr-box">
                         <img src="{{ item.qr_url }}" alt="QR code for {{ item.property_reference }}">
-                        <div class="qr-badge">✓</div>
+                        <div class="qr-badge"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.2 16.7L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
                     </div>
                 </div>
 
@@ -440,12 +457,12 @@
                 <div class="status-row">● {{ item.status_label }}</div>
 
                 <div class="actions">
-                    <a href="{{ item.download_url }}" class="btn-gold">⭳ Download Certificate</a>
+                    <a href="{{ item.download_url }}" class="btn-gold">Download Certificate</a>
                     <button
                         type="button"
                         class="btn-white share-btn"
                         data-url="{{ item.verify_url }}"
-                    >⌘ Share QR</button>
+                    >Share QR</button>
                 </div>
 
                 <div class="verify-box">
@@ -469,7 +486,7 @@
 
             <div class="about-grid">
                 <div class="about-item">
-                    <div class="about-icon">🛡</div>
+                    <div class="about-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3L19 6V11C19 15.5 16.3 19.1 12 21C7.7 19.1 5 15.5 5 11V6L12 3Z" stroke="currentColor" stroke-width="2"/></svg></div>
                     <div>
                         <strong>Secure & Official</strong>
                         <span>Government-issued digital certificate with property verification</span>
@@ -477,7 +494,7 @@
                 </div>
 
                 <div class="about-item">
-                    <div class="about-icon">⌘</div>
+                    <div class="about-icon"><img src="{% static 'images/qr-code.png' %}" alt="QR"></div>
                     <div>
                         <strong>QR Code Access</strong>
                         <span>Instant verification for field officers and officials</span>
@@ -485,7 +502,7 @@
                 </div>
 
                 <div class="about-item">
-                    <div class="about-icon">⭳</div>
+                    <div class="about-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 4V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11L12 15L16 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
                     <div>
                         <strong>Download & Print</strong>
                         <span>High-quality printable version available for official use</span>
@@ -497,7 +514,9 @@
 
     <nav class="bottom-nav">
         <a href="{% url 'citizens:dashboard' %}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard">
+            </span>
             Dashboard
         </a>
 
@@ -516,12 +535,16 @@
         </a>
 
         <a href="{% url 'citizens:certificates' %}" class="active">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
             Certificates
         </a>
 
         <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>

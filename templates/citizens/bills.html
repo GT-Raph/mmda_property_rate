@@ -124,7 +124,7 @@
             font-size:14px;
         }
 
-        .pay-all{
+        .summary-icon{display:flex;align-items:center;justify-content:center;width:54px;height:54px;border-radius:16px;background:#fff;border:1px solid #ffc2c2;flex-shrink:0}.summary-icon img{width:24px;height:24px;object-fit:contain;display:block}.pay-all{
             display:flex;
             align-items:center;
             justify-content:center;
@@ -416,11 +416,11 @@
                     <div class="summary-value">{{ outstanding_total }}</div>
                     <div class="summary-meta">{{ unpaid_count }} unpaid bill(s)</div>
                 </div>
-                <div style="font-size:34px; color:#ef1111;">📄</div>
+                <div class="summary-icon"><img src="{% static 'images/bill.png' %}" alt="Bills"></div>
             </div>
 
             {% if unpaid_count %}
-                <a href="{% url 'citizens:payment-confirm' %}?all=1" class="pay-all">▭ Pay Now</a>
+                <a href="{% url 'citizens:payment-confirm' %}?all=1" class="pay-all">Pay Now</a>
             {% endif %}
         </section>
 
@@ -435,7 +435,7 @@
                     </div>
 
                     <div class="prop-line muted">Account No: {{ bill.account_number }}</div>
-                    <div class="prop-line"><strong>⌖ {{ bill.property_location }}</strong></div>
+                    <div class="prop-line"><strong>{{ bill.property_location }}</strong></div>
                     <div class="type-line">{{ bill.property_type }}</div>
 
                     <div class="grid">
@@ -476,14 +476,14 @@
                             <div class="total-amount">{{ bill.total_due }}</div>
                         </div>
                         <div class="due">
-                            <div class="label">🗓 Due Date</div>
+                            <div class="label">Due Date</div>
                             <div class="value">{{ bill.due_date }}</div>
                         </div>
                     </div>
 
                     <div class="actions">
-                        <a href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}" class="btn-gold">▭ Pay Bill</a>
-                        <a href="{% url 'citizens:bill-detail' bill.id %}" class="btn-white">📄 View Full Bill</a>
+                        <a href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}" class="btn-gold">Pay Bill</a>
+                        <a href="{% url 'citizens:bill-detail' bill.id %}" class="btn-white">View Full Bill</a>
                     </div>
                 </section>
             {% endfor %}
@@ -504,7 +504,7 @@
                 <section class="paid-card">
                     <div class="bill-head">
                         <h3>Bill Year: {{ bill.bill_year }}</h3>
-                        <span class="badge-paid">● {{ bill.status_label }}</span>
+                        <span class="badge-paid">{{ bill.status_label }}</span>
                     </div>
 
                     <div class="prop-line muted">Account No: {{ bill.account_number }}</div>
@@ -553,12 +553,16 @@
         </a>
 
         <a href="{% url 'citizens:certificates' %}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
             Certificates
         </a>
 
         <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>

@@ -10,7 +10,7 @@
         .topbar-left{display:flex;align-items:center;gap:12px}.avatar{width:38px;height:38px;border-radius:50%;background:#2d2d2d;display:grid;place-items:center;font-weight:700}.owner-meta strong{display:block;font-size:14px}.owner-meta small{display:block;font-size:12px;color:#c5c5c5}
         .page{max-width:760px;margin:0 auto;padding:36px 18px 120px}
         .card{background:#fff;border:1px solid #e7e7e7;border-radius:18px;padding:34px 24px;text-align:center}
-        .icon{width:82px;height:82px;border-radius:50%;background:#dff5e7;color:#16a34a;display:grid;place-items:center;font-size:42px;margin:0 auto 18px}
+        .icon{width:82px;height:82px;border-radius:50%;background:#dff5e7;color:#16a34a;display:grid;place-items:center;margin:0 auto 18px}.icon svg{width:40px;height:40px;display:block}
         h1{margin:0 0 12px;font-size:28px;font-weight:800}.sub{color:#737887;font-size:16px;margin-bottom:24px}
         .summary{background:#fafafa;border-radius:14px;padding:16px;text-align:left}
         .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-top:1px solid #e7e7e7}.row:first-child{border-top:0}
@@ -35,7 +35,7 @@
 
 <main class="page">
     <section class="card">
-        <div class="icon">✓</div>
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.2 16.7L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <h1>Payment Successful!</h1>
         <p class="sub">Your payment of {{ result.total_paid }} has been processed successfully</p>
 
@@ -69,7 +69,7 @@
         </div>
 
         <div class="actions">
-            <a href="{% url 'citizens:payment-history' %}" class="btn btn-white">⭳ Download Receipt</a>
+            <a href="{% url 'citizens:payment-history' %}" class="btn btn-white">Download Receipt</a>
             <a href="{% url 'citizens:dashboard' %}" class="btn btn-gold">Back to Dashboard</a>
         </div>
     </section>

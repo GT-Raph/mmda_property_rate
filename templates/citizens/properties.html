@@ -203,9 +203,21 @@
         }
 
         .cta-icon {
-            font-size: 48px;
-            color: var(--blue);
-            margin-bottom: 12px;
+            width:64px;
+            height:64px;
+            margin:0 auto 12px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            border-radius:16px;
+            background:#dbeafe;
+        }
+
+        .cta-icon img {
+            width:30px;
+            height:30px;
+            object-fit:contain;
+            display:block;
         }
 
         .cta-title {
@@ -345,7 +357,7 @@
                         <div>
                             <div class="property-ref">{{ property.reference }}</div>
                             <div class="property-title">{{ property.heading }}</div>
-                            <div class="property-location">⌖ {{ property.location }}</div>
+                            <div class="property-location">{{ property.location }}</div>
                         </div>
                         <div class="status-pill">{{ property.status }}</div>
                     </div>
@@ -374,11 +386,9 @@
 
                         <div class="actions">
                             <a href="{% url 'citizens:property-certificate' property.id %}" class="btn btn-gold">
-                                <span>⌘</span>
                                 <span>View Certificate</span>
                             </a>
                             <a href="{% url 'citizens:property-bills' property.id %}" class="btn btn-white">
-                                <span>$</span>
                                 <span>View Bills</span>
                             </a>
                         </div>
@@ -396,7 +406,7 @@
         {% endif %}
 
         <section class="cta-box">
-            <div class="cta-icon">🏢</div>
+            <div class="cta-icon"><img src="{% static 'images/property.png' %}" alt="Properties"></div>
             <div class="cta-title">Want to add another property?</div>
             <p class="cta-text">Contact your local MMDA office to register additional properties</p>
             <a href="tel:{{ assembly_phone }}" class="cta-btn">Call MMDA Office</a>
@@ -426,12 +436,16 @@
         </a>
 
         <a href="{% url 'citizens:certificates' %}">
-            <span class="nav-ico">⌘</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
+            </span>
             Certificates
         </a>
 
         <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico">⚙</span>
+            <span class="nav-ico nav-img">
+                <img src="{% static 'images/settings.png' %}" alt="Profile">
+            </span>
             Profile
         </a>
     </nav>
