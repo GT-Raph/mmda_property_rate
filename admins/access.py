@@ -13,7 +13,7 @@ ALL_MODULES = (
     "citizen_dashboard",
 )
 
-GROUP_MODULES = {
+ROLE_MODULES = {
     "sys_admin": {
         "dashboard",
         "properties",
@@ -77,22 +77,11 @@ def get_user_role(user):
     if user.is_superuser:
         return "sys_admin"
 
-    user_group_names = set(user.groups.values_list("name", flat=True))
+    profile = getattr(user, "profile", None)
+    role = getattr(profile, "role", None)
 
-    priority_order = [
-        "sys_admin",
-        "revenue_admin",
-        "property_officer",
-        "payment_officer",
-        "billing_officer",
-        "report_officer",
-        "field_officer",
-        "citizen",
-    ]
-
-    for role_name in priority_order:
-        if role_name in user_group_names:
-            return role_name
+    if role in ROLE_MODULES:
+        return role
 
     return "citizen"
 
@@ -103,22 +92,8 @@ def build_portal_access(module_names):
 
 
 def get_allowed_module_names(user):
-    if not user.is_authenticated:
-        return set()
-
-    if user.is_superuser:
-        return set(ALL_MODULES)
-
-    user_group_names = set(user.groups.values_list("name", flat=True))
-
-    allowed = set()
-    for group_name in user_group_names:
-        allowed.update(GROUP_MODULES.get(group_name, set()))
-
-    if not allowed:
-        allowed = GROUP_MODULES.get("citizen", set())
-
-    return allowed
+    role = get_user_role(user)
+    return ROLE_MODULES.get(role, set())
 
 
 def get_allowed_modules(user):
@@ -139,7 +114,7 @@ def landing_url_for_user(user):
     role = get_user_role(user)
 
     if role == "field_officer":
-        return reverse("field_operations:field-operations")
+        return reverse("admins:admin-dashboard")
 
     if role == "property_officer":
         return reverse("properties:property-registry")
