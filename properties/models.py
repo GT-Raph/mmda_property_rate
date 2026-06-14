@@ -1,9 +1,8 @@
 from uuid import uuid4
-
 from django.conf import settings
 from django.db import models
-
 from admins.models import Assembly, TimeStampedModel
+from decimal import Decimal
 
 
 class Owner(TimeStampedModel):
@@ -179,3 +178,26 @@ class PropertyPhoto(TimeStampedModel):
 
     def __str__(self):
         return f"Photo for {self.property.property_reference}"
+    
+
+class AssemblyRateConfig(TimeStampedModel):
+    assembly = models.ForeignKey(
+        Assembly,
+        on_delete=models.CASCADE,
+        related_name="rate_configs",
+    )
+    property_use = models.CharField(
+        max_length=20,
+        choices=Property.PROPERTY_USE_CHOICES,
+    )
+    rate_impost = models.DecimalField(max_digits=10, decimal_places=5)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["assembly__name", "property_use", "-created_at"]
+        indexes = [
+            models.Index(fields=["assembly", "property_use", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.assembly} - {self.property_use} - {self.rate_impost}"

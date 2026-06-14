@@ -24,15 +24,20 @@ OWNER_MODEL_FIELDS = _model_field_map(OWNER_MODEL)
 PROPERTY_FIELD_CANDIDATES = [
     "property_use",
     "building_type",
+    "occupancy_status",
+    "number_of_floors",
+    "number_of_units",
+    "year_built",
+    "address_line",
     "area_town",
     "suburb",
-    "street_name",
-    "house_number",
     "digital_address",
     "landmark",
     "rateable_value",
     "latitude",
     "longitude",
+    "is_exempt",
+    "exemption_reason",
     "verification_status",
     "is_active",
 ]
@@ -110,28 +115,22 @@ class PropertyCreateForm(PropertyBaseForm):
                 self.owner_required_field_names.append(prefixed_name)
 
         placeholders = {
+            "address_line": "Enter full address",
             "area_town": "Enter area or town",
             "suburb": "Enter suburb",
-            "street_name": "Enter street name",
-            "house_number": "Enter house number",
             "digital_address": "Enter digital address",
             "landmark": "Enter landmark",
             "latitude": "Latitude",
             "longitude": "Longitude",
             "rateable_value": "Enter rateable value",
             "owner_full_name": "Enter owner's full name",
-            "owner_name": "Enter owner's name",
-            "owner_owner_name": "Enter owner's name",
             "owner_phone_number": "Enter phone number",
-            "owner_phone": "Enter phone number",
-            "owner_mobile": "Enter mobile number",
+            "owner_primary_phone": "Enter phone number",
+            "owner_alternate_phone": "Enter alternate phone number",
             "owner_email": "Enter email address",
-            "owner_email_address": "Enter email address",
-            "owner_address": "Enter address",
-            "owner_postal_address": "Enter address",
-            "owner_digital_address": "Enter digital address",
+            "owner_postal_address": "Enter postal address",
+            "owner_residential_address": "Enter residential address",
             "owner_ghana_card_number": "Enter Ghana card number",
-            "owner_national_id": "Enter national ID",
         }
 
         for field_name, field in self.fields.items():
@@ -146,6 +145,20 @@ class PropertyCreateForm(PropertyBaseForm):
             if field_name in placeholders and not isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.update({"placeholder": placeholders[field_name]})
 
+        labels = {
+            "address_line": "Address",
+            "number_of_floors": "Number of Floors",
+            "number_of_units": "Number of Units",
+            "year_built": "Year Built",
+            "occupancy_status": "Occupancy Status",
+            "rateable_value": "Rateable Value",
+            "is_exempt": "Exempt Property",
+            "exemption_reason": "Exemption Reason",
+        }
+        for field_name, label in labels.items():
+            if field_name in self.fields:
+                self.fields[field_name].label = label
+
         if "rateable_value" in self.fields:
             self.fields["rateable_value"].widget.attrs.update(
                 {
@@ -153,6 +166,14 @@ class PropertyCreateForm(PropertyBaseForm):
                     "min": "0",
                 }
             )
+
+        for coordinate_field in ["latitude", "longitude"]:
+            if coordinate_field in self.fields:
+                self.fields[coordinate_field].widget.attrs.update(
+                    {
+                        "readonly": "readonly",
+                    }
+                )
 
         if "verification_status" in self.fields:
             choices = [

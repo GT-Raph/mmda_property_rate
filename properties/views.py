@@ -1,14 +1,18 @@
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_GET
 
 from admins.access import get_allowed_modules
 from admins.decorators import module_required
 from admins.models import Assembly
 from properties.forms import PropertyCreateForm
-from properties.models import Property
+from properties.models import Property, AssemblyRateConfig
 
 
 def _get_current_assembly(request):
@@ -74,6 +78,58 @@ def _property_location(prop):
     return ", ".join(parts) if parts else "—"
 
 
+def _get_active_rate_config(assembly, property_use):
+    return (
+        AssemblyRateConfig.objects.filter(
+            assembly=assembly,
+            property_use=property_use,
+            is_active=True,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+@module_required("properties")
+@require_GET
+def property_rate_preview(request):
+    context_assembly = _get_current_assembly(request)
+
+    if not context_assembly:
+        return JsonResponse({"error": "No active assembly found."}, status=400)
+
+    property_use = (request.GET.get("property_use") or "").strip()
+    rateable_value_raw = (request.GET.get("rateable_value") or "").strip()
+
+    if not property_use or not rateable_value_raw:
+        return JsonResponse({"error": "Property use and rateable value are required."}, status=400)
+
+    try:
+        rateable_value = Decimal(rateable_value_raw)
+    except (InvalidOperation, TypeError):
+        return JsonResponse({"error": "Invalid rateable value."}, status=400)
+
+    if rateable_value < 0:
+        return JsonResponse({"error": "Rateable value cannot be negative."}, status=400)
+
+    rate_config = _get_active_rate_config(context_assembly, property_use)
+    if not rate_config:
+        return JsonResponse(
+            {"error": "No active rate impost configured for this property type."},
+            status=404,
+        )
+
+    annual_rate = (rateable_value * rate_config.rate_impost).quantize(Decimal("0.01"))
+
+    return JsonResponse(
+        {
+            "rate_impost": str(rate_config.rate_impost),
+            "annual_rate": str(annual_rate),
+            "annual_rate_display": f"GH₵ {annual_rate:,.2f}",
+        }
+    )
+
+
 @module_required("properties")
 def property_registry(request):
     context_assembly = _get_current_assembly(request)
@@ -93,8 +149,6 @@ def property_registry(request):
         properties_qs = properties_qs.filter(
             Q(property_reference__icontains=search)
             | Q(owner__full_name__icontains=search)
-            | Q(owner__name__icontains=search)
-            | Q(owner__owner_name__icontains=search)
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
         )
@@ -123,12 +177,7 @@ def property_registry(request):
         owner_name = "—"
         owner = getattr(prop, "owner", None)
         if owner:
-            owner_name = (
-                getattr(owner, "full_name", None)
-                or getattr(owner, "name", None)
-                or getattr(owner, "owner_name", None)
-                or str(owner)
-            )
+            owner_name = getattr(owner, "full_name", None) or str(owner)
 
         property_rows.append(
             {
@@ -146,13 +195,7 @@ def property_registry(request):
             }
         )
 
-    type_choices = []
-    if hasattr(Property, "PROPERTY_USE_CHOICES"):
-        type_choices = list(Property.PROPERTY_USE_CHOICES)
-    elif hasattr(Property, "_meta"):
-        field = Property._meta.get_field("property_use")
-        if getattr(field, "choices", None):
-            type_choices = list(field.choices)
+    type_choices = list(Property.PROPERTY_USE_CHOICES)
 
     start_index = page_obj.start_index() if paginator.count else 0
     end_index = page_obj.end_index() if paginator.count else 0
@@ -191,6 +234,20 @@ def add_property(request):
             try:
                 with transaction.atomic():
                     property_instance = form.save(assembly=context_assembly)
+
+                    update_fields = []
+
+                    if hasattr(property_instance, "registered_by_id") and not property_instance.registered_by_id:
+                        property_instance.registered_by = request.user
+                        update_fields.append("registered_by")
+
+                    if hasattr(property_instance, "registration_source"):
+                        role = str(getattr(getattr(request.user, "profile", None), "role", "") or "").lower()
+                        property_instance.registration_source = "field" if "field" in role else "admin"
+                        update_fields.append("registration_source")
+
+                    if update_fields:
+                        property_instance.save(update_fields=update_fields)
 
                 messages.success(
                     request,
