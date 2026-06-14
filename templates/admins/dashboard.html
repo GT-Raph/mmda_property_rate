@@ -24,6 +24,7 @@
             --yellow: #d2a21c;
             --yellow-soft: #f7efc7;
             --red: #ef4444;
+            --red-soft: #fde6ea;
             --shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
             --radius: 18px;
             --sidebar-width: 230px;
@@ -469,13 +470,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 240px;
+            min-height: 300px;
         }
 
         .pie-canvas-box {
-            width: 200px;
-            height: 200px;
-            margin: 10px auto 26px;
+            width: 220px;
+            height: 220px;
+            margin: 8px auto 24px;
+            position: relative;
         }
 
         .distribution-legend {
@@ -506,8 +508,8 @@
         }
 
         .dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             flex-shrink: 0;
         }
@@ -722,8 +724,12 @@
             }
 
             .pie-canvas-box {
-                width: 180px;
-                height: 180px;
+                width: 190px;
+                height: 190px;
+            }
+
+            .pie-wrap {
+                min-height: 260px;
             }
         }
     </style>
@@ -874,7 +880,7 @@
                     <div class="stat-head">
                         <div class="icon-chip
                             {% if 'Bills' in card.title %}soft-blue
-                            {% elif 'Revenue' in card.title %}soft-green
+                            {% elif 'Revenue' in card.title or 'Collected' in card.title %}soft-green
                             {% elif 'Outstanding' in card.title %}soft-yellow
                             {% else %}soft-gold{% endif %}">
                             <img src="{% static 'images/icons/' %}{{ card.icon_key }}.png" alt="{{ card.title }}">
@@ -910,6 +916,7 @@
                 <div class="panel-head">
                     <div>
                         <h3 class="panel-title">Payment Distribution</h3>
+                        <div class="panel-subtitle">Paid, partial and unpaid bills</div>
                     </div>
                 </div>
 
@@ -1018,6 +1025,37 @@
         {% endfor %}
     ];
 
+    const paymentTotal = paymentValues.reduce((sum, value) => sum + Number(value || 0), 0);
+
+    const centerTextPlugin = {
+        id: "centerTextPlugin",
+        afterDraw(chart, args, pluginOptions) {
+            if (chart.config.type !== "pie" && chart.config.type !== "doughnut") return;
+
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data || !meta.data.length) return;
+
+            const x = meta.data[0].x;
+            const y = meta.data[0].y;
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            ctx.fillStyle = "#171717";
+            ctx.font = "700 24px Arial";
+            ctx.fillText(pluginOptions.valueText || "0", x, y - 8);
+
+            ctx.fillStyle = "#8a8a8a";
+            ctx.font = "13px Arial";
+            ctx.fillText(pluginOptions.labelText || "Bills", x, y + 16);
+            ctx.restore();
+        }
+    };
+
+    Chart.register(centerTextPlugin);
+
     const revenueCtx = document.getElementById("revenueChart");
     new Chart(revenueCtx, {
         type: "line",
@@ -1074,21 +1112,32 @@
 
     const paymentCtx = document.getElementById("paymentChart");
     new Chart(paymentCtx, {
-        type: "pie",
+        type: "doughnut",
         data: {
             labels: paymentLabels,
             datasets: [{
-                data: paymentValues,
-                backgroundColor: ["#2ac45a", "#e0ac00", "#d60d27"],
+                data: paymentTotal > 0 ? paymentValues : [1],
+                backgroundColor: paymentTotal > 0
+                    ? ["#2ac45a", "#e0ac00", "#d60d27"]
+                    : ["#ececec"],
                 borderColor: "#ffffff",
-                borderWidth: 2
+                borderWidth: 2,
+                hoverOffset: paymentTotal > 0 ? 4 : 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: "68%",
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    enabled: paymentTotal > 0
+                },
+                centerTextPlugin: {
+                    valueText: String(paymentTotal),
+                    labelText: paymentTotal > 0 ? "Bills" : "No Data"
+                }
             }
         }
     });
