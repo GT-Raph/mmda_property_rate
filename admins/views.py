@@ -625,6 +625,7 @@ def dashboard(request):
     week_start = today - timedelta(days=today.weekday())
     current_year = today.year
     context_assembly = _get_current_assembly(request)
+    user_role = get_user_role(request.user)
 
     properties_qs = Property.objects.select_related("owner")
     bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
@@ -641,6 +642,15 @@ def dashboard(request):
         payments_qs = payments_qs.filter(assembly=context_assembly)
         field_visits_qs = field_visits_qs.filter(property__assembly=context_assembly)
         disputes_qs = disputes_qs.filter(bill__assembly=context_assembly)
+
+    # FIELD OFFICER SCOPE
+    # Only show records related to the logged-in field officer
+    if user_role == "field_officer":
+        properties_qs = properties_qs.filter(registered_by=request.user)
+        bills_qs = bills_qs.filter(property_record__registered_by=request.user)
+        payments_qs = payments_qs.filter(property__registered_by=request.user)
+        field_visits_qs = field_visits_qs.filter(officer=request.user)
+        disputes_qs = disputes_qs.filter(bill__property_record__registered_by=request.user)
 
     balance_expr = ExpressionWrapper(
         F("amount_due") - F("amount_paid"),
@@ -690,44 +700,84 @@ def dashboard(request):
     revenue_change = _pct_change(revenue_this_month, revenue_previous_month)
     outstanding_change = _pct_change(outstanding_total, outstanding_previous)
 
-    summary_cards = [
-        {
-            "title": "Total Properties",
-            "value": _number(total_properties),
-            "meta": "vs last month",
-            "change": abs(property_change),
-            "change_prefix": "+" if property_change >= 0 else "-",
-            "change_class": "green" if property_change >= 0 else "red",
-            "icon_key": "property",
-        },
-        {
-            "title": "Bills Generated",
-            "value": _number(bills_this_month),
-            "meta": "this month",
-            "change": abs(bills_change),
-            "change_prefix": "+" if bills_change >= 0 else "-",
-            "change_class": "green" if bills_change >= 0 else "red",
-            "icon_key": "bill",
-        },
-        {
-            "title": "Revenue Collected",
-            "value": _money(revenue_this_month),
-            "meta": "this month",
-            "change": abs(revenue_change),
-            "change_prefix": "+" if revenue_change >= 0 else "-",
-            "change_class": "green" if revenue_change >= 0 else "red",
-            "icon_key": "paid",
-        },
-        {
-            "title": "Outstanding",
-            "value": _money(outstanding_total),
-            "meta": "vs last month",
-            "change": abs(outstanding_change),
-            "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
-            "change_class": "green" if outstanding_total <= outstanding_previous else "red",
-            "icon_key": "alert",
-        },
-    ]
+    if user_role == "field_officer":
+        summary_cards = [
+            {
+                "title": "My Properties",
+                "value": _number(total_properties),
+                "meta": "vs last month",
+                "change": abs(property_change),
+                "change_prefix": "+" if property_change >= 0 else "-",
+                "change_class": "green" if property_change >= 0 else "red",
+                "icon_key": "property",
+            },
+            {
+                "title": "Bills On My Properties",
+                "value": _number(bills_this_month),
+                "meta": "this month",
+                "change": abs(bills_change),
+                "change_prefix": "+" if bills_change >= 0 else "-",
+                "change_class": "green" if bills_change >= 0 else "red",
+                "icon_key": "bill",
+            },
+            {
+                "title": "Collected On My Records",
+                "value": _money(revenue_this_month),
+                "meta": "this month",
+                "change": abs(revenue_change),
+                "change_prefix": "+" if revenue_change >= 0 else "-",
+                "change_class": "green" if revenue_change >= 0 else "red",
+                "icon_key": "paid",
+            },
+            {
+                "title": "Outstanding On My Records",
+                "value": _money(outstanding_total),
+                "meta": "vs last month",
+                "change": abs(outstanding_change),
+                "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
+                "change_class": "green" if outstanding_total <= outstanding_previous else "red",
+                "icon_key": "alert",
+            },
+        ]
+    else:
+        summary_cards = [
+            {
+                "title": "Total Properties",
+                "value": _number(total_properties),
+                "meta": "vs last month",
+                "change": abs(property_change),
+                "change_prefix": "+" if property_change >= 0 else "-",
+                "change_class": "green" if property_change >= 0 else "red",
+                "icon_key": "property",
+            },
+            {
+                "title": "Bills Generated",
+                "value": _number(bills_this_month),
+                "meta": "this month",
+                "change": abs(bills_change),
+                "change_prefix": "+" if bills_change >= 0 else "-",
+                "change_class": "green" if bills_change >= 0 else "red",
+                "icon_key": "bill",
+            },
+            {
+                "title": "Revenue Collected",
+                "value": _money(revenue_this_month),
+                "meta": "this month",
+                "change": abs(revenue_change),
+                "change_prefix": "+" if revenue_change >= 0 else "-",
+                "change_class": "green" if revenue_change >= 0 else "red",
+                "icon_key": "paid",
+            },
+            {
+                "title": "Outstanding",
+                "value": _money(outstanding_total),
+                "meta": "vs last month",
+                "change": abs(outstanding_change),
+                "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
+                "change_class": "green" if outstanding_total <= outstanding_previous else "red",
+                "icon_key": "alert",
+            },
+        ]
 
     month_starts = []
     for offset in range(5, -1, -1):
@@ -787,8 +837,16 @@ def dashboard(request):
 
     for payment in payments_qs.filter(status="successful").order_by("-paid_at", "-created_at")[:3]:
         dt = payment.paid_at or payment.created_at
-        prop_ref = payment.property.property_reference if payment.property_id else payment.property_reference_entered or "Unknown Ref"
-        owner_name = payment.property.owner.full_name if payment.property_id else payment.payer_name or "Unknown payer"
+        prop_ref = (
+            payment.property.property_reference
+            if payment.property_id
+            else payment.property_reference_entered or "Unknown Ref"
+        )
+        owner_name = (
+            payment.property.owner.full_name
+            if payment.property_id and getattr(payment.property, "owner", None)
+            else payment.payer_name or "Unknown payer"
+        )
 
         recent_items.append(
             {
@@ -803,29 +861,30 @@ def dashboard(request):
         )
 
     for prop in properties_qs.order_by("-created_at")[:2]:
+        owner_name = getattr(prop.owner, "full_name", "Unknown owner") if getattr(prop, "owner", None) else "Unknown owner"
         recent_items.append(
             {
                 "sort_at": prop.created_at,
                 "icon_key": "property",
                 "icon_class": "soft-blue",
                 "title": f"New property registered in {prop.area_town}",
-                "subtitle": f"{prop.property_reference} • {prop.owner.full_name}",
+                "subtitle": f"{prop.property_reference} • {owner_name}",
                 "time": _time_ago(prop.created_at),
                 "highlight": False,
             }
         )
 
     for dispute in disputes_qs.order_by("-created_at")[:2]:
+        prop = getattr(dispute.bill, "property_record", None)
+        prop_ref = getattr(prop, "property_reference", "Unknown Ref")
+        owner_name = getattr(getattr(prop, "owner", None), "full_name", "Unknown owner")
         recent_items.append(
             {
                 "sort_at": dispute.created_at,
                 "icon_key": "alert",
                 "icon_class": "soft-yellow",
                 "title": "Rate calculation dispute",
-                "subtitle": (
-                    f"{dispute.bill.property_record.property_reference} • "
-                    f"{dispute.bill.property_record.owner.full_name}"
-                ),
+                "subtitle": f"{prop_ref} • {owner_name}",
                 "time": _time_ago(dispute.created_at),
                 "highlight": False,
             }
@@ -833,13 +892,16 @@ def dashboard(request):
 
     for visit in field_visits_qs.order_by("-visited_at", "-created_at")[:2]:
         dt = visit.visited_at or visit.created_at
+        prop = getattr(visit, "property", None)
+        prop_ref = getattr(prop, "property_reference", "Unknown Ref")
+        owner_name = getattr(getattr(prop, "owner", None), "full_name", "Unknown owner")
         recent_items.append(
             {
                 "sort_at": dt,
                 "icon_key": "field",
                 "icon_class": "soft-blue",
                 "title": visit.get_visit_type_display() if hasattr(visit, "get_visit_type_display") else "Field Visit",
-                "subtitle": f"{visit.property.property_reference} • {visit.property.owner.full_name}",
+                "subtitle": f"{prop_ref} • {owner_name}",
                 "time": _time_ago(dt),
                 "highlight": False,
             }
@@ -856,29 +918,52 @@ def dashboard(request):
 
     weekly_field_visits = field_visits_qs.filter(visited_at__date__gte=week_start).count()
 
-    alerts = [
-        {
-            "message": f"{_number(overdue_90_count)} properties have overdue payments (>90 days)",
-            "action": "View List",
-            "alert_class": "alert-warning",
-        },
-        {
-            "message": f"Monthly billing cycle starts in {days_until_next_cycle} day{'s' if days_until_next_cycle != 1 else ''}",
-            "action": "Prepare",
-            "alert_class": "alert-info",
-        },
-        {
-            "message": f"Field verification completed for {_number(weekly_field_visits)} properties",
-            "action": "Review",
-            "alert_class": "alert-success",
-        },
-    ]
+    if user_role == "field_officer":
+        alerts = [
+            {
+                "message": f"{_number(overdue_90_count)} overdue properties are linked to your registered records",
+                "action": "View List",
+                "alert_class": "alert-warning",
+            },
+            {
+                "message": f"You completed {_number(weekly_field_visits)} field visit(s) this week",
+                "action": "Review",
+                "alert_class": "alert-success",
+            },
+            {
+                "message": f"{_number(properties_this_month)} property record(s) added by you this month",
+                "action": "Open",
+                "alert_class": "alert-info",
+            },
+        ]
+    else:
+        alerts = [
+            {
+                "message": f"{_number(overdue_90_count)} properties have overdue payments (>90 days)",
+                "action": "View List",
+                "alert_class": "alert-warning",
+            },
+            {
+                "message": f"Monthly billing cycle starts in {days_until_next_cycle} day{'s' if days_until_next_cycle != 1 else ''}",
+                "action": "Prepare",
+                "alert_class": "alert-info",
+            },
+            {
+                "message": f"Field verification completed for {_number(weekly_field_visits)} properties",
+                "action": "Review",
+                "alert_class": "alert-success",
+            },
+        ]
 
     portal_access = _portal_access(request.user)
 
     context = {
         "page_title": "Dashboard",
-        "page_subtitle": "Property Rate Management System Overview",
+        "page_subtitle": (
+            "Your assigned and registered field activity overview"
+            if user_role == "field_officer"
+            else "Property Rate Management System Overview"
+        ),
         "context_assembly": context_assembly,
         "summary_cards": summary_cards,
         "revenue_points": revenue_points,
@@ -887,7 +972,7 @@ def dashboard(request):
         "distribution_total": distribution_total,
         "recent_activities": recent_items,
         "alerts": alerts,
-        "user_role": get_user_role(request.user),
+        "user_role": user_role,
         "allowed_modules": portal_access,
         "portal_access": portal_access,
     }

@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET
 
-from admins.access import get_allowed_modules
+from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
 from properties.forms import PropertyCreateForm
@@ -134,6 +134,7 @@ def property_rate_preview(request):
 def property_registry(request):
     context_assembly = _get_current_assembly(request)
     portal_access = get_allowed_modules(request.user)
+    user_role = get_user_role(request.user)
 
     search = (request.GET.get("q") or "").strip()
     property_type = (request.GET.get("type") or "").strip()
@@ -145,10 +146,15 @@ def property_registry(request):
     if context_assembly:
         properties_qs = properties_qs.filter(assembly=context_assembly)
 
+    if user_role == "field_officer":
+        properties_qs = properties_qs.filter(registered_by=request.user)
+
     if search:
         properties_qs = properties_qs.filter(
             Q(property_reference__icontains=search)
             | Q(owner__full_name__icontains=search)
+            | Q(owner__name__icontains=search)
+            | Q(owner__owner_name__icontains=search)
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
         )
@@ -177,7 +183,12 @@ def property_registry(request):
         owner_name = "—"
         owner = getattr(prop, "owner", None)
         if owner:
-            owner_name = getattr(owner, "full_name", None) or str(owner)
+            owner_name = (
+                getattr(owner, "full_name", None)
+                or getattr(owner, "name", None)
+                or getattr(owner, "owner_name", None)
+                or str(owner)
+            )
 
         property_rows.append(
             {
@@ -195,14 +206,24 @@ def property_registry(request):
             }
         )
 
-    type_choices = list(Property.PROPERTY_USE_CHOICES)
+    type_choices = []
+    if hasattr(Property, "PROPERTY_USE_CHOICES"):
+        type_choices = list(Property.PROPERTY_USE_CHOICES)
+    elif hasattr(Property, "_meta"):
+        field = Property._meta.get_field("property_use")
+        if getattr(field, "choices", None):
+            type_choices = list(field.choices)
 
     start_index = page_obj.start_index() if paginator.count else 0
     end_index = page_obj.end_index() if paginator.count else 0
 
     context = {
-        "page_title": "Property Registry",
-        "page_subtitle": f"Manage and view all registered properties ({paginator.count} total)",
+        "page_title": "Property Registry" if user_role != "field_officer" else "My Registered Properties",
+        "page_subtitle": (
+            f"Manage and view all registered properties ({paginator.count} total)"
+            if user_role != "field_officer"
+            else f"Properties you registered ({paginator.count} total)"
+        ),
         "context_assembly": context_assembly,
         "properties": property_rows,
         "page_obj": page_obj,
@@ -235,19 +256,14 @@ def add_property(request):
                 with transaction.atomic():
                     property_instance = form.save(assembly=context_assembly)
 
-                    update_fields = []
-
                     if hasattr(property_instance, "registered_by_id") and not property_instance.registered_by_id:
                         property_instance.registered_by = request.user
-                        update_fields.append("registered_by")
 
                     if hasattr(property_instance, "registration_source"):
-                        role = str(getattr(getattr(request.user, "profile", None), "role", "") or "").lower()
-                        property_instance.registration_source = "field" if "field" in role else "admin"
-                        update_fields.append("registration_source")
+                        role = get_user_role(request.user)
+                        property_instance.registration_source = "field" if role == "field_officer" else "admin"
 
-                    if update_fields:
-                        property_instance.save(update_fields=update_fields)
+                    property_instance.save()
 
                 messages.success(
                     request,
