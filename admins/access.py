@@ -13,7 +13,7 @@ ALL_MODULES = (
     "citizen_dashboard",
 )
 
-ROLE_MODULES = {
+GROUP_MODULES = {
     "sys_admin": {
         "dashboard",
         "properties",
@@ -58,6 +58,8 @@ ROLE_MODULES = {
         "settings",
     },
     "field_officer": {
+        "dashboard",
+        "properties",
         "field_operations",
         "settings",
     },
@@ -75,11 +77,22 @@ def get_user_role(user):
     if user.is_superuser:
         return "sys_admin"
 
-    profile = getattr(user, "profile", None)
-    role = getattr(profile, "role", None)
+    user_group_names = set(user.groups.values_list("name", flat=True))
 
-    if role in ROLE_MODULES:
-        return role
+    priority_order = [
+        "sys_admin",
+        "revenue_admin",
+        "property_officer",
+        "payment_officer",
+        "billing_officer",
+        "report_officer",
+        "field_officer",
+        "citizen",
+    ]
+
+    for role_name in priority_order:
+        if role_name in user_group_names:
+            return role_name
 
     return "citizen"
 
@@ -90,8 +103,22 @@ def build_portal_access(module_names):
 
 
 def get_allowed_module_names(user):
-    role = get_user_role(user)
-    return ROLE_MODULES.get(role, set())
+    if not user.is_authenticated:
+        return set()
+
+    if user.is_superuser:
+        return set(ALL_MODULES)
+
+    user_group_names = set(user.groups.values_list("name", flat=True))
+
+    allowed = set()
+    for group_name in user_group_names:
+        allowed.update(GROUP_MODULES.get(group_name, set()))
+
+    if not allowed:
+        allowed = GROUP_MODULES.get("citizen", set())
+
+    return allowed
 
 
 def get_allowed_modules(user):
