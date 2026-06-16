@@ -6,13 +6,15 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
+from billing.models import RatePolicy
 from properties.forms import PropertyCreateForm
-from properties.models import AssemblyRateConfig, Property
+from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
 
 
@@ -82,15 +84,14 @@ def _property_location(prop):
     return ", ".join(parts) if parts else "—"
 
 
-def _get_active_rate_config(assembly, property_use):
-    return (
-        AssemblyRateConfig.objects.filter(
-            assembly=assembly,
-            property_use=property_use,
-            is_active=True,
-        )
-        .order_by("-created_at")
-        .first()
+def _get_active_rate_policy(*, assembly, property_use, building_type, preview_date=None):
+    preview_date = preview_date or timezone.localdate()
+    return RatePolicy.get_applicable_policy(
+        assembly=assembly,
+        property_use=property_use,
+        building_type=building_type,
+        on_date=preview_date,
+        year=preview_date.year,
     )
 
 
@@ -103,10 +104,14 @@ def property_rate_preview(request):
         return JsonResponse({"error": "No active assembly found."}, status=400)
 
     property_use = (request.GET.get("property_use") or "").strip()
+    building_type = (request.GET.get("building_type") or "").strip()
     rateable_value_raw = (request.GET.get("rateable_value") or "").strip()
 
-    if not property_use or not rateable_value_raw:
-        return JsonResponse({"error": "Property use and rateable value are required."}, status=400)
+    if not property_use or not building_type or not rateable_value_raw:
+        return JsonResponse(
+            {"error": "Property use, building type and rateable value are required."},
+            status=400,
+        )
 
     try:
         rateable_value = Decimal(rateable_value_raw)
@@ -116,20 +121,27 @@ def property_rate_preview(request):
     if rateable_value < 0:
         return JsonResponse({"error": "Rateable value cannot be negative."}, status=400)
 
-    rate_config = _get_active_rate_config(context_assembly, property_use)
-    if not rate_config:
+    policy = _get_active_rate_policy(
+        assembly=context_assembly,
+        property_use=property_use,
+        building_type=building_type,
+    )
+    if not policy:
         return JsonResponse(
-            {"error": "No active rate impost configured for this property type."},
+            {"error": "No active rate policy matches this property use and building type for the current year."},
             status=404,
         )
 
-    annual_rate = (rateable_value * rate_config.rate_impost).quantize(Decimal("0.01"))
+    principal = policy.calculate_principal(rateable_value)
 
     return JsonResponse(
         {
-            "rate_impost": str(rate_config.rate_impost),
-            "annual_rate": str(annual_rate),
-            "annual_rate_display": f"GH₵ {annual_rate:,.2f}",
+            "rate_impost": str(policy.rate_impost),
+            "minimum_charge": str(policy.minimum_charge),
+            "annual_rate": str(principal),
+            "annual_rate_display": f"GH₵ {principal:,.2f}",
+            "policy_year": policy.year,
+            "policy_label": str(policy),
         }
     )
 
@@ -204,11 +216,7 @@ def property_registry(request):
             }
         )
 
-    if hasattr(Property, "PROPERTY_USE_CHOICES"):
-        type_choices = list(Property.PROPERTY_USE_CHOICES)
-    else:
-        field = Property._meta.get_field("property_use")
-        type_choices = list(field.choices) if getattr(field, "choices", None) else []
+    type_choices = list(Property.PROPERTY_USE_CHOICES)
 
     start_index = page_obj.start_index() if paginator.count else 0
     end_index = page_obj.end_index() if paginator.count else 0
@@ -277,8 +285,7 @@ def add_property(request):
                 if account_result.get("created"):
                     messages.info(
                         request,
-                        f"Citizen account created for {owner.full_name}. "
-                        f"Username: {account_result['username']} | Temporary password: 1234"
+                        f"Citizen account created for {owner.full_name}. Username: {account_result['username']} | Temporary password: 1234"
                     )
                 elif account_result.get("linked"):
                     messages.info(

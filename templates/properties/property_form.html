@@ -5,13 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
-
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
         :root {
             --bg: #f5f5f5;
@@ -23,13 +16,10 @@
             --sidebar-line: rgba(255,255,255,0.08);
             --gold: #d1ac4c;
             --gold-bg: #ead79f;
-            --gold-soft: #f6edcf;
             --green-soft: #d9f7df;
             --green: #16a34a;
             --red-soft: #fff1f1;
             --red: #b42318;
-            --blue-soft: #edf4ff;
-            --blue-line: #bdd4ff;
             --shadow: 0 4px 18px rgba(0,0,0,0.04);
             --radius: 18px;
             --sidebar-width: 230px;
@@ -38,19 +28,11 @@
 
         * { box-sizing: border-box; }
 
-        html, body {
+        body {
             margin: 0;
-            padding: 0;
             font-family: Arial, Helvetica, sans-serif;
             background: var(--bg);
             color: var(--text);
-        }
-
-        body { min-height: 100vh; }
-
-        a {
-            text-decoration: none;
-            color: inherit;
         }
 
         .layout { min-height: 100vh; }
@@ -98,46 +80,13 @@
             border-radius: 12px;
             font-size: 15px;
             margin-bottom: 8px;
-            transition: 0.18s ease;
-        }
-
-        .nav a:hover {
-            background: rgba(255,255,255,0.08);
+            text-decoration: none;
         }
 
         .nav a.active {
             background: var(--gold-bg);
             color: #1f1f1f;
             font-weight: 700;
-        }
-
-        .nav-icon {
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .nav-icon-img {
-            width: 18px;
-            height: 18px;
-            object-fit: contain;
-            display: block;
-            filter: brightness(0) invert(1);
-            opacity: 0.96;
-            transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
-        }
-
-        .nav a:hover .nav-icon-img {
-            opacity: 1;
-            transform: scale(1.03);
-        }
-
-        .nav a.active .nav-icon-img {
-            filter: none;
-            opacity: 1;
         }
 
         .sidebar-footer {
@@ -167,43 +116,6 @@
             padding: 0 22px;
         }
 
-        .topbar-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .menu-toggle {
-            display: none;
-            width: 42px;
-            height: 42px;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: #fff;
-            cursor: pointer;
-            flex-shrink: 0;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-
-        .menu-bars {
-            width: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .menu-bars span {
-            display: block;
-            width: 100%;
-            height: 2px;
-            background: #333;
-            border-radius: 999px;
-        }
-
         .search-wrap {
             width: 100%;
             max-width: 580px;
@@ -216,67 +128,36 @@
             border: 1px solid transparent;
             background: #f4f4f4;
             border-radius: 10px;
-            padding: 0 16px 0 44px;
+            padding: 0 16px 0 40px;
             font-size: 14px;
             outline: none;
         }
 
-        .search-wrap input:focus {
-            background: #fff;
-            border-color: #ddd;
-        }
-
-        .search-icon {
+        .search-wrap span {
             position: absolute;
             left: 14px;
             top: 12px;
-            width: 18px;
-            height: 18px;
             color: #8b8b8b;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .search-icon svg {
-            width: 18px;
-            height: 18px;
-            display: block;
+            font-size: 16px;
         }
 
         .topbar-right {
             display: flex;
             align-items: center;
             gap: 18px;
-            flex-shrink: 0;
         }
 
-        .notification-btn {
+        .notification {
             position: relative;
-            width: 40px;
-            height: 40px;
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            background: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
         }
 
-        .notification-btn svg {
-            width: 18px;
-            height: 18px;
-            color: #333;
-            display: block;
-        }
-
-        .notification-btn::after {
+        .notification::after {
             content: "";
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 0;
+            right: -3px;
             width: 8px;
             height: 8px;
             border-radius: 50%;
@@ -287,7 +168,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            min-width: 0;
         }
 
         .avatar {
@@ -300,46 +180,23 @@
             place-items: center;
             font-size: 13px;
             font-weight: 800;
-            flex-shrink: 0;
-        }
-
-        .user-meta {
-            min-width: 0;
-            line-height: 1.15;
         }
 
         .user-meta strong {
             display: block;
             font-size: 14px;
             font-weight: 700;
-            color: #222;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .user-meta small {
             display: block;
             font-size: 12px;
             color: var(--muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-caret {
-            width: 8px;
-            height: 8px;
-            border-right: 2px solid #9a9a9a;
-            border-bottom: 2px solid #9a9a9a;
-            transform: rotate(45deg);
-            flex-shrink: 0;
-            margin-top: -3px;
         }
 
         .page {
             padding: 20px 22px 34px;
-            max-width: 1120px;
+            max-width: 1100px;
         }
 
         .page h1 {
@@ -391,15 +248,9 @@
             margin: 0 0 18px;
         }
 
-        .section-subtitle {
-            margin: -8px 0 18px;
-            font-size: 13px;
-            color: var(--muted);
-        }
-
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
         }
 
@@ -432,10 +283,6 @@
             background: #fff;
         }
 
-        input[readonly] {
-            background: #fafafa;
-        }
-
         .checkbox-wrap {
             display: flex;
             align-items: center;
@@ -452,7 +299,6 @@
             margin-top: 6px;
             font-size: 12px;
             color: var(--muted);
-            line-height: 1.45;
         }
 
         .error-text {
@@ -467,63 +313,10 @@
             margin: 24px 0;
         }
 
-        .preview-card {
-            border: 1px solid var(--blue-line);
-            background: var(--blue-soft);
-            border-radius: 14px;
-            padding: 18px;
-            margin-top: 6px;
-        }
-
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 16px;
-        }
-
-        .preview-label {
-            font-size: 13px;
-            color: #4d617f;
-            margin-bottom: 6px;
-        }
-
-        .preview-value {
-            font-size: 18px;
-            font-weight: 800;
-            color: #173b7a;
-            min-height: 24px;
-        }
-
-        .preview-empty {
-            color: #6c7a8f;
-            font-weight: 600;
-        }
-
-        .map-wrap {
-            margin-top: 8px;
-        }
-
-        #property-map {
-            height: 340px;
-            width: 100%;
-            border: 1px solid #dddddd;
-            border-radius: 14px;
-            overflow: hidden;
-            background: #f8f8f8;
-        }
-
-        .map-tools {
-            display: flex;
-            gap: 12px;
-            margin-top: 14px;
-            flex-wrap: wrap;
-        }
-
         .actions {
             display: flex;
             gap: 12px;
             margin-top: 24px;
-            flex-wrap: wrap;
         }
 
         .btn {
@@ -550,70 +343,22 @@
             color: #333;
         }
 
-        .btn-outline {
-            background: #fff;
-            color: #222;
-            border: 1px solid #d8d8d8;
-        }
-
-        .mobile-overlay {
-            display: none;
-        }
-
         @media (max-width: 860px) {
             .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.25s ease;
-                width: 250px;
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
-            .mobile-overlay {
-                display: block;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.35);
-                z-index: 900;
-                opacity: 0;
-                visibility: hidden;
-                transition: 0.2s ease;
-            }
-
-            .mobile-overlay.show {
-                opacity: 1;
-                visibility: visible;
+                display: none;
             }
 
             .content {
                 margin-left: 0;
             }
-
-            .menu-toggle {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .topbar {
-                padding: 0 14px;
-            }
-
-            .search-wrap {
-                max-width: none;
-            }
         }
 
         @media (max-width: 680px) {
-            .form-grid,
-            .preview-grid {
+            .form-grid {
                 grid-template-columns: 1fr;
             }
 
-            .actions,
-            .map-tools {
+            .actions {
                 flex-direction: column;
             }
 
@@ -624,30 +369,12 @@
             .page h1 {
                 font-size: 24px;
             }
-
-            .topbar {
-                height: auto;
-                padding: 12px 14px;
-                flex-wrap: wrap;
-                align-items: stretch;
-            }
-
-            .topbar-left,
-            .topbar-right {
-                width: 100%;
-            }
-
-            .topbar-right {
-                justify-content: space-between;
-            }
         }
     </style>
 </head>
 <body>
-<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
-
 <div class="layout">
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar">
         <div class="brand">
             <h2>Admin Portal</h2>
             <p>MMDA Management</p>
@@ -655,60 +382,25 @@
 
         <nav class="nav">
             {% if portal_access.dashboard %}
-                <a href="{% url 'admins:admin-dashboard' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
-                    </span>
-                    <span>Dashboard</span>
-                </a>
+                <a href="{% url 'admins:admin-dashboard' %}">⌂ Dashboard</a>
             {% endif %}
             {% if portal_access.properties %}
-                <a href="{% url 'properties:property-registry' %}" class="active">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
-                    </span>
-                    <span>Properties</span>
-                </a>
+                <a href="{% url 'properties:property-registry' %}" class="active">🏢 Properties</a>
             {% endif %}
             {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
-                    </span>
-                    <span>Billing & Payments</span>
-                </a>
+                <a href="{% url 'billing:billing-management' %}">💳 Billing & Payments</a>
             {% endif %}
             {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
-                    </span>
-                    <span>Field Officers</span>
-                </a>
+                <a href="{% url 'field_operations:field-operations' %}">📍 Field Officers</a>
             {% endif %}
             {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/icons/report.png' %}" alt="Reports" class="nav-icon-img">
-                    </span>
-                    <span>Reports</span>
-                </a>
+                <a href="{% url 'admins:reports-analytics' %}">📊 Reports</a>
             {% endif %}
             {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
-                    </span>
-                    <span>Assembly</span>
-                </a>
+                <a href="{% url 'admins:assembly-management' %}">ⓘ Assembly</a>
             {% endif %}
             {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}">
-                    <span class="nav-icon">
-                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
-                    </span>
-                    <span>Settings</span>
-                </a>
+                <a href="{% url 'admins:settings' %}">⚙ Settings</a>
             {% endif %}
         </nav>
 
@@ -720,31 +412,13 @@
 
     <main class="content">
         <div class="topbar">
-            <div class="topbar-left">
-                <button class="menu-toggle" type="button" onclick="openSidebar()" aria-label="Open menu">
-                    <span class="menu-bars">
-                        <span></span><span></span><span></span>
-                    </span>
-                </button>
-
-                <div class="search-wrap">
-                    <span class="search-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"></circle>
-                            <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <input type="text" placeholder="Search properties, bills, payments...">
-                </div>
+            <div class="search-wrap">
+                <span>⌕</span>
+                <input type="text" placeholder="Search properties, bills, payments...">
             </div>
 
             <div class="topbar-right">
-                <button class="notification-btn" type="button" aria-label="Notifications">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"/>
-                        <path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    </svg>
-                </button>
+                <div class="notification">🔔</div>
 
                 <div class="user-box">
                     <div class="avatar">
@@ -769,8 +443,6 @@
                             <small>No email added</small>
                         {% endif %}
                     </div>
-
-                    <div class="user-caret"></div>
                 </div>
             </div>
         </div>
@@ -825,7 +497,7 @@
                     <div id="newOwnerFields">
                         <div class="form-grid">
                             {% for field in owner_fields %}
-                                <div class="field-group {% if field.name == 'owner_address' or field.name == 'owner_postal_address' or field.name == 'owner_digital_address' or field.name == 'owner_residential_address' %}full{% endif %}">
+                                <div class="field-group {% if field.name == 'owner_address' or field.name == 'owner_postal_address' or field.name == 'owner_digital_address' %}full{% endif %}">
                                     <label for="{{ field.id_for_label }}">
                                         {{ field.label }}
                                         {% if field.name in form.owner_required_field_names %}
@@ -856,100 +528,28 @@
 
                     <div class="form-grid">
                         {% for field in property_fields %}
-                            {% if field.name != "latitude" and field.name != "longitude" %}
-                                <div class="field-group {% if field.name == 'landmark' or field.name == 'digital_address' or field.name == 'address_line' or field.name == 'exemption_reason' %}full{% endif %}">
-                                    <label for="{{ field.id_for_label }}">
-                                        {{ field.label }}
-                                        {% if field.field.required %}
-                                            <span class="required-star">*</span>
-                                        {% endif %}
-                                    </label>
+                            <div class="field-group {% if field.name == 'landmark' or field.name == 'digital_address' %}full{% endif %}">
+                                <label for="{{ field.id_for_label }}">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="required-star">*</span>
+                                    {% endif %}
+                                </label>
 
-                                    {% if field.field.widget.input_type == "checkbox" %}
-                                        <div class="checkbox-wrap">
-                                            {{ field }}
-                                            <span>Yes</span>
-                                        </div>
-                                    {% else %}
+                                {% if field.field.widget.input_type == "checkbox" %}
+                                    <div class="checkbox-wrap">
                                         {{ field }}
-                                    {% endif %}
+                                        <span>Yes</span>
+                                    </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
 
-                                    {% for error in field.errors %}
-                                        <div class="error-text">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="error-text">{{ error }}</div>
+                                {% endfor %}
+                            </div>
                         {% endfor %}
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <h2 class="section-title">Rate Preview</h2>
-                    <p class="section-subtitle">This updates automatically when property type and rateable value are filled.</p>
-
-                    <div class="preview-card">
-                        <div class="preview-grid">
-                            <div>
-                                <div class="preview-label">Rate Impost</div>
-                                <div class="preview-value" id="rateImpostDisplay">
-                                    <span class="preview-empty">Not available yet</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="preview-label">Computed Annual Rate</div>
-                                <div class="preview-value" id="annualRateDisplay">
-                                    <span class="preview-empty">Not available yet</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="help-text" id="ratePreviewHelp">
-                            Fill the rateable value and property use to see the automatic calculation.
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <h2 class="section-title">Map Location</h2>
-                    <p class="section-subtitle">Click on the map or use current location to fill latitude and longitude automatically.</p>
-
-                    <div class="map-wrap">
-                        <div id="property-map"></div>
-                    </div>
-
-                    <div class="map-tools">
-                        <button type="button" class="btn btn-outline" id="useCurrentLocation">Use Current Location</button>
-                    </div>
-
-                    <div class="form-grid" style="margin-top: 18px;">
-                        {% if form.latitude %}
-                            <div class="field-group">
-                                <label for="{{ form.latitude.id_for_label }}">
-                                    {{ form.latitude.label }}
-                                    {% if form.latitude.field.required %}
-                                        <span class="required-star">*</span>
-                                    {% endif %}
-                                </label>
-                                {{ form.latitude }}
-                                {% for error in form.latitude.errors %}
-                                    <div class="error-text">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
-                        {% if form.longitude %}
-                            <div class="field-group">
-                                <label for="{{ form.longitude.id_for_label }}">
-                                    {{ form.longitude.label }}
-                                    {% if form.longitude.field.required %}
-                                        <span class="required-star">*</span>
-                                    {% endif %}
-                                </label>
-                                {{ form.longitude }}
-                                {% for error in form.longitude.errors %}
-                                    <div class="error-text">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
                     </div>
 
                     <div class="actions">
@@ -963,20 +563,6 @@
 </div>
 
 <script>
-    function openSidebar() {
-        const sidebar = document.getElementById("sidebar");
-        const overlay = document.getElementById("mobileOverlay");
-        if (sidebar) sidebar.classList.add("open");
-        if (overlay) overlay.classList.add("show");
-    }
-
-    function closeSidebar() {
-        const sidebar = document.getElementById("sidebar");
-        const overlay = document.getElementById("mobileOverlay");
-        if (sidebar) sidebar.classList.remove("open");
-        if (overlay) overlay.classList.remove("show");
-    }
-
     function toggleOwnerFields() {
         const existingOwner = document.getElementById("id_existing_owner");
         const createNewOwner = document.getElementById("id_create_new_owner");
@@ -988,121 +574,9 @@
         newOwnerFields.style.display = shouldShow ? "block" : "none";
     }
 
-    async function updateRatePreview() {
-        const propertyUse = document.getElementById("id_property_use");
-        const rateableValue = document.getElementById("id_rateable_value");
-        const rateImpostDisplay = document.getElementById("rateImpostDisplay");
-        const annualRateDisplay = document.getElementById("annualRateDisplay");
-        const ratePreviewHelp = document.getElementById("ratePreviewHelp");
-
-        if (!propertyUse || !rateableValue || !rateImpostDisplay || !annualRateDisplay) return;
-
-        if (!propertyUse.value || !rateableValue.value) {
-            rateImpostDisplay.innerHTML = '<span class="preview-empty">Not available yet</span>';
-            annualRateDisplay.innerHTML = '<span class="preview-empty">Not available yet</span>';
-            if (ratePreviewHelp) {
-                ratePreviewHelp.textContent = "Fill the rateable value and property use to see the automatic calculation.";
-            }
-            return;
-        }
-
-        try {
-            const params = new URLSearchParams({
-                property_use: propertyUse.value,
-                rateable_value: rateableValue.value
-            });
-
-            const response = await fetch(`/properties/api/rate-preview/?${params.toString()}`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                rateImpostDisplay.innerHTML = '<span class="preview-empty">No active impost</span>';
-                annualRateDisplay.innerHTML = '<span class="preview-empty">Cannot compute yet</span>';
-                if (ratePreviewHelp) {
-                    ratePreviewHelp.textContent = data.error || "No active rate impost configuration was found.";
-                }
-                return;
-            }
-
-            rateImpostDisplay.textContent = data.rate_impost;
-            annualRateDisplay.textContent = data.annual_rate_display || data.annual_rate;
-            if (ratePreviewHelp) {
-                ratePreviewHelp.textContent = "Rate preview loaded successfully.";
-            }
-        } catch (error) {
-            rateImpostDisplay.innerHTML = '<span class="preview-empty">Unavailable</span>';
-            annualRateDisplay.innerHTML = '<span class="preview-empty">Unavailable</span>';
-            if (ratePreviewHelp) {
-                ratePreviewHelp.textContent = "Could not load rate preview.";
-            }
-        }
-    }
-
-    function initPropertyMap() {
-        const latInput = document.getElementById("id_latitude");
-        const lngInput = document.getElementById("id_longitude");
-        const mapEl = document.getElementById("property-map");
-        const useCurrentLocationBtn = document.getElementById("useCurrentLocation");
-
-        if (!latInput || !lngInput || !mapEl || typeof L === "undefined") return;
-
-        const fallbackLat = 5.6037;
-        const fallbackLng = -0.1870;
-
-        const startLat = parseFloat(latInput.value || fallbackLat);
-        const startLng = parseFloat(lngInput.value || fallbackLng);
-
-        const map = L.map("property-map").setView([startLat, startLng], 13);
-
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "&copy; OpenStreetMap contributors"
-        }).addTo(map);
-
-        const marker = L.marker([startLat, startLng], {
-            draggable: true
-        }).addTo(map);
-
-        function setCoordinates(lat, lng) {
-            latInput.value = Number(lat).toFixed(6);
-            lngInput.value = Number(lng).toFixed(6);
-            marker.setLatLng([lat, lng]);
-        }
-
-        map.on("click", function (e) {
-            setCoordinates(e.latlng.lat, e.latlng.lng);
-        });
-
-        marker.on("dragend", function () {
-            const pos = marker.getLatLng();
-            setCoordinates(pos.lat, pos.lng);
-        });
-
-        if (useCurrentLocationBtn) {
-            useCurrentLocationBtn.addEventListener("click", function () {
-                map.locate({ setView: true, maxZoom: 17 });
-            });
-        }
-
-        map.on("locationfound", function (e) {
-            setCoordinates(e.latitude, e.longitude);
-            map.setView([e.latitude, e.longitude], 17);
-        });
-
-        map.on("locationerror", function () {
-            alert("Could not get current location on this device/browser.");
-        });
-
-        setTimeout(function () {
-            map.invalidateSize();
-        }, 200);
-    }
-
     document.addEventListener("DOMContentLoaded", function () {
         const existingOwner = document.getElementById("id_existing_owner");
         const createNewOwner = document.getElementById("id_create_new_owner");
-        const propertyUse = document.getElementById("id_property_use");
-        const rateableValue = document.getElementById("id_rateable_value");
 
         if (existingOwner) {
             existingOwner.addEventListener("change", toggleOwnerFields);
@@ -1112,18 +586,7 @@
             createNewOwner.addEventListener("change", toggleOwnerFields);
         }
 
-        if (propertyUse) {
-            propertyUse.addEventListener("change", updateRatePreview);
-        }
-
-        if (rateableValue) {
-            rateableValue.addEventListener("input", updateRatePreview);
-            rateableValue.addEventListener("change", updateRatePreview);
-        }
-
         toggleOwnerFields();
-        updateRatePreview();
-        initPropertyMap();
     });
 </script>
 </body>

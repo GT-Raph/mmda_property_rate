@@ -2,7 +2,6 @@ from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q
 
 from .models import Owner, Property
 
@@ -28,16 +27,6 @@ def _owner_property_count(owner):
 
 
 def _choose_master_owner(owners):
-    """
-    Pick the best owner to keep.
-    Priority:
-    1. linked_user exists
-    2. ghana_card_number exists
-    3. email exists
-    4. primary_phone exists
-    5. has more properties
-    6. lowest id
-    """
     def score(owner):
         return (
             1 if getattr(owner, "linked_user_id", None) else 0,
@@ -62,7 +51,6 @@ def _merge_owner_data(master, duplicate):
         "ghana_card_number",
         "postal_address",
         "residential_address",
-        "digital_address",
         "linked_user",
         "assembly",
     ]
@@ -83,15 +71,6 @@ def _merge_owner_data(master, duplicate):
 
 
 def _validate_merge_candidates(owners):
-    """
-    Safe merge rules:
-    - same assembly
-    - same full name
-    - no conflicting non-empty linked_user
-    - no conflicting non-empty Ghana card
-    - no conflicting non-empty email
-    - no conflicting non-empty primary phone
-    """
     if len(owners) < 2:
         raise ValidationError("Select at least two owner records to merge.")
 
@@ -153,9 +132,7 @@ class OwnerAdminForm(forms.ModelForm):
         qs = Owner.objects.exclude(pk=self.instance.pk)
 
         if linked_user and qs.filter(linked_user=linked_user).exists():
-            raise ValidationError({
-                "linked_user": "Owner with this Linked user already exists."
-            })
+            raise ValidationError({"linked_user": "Owner with this linked user already exists."})
 
         possible_dupes = qs
         if assembly:
@@ -218,7 +195,6 @@ def merge_selected_owners(modeladmin, request, queryset):
     with transaction.atomic():
         for duplicate in duplicates:
             _merge_owner_data(master, duplicate)
-
             moved_properties += Property.objects.filter(owner=duplicate).update(owner=master)
             deleted_ids.append(duplicate.id)
             duplicate.delete()
@@ -226,8 +202,7 @@ def merge_selected_owners(modeladmin, request, queryset):
     modeladmin.message_user(
         request,
         (
-            f"Merged {len(deleted_ids)} duplicate owner record(s) into "
-            f"owner #{master.id} ({master.full_name}). "
+            f"Merged {len(deleted_ids)} duplicate owner record(s) into owner #{master.id} ({master.full_name}). "
             f"Moved {moved_properties} propert{'y' if moved_properties == 1 else 'ies'}."
         ),
         level=messages.SUCCESS,
@@ -274,6 +249,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "property_reference",
         "owner",
         "property_use",
+        "building_type",
         "area_town",
         "suburb",
         "rateable_value",
@@ -281,7 +257,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "registered_by",
         "created_at",
     )
-    list_filter = ("assembly", "property_use", "is_active", "verification_status")
+    list_filter = ("assembly", "property_use", "building_type", "is_active", "verification_status")
     search_fields = (
         "property_reference",
         "owner__full_name",

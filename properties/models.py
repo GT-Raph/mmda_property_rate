@@ -1,9 +1,11 @@
 from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
-from admins.models import Assembly, TimeStampedModel
-from decimal import Decimal
 
+from admins.models import Assembly, TimeStampedModel
+
+from decimal import Decimal
 
 class Owner(TimeStampedModel):
     assembly = models.ForeignKey(
@@ -143,12 +145,13 @@ class Property(TimeStampedModel):
             models.Index(fields=["property_reference"]),
             models.Index(fields=["area_town"]),
             models.Index(fields=["property_use"]),
+            models.Index(fields=["building_type"]),
             models.Index(fields=["verification_status"]),
         ]
 
     def save(self, *args, **kwargs):
         if not self.property_reference:
-            prefix = self.assembly.short_code if self.assembly_id else "MMDA"
+            prefix = self.assembly.short_code if self.assembly_id and getattr(self.assembly, "short_code", "") else "MMDA"
             self.property_reference = f"{prefix}-{uuid4().hex[:10].upper()}"
         super().save(*args, **kwargs)
 
@@ -178,26 +181,3 @@ class PropertyPhoto(TimeStampedModel):
 
     def __str__(self):
         return f"Photo for {self.property.property_reference}"
-    
-
-class AssemblyRateConfig(TimeStampedModel):
-    assembly = models.ForeignKey(
-        Assembly,
-        on_delete=models.CASCADE,
-        related_name="rate_configs",
-    )
-    property_use = models.CharField(
-        max_length=20,
-        choices=Property.PROPERTY_USE_CHOICES,
-    )
-    rate_impost = models.DecimalField(max_digits=10, decimal_places=5)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["assembly__name", "property_use", "-created_at"]
-        indexes = [
-            models.Index(fields=["assembly", "property_use", "is_active"]),
-        ]
-
-    def __str__(self):
-        return f"{self.assembly} - {self.property_use} - {self.rate_impost}"
