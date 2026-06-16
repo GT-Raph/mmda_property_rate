@@ -72,6 +72,26 @@ def _owner_display_field():
     return "id"
 
 
+def _normalize_text(value):
+    value = (value or "").strip().lower()
+    value = re.sub(r"\s+", " ", value)
+    return value
+
+
+def _normalize_phone(value):
+    value = (value or "").strip()
+    digits = re.sub(r"[^\d]", "", value)
+
+    if not digits:
+        return ""
+
+    if digits.startswith("233"):
+        return digits
+    if digits.startswith("0"):
+        return f"233{digits[1:]}"
+    return digits
+
+
 class PropertyCreateForm(PropertyBaseForm):
     class Meta(PropertyBaseForm.Meta):
         fields = PROPERTY_FORM_FIELDS
@@ -200,6 +220,72 @@ class PropertyCreateForm(PropertyBaseForm):
 
         return value
 
+    def _owner_value(self, field_name):
+        return self.cleaned_data.get(f"owner_{field_name}")
+
+    def _find_existing_owner_match(self, assembly=None):
+        """
+        Try to find an existing owner using the strongest available match.
+        Match priority:
+        1. linked_user
+        2. ghana_card_number
+        3. primary/alternate phone
+        4. email
+        5. exact full_name within the same assembly
+        """
+        queryset = OWNER_MODEL.objects.all()
+
+        if assembly is not None and "assembly" in OWNER_MODEL_FIELDS:
+            queryset = queryset.filter(assembly=assembly)
+
+        linked_user = self._owner_value("linked_user") if "linked_user" in OWNER_MODEL_FIELDS else None
+        if linked_user:
+            owner = queryset.filter(linked_user=linked_user).first()
+            if owner:
+                return owner
+
+        ghana_card_number = self._owner_value("ghana_card_number") if "ghana_card_number" in OWNER_MODEL_FIELDS else None
+        if ghana_card_number:
+            owner = queryset.filter(ghana_card_number__iexact=str(ghana_card_number).strip()).first()
+            if owner:
+                return owner
+
+        primary_phone = self._owner_value("primary_phone") if "primary_phone" in OWNER_MODEL_FIELDS else None
+        alternate_phone = self._owner_value("alternate_phone") if "alternate_phone" in OWNER_MODEL_FIELDS else None
+
+        normalized_primary = _normalize_phone(primary_phone)
+        normalized_alternate = _normalize_phone(alternate_phone)
+
+        if normalized_primary and "primary_phone" in OWNER_MODEL_FIELDS:
+            for owner in queryset:
+                owner_primary = _normalize_phone(getattr(owner, "primary_phone", ""))
+                owner_alternate = _normalize_phone(getattr(owner, "alternate_phone", ""))
+                if normalized_primary in {owner_primary, owner_alternate}:
+                    return owner
+
+        if normalized_alternate and "alternate_phone" in OWNER_MODEL_FIELDS:
+            for owner in queryset:
+                owner_primary = _normalize_phone(getattr(owner, "primary_phone", ""))
+                owner_alternate = _normalize_phone(getattr(owner, "alternate_phone", ""))
+                if normalized_alternate in {owner_primary, owner_alternate}:
+                    return owner
+
+        email = self._owner_value("email") if "email" in OWNER_MODEL_FIELDS else None
+        normalized_email = _normalize_text(email)
+        if normalized_email and "email" in OWNER_MODEL_FIELDS:
+            owner = queryset.filter(email__iexact=normalized_email).first()
+            if owner:
+                return owner
+
+        full_name = self._owner_value("full_name") if "full_name" in OWNER_MODEL_FIELDS else None
+        normalized_name = _normalize_text(full_name)
+        if normalized_name and "full_name" in OWNER_MODEL_FIELDS:
+            name_matches = queryset.filter(full_name__iexact=full_name.strip())
+            if name_matches.count() == 1:
+                return name_matches.first()
+
+        return None
+
     def clean(self):
         cleaned_data = super().clean()
 
@@ -265,7 +351,11 @@ class PropertyCreateForm(PropertyBaseForm):
 
         return f"{prefix}{next_number:05d}"
 
-    def _build_owner_instance(self, assembly=None):
+    def _build_or_reuse_owner_instance(self, assembly=None):
+        matched_owner = self._find_existing_owner_match(assembly=assembly)
+        if matched_owner:
+            return matched_owner
+
         owner = OWNER_MODEL()
 
         if "assembly" in OWNER_MODEL_FIELDS and assembly is not None:
@@ -291,7 +381,7 @@ class PropertyCreateForm(PropertyBaseForm):
         wants_new_owner = self.cleaned_data.get("_wants_new_owner", False)
 
         if wants_new_owner:
-            owner = self._build_owner_instance(assembly=assembly)
+            owner = self._build_or_reuse_owner_instance(assembly=assembly)
         else:
             owner = existing_owner
 
