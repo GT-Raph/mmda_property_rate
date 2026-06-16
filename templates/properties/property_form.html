@@ -382,25 +382,66 @@
 
         <nav class="nav">
             {% if portal_access.dashboard %}
-                <a href="{% url 'admins:admin-dashboard' %}">⌂ Dashboard</a>
+                <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
+                    </span>
+                    <span>Dashboard</span>
+                </a>
             {% endif %}
+
             {% if portal_access.properties %}
-                <a href="{% url 'properties:property-registry' %}" class="active">🏢 Properties</a>
+                <a href="{% url 'properties:property-registry' %}" class="active">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/property.png' %}" alt="Properties" class="nav-icon-img">
+                    </span>
+                    <span>Properties</span>
+                </a>
             {% endif %}
+
             {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}">💳 Billing & Payments</a>
+                <a href="{% url 'billing:billing-management' %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/bill.png' %}" alt="Billing & Payments" class="nav-icon-img">
+                    </span>
+                    <span>Billing & Payments</span>
+                </a>
             {% endif %}
+
             {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}">📍 Field Officers</a>
+                <a href="{% url 'field_operations:field-operations' %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/person.png' %}" alt="Field Officers" class="nav-icon-img">
+                    </span>
+                    <span>Field Officers</span>
+                </a>
             {% endif %}
+
             {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}">📊 Reports</a>
+                <a href="{% url 'admins:reports-analytics' %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/icons/report.png' %}" alt="Reports" class="nav-icon-img">
+                    </span>
+                    <span>Reports</span>
+                </a>
             {% endif %}
+
             {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}">ⓘ Assembly</a>
+                <a href="{% url 'admins:assembly-management' %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/assembly.png' %}" alt="Assembly" class="nav-icon-img">
+                    </span>
+                    <span>Assembly</span>
+                </a>
             {% endif %}
+
             {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}">⚙ Settings</a>
+                <a href="{% url 'admins:settings' %}">
+                    <span class="nav-icon">
+                        <img src="{% static 'images/settings.png' %}" alt="Settings" class="nav-icon-img">
+                    </span>
+                    <span>Settings</span>
+                </a>
             {% endif %}
         </nav>
 
