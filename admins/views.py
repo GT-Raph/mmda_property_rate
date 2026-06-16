@@ -9,7 +9,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Value
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Value, Q
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -624,8 +624,19 @@ def dashboard(request):
     previous_month_start = previous_month_end.replace(day=1)
     week_start = today - timedelta(days=today.weekday())
     current_year = today.year
+
     context_assembly = _get_current_assembly(request)
     user_role = get_user_role(request.user)
+
+    # Roles that should see all assembly payments
+    finance_all_roles = {
+        "sys_admin",
+        "revenue_admin",
+        "billing_officer",
+        "payment_officer",
+        "report_officer",
+        "field_officer",
+    }
 
     properties_qs = Property.objects.select_related("owner")
     bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
@@ -643,41 +654,77 @@ def dashboard(request):
         field_visits_qs = field_visits_qs.filter(property__assembly=context_assembly)
         disputes_qs = disputes_qs.filter(bill__assembly=context_assembly)
 
-    # FIELD OFFICER SCOPE
-    # Only show records related to the logged-in field officer
+    # -----------------------------
+    # WORK SCOPE
+    # -----------------------------
+    # This is for non-finance dashboard data like
+    # my properties, my visits, my disputes, etc.
+    work_properties_qs = properties_qs
+    work_field_visits_qs = field_visits_qs
+    work_disputes_qs = disputes_qs
+
     if user_role == "field_officer":
-        properties_qs = properties_qs.filter(registered_by=request.user)
-        bills_qs = bills_qs.filter(property_record__registered_by=request.user)
-        payments_qs = payments_qs.filter(property__registered_by=request.user)
-        field_visits_qs = field_visits_qs.filter(officer=request.user)
-        disputes_qs = disputes_qs.filter(bill__property_record__registered_by=request.user)
+        work_properties_qs = work_properties_qs.filter(registered_by=request.user)
+        work_field_visits_qs = work_field_visits_qs.filter(officer=request.user)
+        work_disputes_qs = work_disputes_qs.filter(
+            bill__property_record__registered_by=request.user
+        )
+
+    # -----------------------------
+    # FINANCE SCOPE
+    # -----------------------------
+    # This is for payment chart, revenue chart,
+    # recent payments and finance-related stats.
+    finance_bills_qs = bills_qs
+    finance_payments_qs = payments_qs
+
+    if user_role not in finance_all_roles:
+        finance_bills_qs = finance_bills_qs.filter(
+            property_record__registered_by=request.user
+        )
+        finance_payments_qs = finance_payments_qs.filter(
+            Q(property__registered_by=request.user)
+            | Q(bill__property_record__registered_by=request.user)
+        )
 
     balance_expr = ExpressionWrapper(
         F("amount_due") - F("amount_paid"),
         output_field=MONEY_FIELD,
     )
 
-    total_properties = properties_qs.count()
-    properties_this_month = properties_qs.filter(created_at__date__gte=current_month_start).count()
-    properties_previous_month = properties_qs.filter(
+    # -----------------------------
+    # PROPERTY / PERSONAL STATS
+    # -----------------------------
+    total_properties = work_properties_qs.count()
+    properties_this_month = work_properties_qs.filter(
+        created_at__date__gte=current_month_start
+    ).count()
+    properties_previous_month = work_properties_qs.filter(
         created_at__date__gte=previous_month_start,
         created_at__date__lte=previous_month_end,
     ).count()
 
-    bills_this_month = bills_qs.filter(created_at__date__gte=current_month_start).count()
-    bills_previous_month = bills_qs.filter(
+    property_change = _pct_change(properties_this_month, properties_previous_month)
+
+    # -----------------------------
+    # FINANCE STATS
+    # -----------------------------
+    bills_this_month = finance_bills_qs.filter(
+        created_at__date__gte=current_month_start
+    ).count()
+    bills_previous_month = finance_bills_qs.filter(
         created_at__date__gte=previous_month_start,
         created_at__date__lte=previous_month_end,
     ).count()
 
-    revenue_this_month = payments_qs.filter(
+    revenue_this_month = finance_payments_qs.filter(
         status="successful",
         paid_at__date__gte=current_month_start,
     ).aggregate(
         total=Coalesce(Sum("amount"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
     )["total"]
 
-    revenue_previous_month = payments_qs.filter(
+    revenue_previous_month = finance_payments_qs.filter(
         status="successful",
         paid_at__date__gte=previous_month_start,
         paid_at__date__lte=previous_month_end,
@@ -685,17 +732,18 @@ def dashboard(request):
         total=Coalesce(Sum("amount"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
     )["total"]
 
-    open_bills = bills_qs.exclude(status__in=["paid", "cancelled"])
+    open_bills = finance_bills_qs.exclude(status__in=["paid", "cancelled"])
 
     outstanding_total = open_bills.aggregate(
         total=Coalesce(Sum(balance_expr), Value(Decimal("0.00"), output_field=MONEY_FIELD))
     )["total"]
 
-    outstanding_previous = open_bills.filter(created_at__date__lt=current_month_start).aggregate(
+    outstanding_previous = open_bills.filter(
+        created_at__date__lt=current_month_start
+    ).aggregate(
         total=Coalesce(Sum(balance_expr), Value(Decimal("0.00"), output_field=MONEY_FIELD))
     )["total"]
 
-    property_change = _pct_change(properties_this_month, properties_previous_month)
     bills_change = _pct_change(bills_this_month, bills_previous_month)
     revenue_change = _pct_change(revenue_this_month, revenue_previous_month)
     outstanding_change = _pct_change(outstanding_total, outstanding_previous)
@@ -712,7 +760,7 @@ def dashboard(request):
                 "icon_key": "property",
             },
             {
-                "title": "Bills On My Properties",
+                "title": "Assembly Bills",
                 "value": _number(bills_this_month),
                 "meta": "this month",
                 "change": abs(bills_change),
@@ -721,7 +769,7 @@ def dashboard(request):
                 "icon_key": "bill",
             },
             {
-                "title": "Collected On My Records",
+                "title": "Assembly Revenue",
                 "value": _money(revenue_this_month),
                 "meta": "this month",
                 "change": abs(revenue_change),
@@ -730,7 +778,7 @@ def dashboard(request):
                 "icon_key": "paid",
             },
             {
-                "title": "Outstanding On My Records",
+                "title": "Assembly Outstanding",
                 "value": _money(outstanding_total),
                 "meta": "vs last month",
                 "change": abs(outstanding_change),
@@ -779,6 +827,9 @@ def dashboard(request):
             },
         ]
 
+    # -----------------------------
+    # REVENUE TREND
+    # -----------------------------
     month_starts = []
     for offset in range(5, -1, -1):
         month = current_month_start.month - offset
@@ -789,7 +840,7 @@ def dashboard(request):
         month_starts.append(date(year, month, 1))
 
     revenue_rows = (
-        payments_qs.filter(
+        finance_payments_qs.filter(
             status="successful",
             paid_at__date__gte=month_starts[0],
         )
@@ -821,46 +872,70 @@ def dashboard(request):
         if total > revenue_max:
             revenue_max = total
 
-    current_year_bills = bills_qs.filter(billing_year=current_year)
+    # -----------------------------
+    # PAYMENT DISTRIBUTION
+    # -----------------------------
+    current_year_bills = finance_bills_qs.filter(billing_year=current_year)
+
     paid_count = current_year_bills.filter(status="paid").count()
-    partial_count = current_year_bills.filter(status="part_paid").count()
-    unpaid_count = current_year_bills.filter(status__in=["pending", "overdue"]).count()
+    partial_count = current_year_bills.filter(
+        Q(status="part_paid") | Q(status="partial")
+    ).count()
+    unpaid_count = current_year_bills.exclude(
+        status__in=["paid", "part_paid", "partial", "cancelled"]
+    ).count()
+
     distribution_total = max(paid_count + partial_count + unpaid_count, 1)
 
     payment_distribution = [
-        {"label": "Paid", "count": paid_count, "display": _number(paid_count), "class": "green"},
-        {"label": "Partial", "count": partial_count, "display": _number(partial_count), "class": "yellow"},
-        {"label": "Unpaid", "count": unpaid_count, "display": _number(unpaid_count), "class": "red"},
+        {
+            "label": "Paid",
+            "count": paid_count,
+            "display": _number(paid_count),
+            "class": "green",
+        },
+        {
+            "label": "Partial",
+            "count": partial_count,
+            "display": _number(partial_count),
+            "class": "yellow",
+        },
+        {
+            "label": "Unpaid",
+            "count": unpaid_count,
+            "display": _number(unpaid_count),
+            "class": "red",
+        },
     ]
 
+    # -----------------------------
+    # RECENT ACTIVITY
+    # -----------------------------
     recent_items = []
 
-    for payment in payments_qs.filter(status="successful").order_by("-paid_at", "-created_at")[:3]:
+    for payment in finance_payments_qs.filter(status="successful").order_by("-paid_at", "-created_at")[:5]:
         dt = payment.paid_at or payment.created_at
-        prop_ref = (
-            payment.property.property_reference
-            if payment.property_id
-            else payment.property_reference_entered or "Unknown Ref"
-        )
-        owner_name = (
-            payment.property.owner.full_name
-            if payment.property_id and getattr(payment.property, "owner", None)
-            else payment.payer_name or "Unknown payer"
-        )
+
+        prop = getattr(payment, "property", None)
+        if not prop and getattr(payment, "bill", None):
+            prop = getattr(payment.bill, "property_record", None)
+
+        prop_ref = getattr(prop, "property_reference", None) or getattr(payment, "property_reference_entered", None) or "Unknown Ref"
+        owner_name = getattr(getattr(prop, "owner", None), "full_name", None) or getattr(payment, "payer_name", None) or "Unknown payer"
 
         recent_items.append(
             {
                 "sort_at": dt,
                 "icon_key": "paid",
                 "icon_class": "soft-green",
-                "title": f"Payment received: {_money(payment.amount)}",
+                "title": f"Payment received: {_money(getattr(payment, 'amount', 0))}",
                 "subtitle": f"{prop_ref} • {owner_name}",
                 "time": _time_ago(dt),
                 "highlight": True,
             }
         )
 
-    for prop in properties_qs.order_by("-created_at")[:2]:
+    for prop in work_properties_qs.order_by("-created_at")[:2]:
         owner_name = getattr(prop.owner, "full_name", "Unknown owner") if getattr(prop, "owner", None) else "Unknown owner"
         recent_items.append(
             {
@@ -874,7 +949,7 @@ def dashboard(request):
             }
         )
 
-    for dispute in disputes_qs.order_by("-created_at")[:2]:
+    for dispute in work_disputes_qs.order_by("-created_at")[:2]:
         prop = getattr(dispute.bill, "property_record", None)
         prop_ref = getattr(prop, "property_reference", "Unknown Ref")
         owner_name = getattr(getattr(prop, "owner", None), "full_name", "Unknown owner")
@@ -890,7 +965,7 @@ def dashboard(request):
             }
         )
 
-    for visit in field_visits_qs.order_by("-visited_at", "-created_at")[:2]:
+    for visit in work_field_visits_qs.order_by("-visited_at", "-created_at")[:2]:
         dt = visit.visited_at or visit.created_at
         prop = getattr(visit, "property", None)
         prop_ref = getattr(prop, "property_reference", "Unknown Ref")
@@ -907,21 +982,30 @@ def dashboard(request):
             }
         )
 
-    recent_items = sorted(recent_items, key=lambda item: item["sort_at"], reverse=True)[:6]
+    recent_items = sorted(
+        recent_items,
+        key=lambda item: item["sort_at"] or timezone.now(),
+        reverse=True,
+    )[:6]
 
-    overdue_90_count = bills_qs.filter(
+    # -----------------------------
+    # ALERTS
+    # -----------------------------
+    overdue_90_count = finance_bills_qs.filter(
         due_date__lt=today - timedelta(days=90)
     ).exclude(status__in=["paid", "cancelled"]).count()
 
     next_month_start = (current_month_start.replace(day=28) + timedelta(days=4)).replace(day=1)
     days_until_next_cycle = (next_month_start - today).days
 
-    weekly_field_visits = field_visits_qs.filter(visited_at__date__gte=week_start).count()
+    weekly_field_visits = work_field_visits_qs.filter(
+        Q(visited_at__date__gte=week_start) | Q(created_at__date__gte=week_start)
+    ).count()
 
     if user_role == "field_officer":
         alerts = [
             {
-                "message": f"{_number(overdue_90_count)} overdue properties are linked to your registered records",
+                "message": f"{_number(overdue_90_count)} overdue payment record(s) in the assembly",
                 "action": "View List",
                 "alert_class": "alert-warning",
             },
@@ -960,7 +1044,7 @@ def dashboard(request):
     context = {
         "page_title": "Dashboard",
         "page_subtitle": (
-            "Your assigned and registered field activity overview"
+            "Your field activity and assembly payment overview"
             if user_role == "field_officer"
             else "Property Rate Management System Overview"
         ),
