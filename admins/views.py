@@ -630,12 +630,12 @@ def dashboard(request):
 
     # Roles that should see all assembly payments
     finance_all_roles = {
-        "sys_admin",
-        "revenue_admin",
-        "billing_officer",
-        "payment_officer",
-        "report_officer",
-        "field_officer",
+    "sys_admin",
+    "revenue_admin",
+    "billing_officer",
+    "payment_officer",
+    "report_officer",
+    "field_officer",
     }
 
     properties_qs = Property.objects.select_related("owner")
@@ -875,15 +875,30 @@ def dashboard(request):
     # -----------------------------
     # PAYMENT DISTRIBUTION
     # -----------------------------
-    current_year_bills = finance_bills_qs.filter(billing_year=current_year)
+    # Use all visible finance bills, not only current year bills.
+    distribution_bills = finance_bills_qs.exclude(status__in=["cancelled"])
 
-    paid_count = current_year_bills.filter(status="paid").count()
-    partial_count = current_year_bills.filter(
-        Q(status="part_paid") | Q(status="partial")
-    ).count()
-    unpaid_count = current_year_bills.exclude(
-        status__in=["paid", "part_paid", "partial", "cancelled"]
-    ).count()
+    paid_bills_qs = distribution_bills.filter(
+        Q(status__iexact="paid") |
+        Q(amount_paid__gte=F("amount_due"), amount_due__gt=0)
+    ).distinct()
+
+    partial_bills_qs = distribution_bills.filter(
+        Q(status__in=["part_paid", "partial"]) |
+        (Q(amount_paid__gt=0) & Q(amount_paid__lt=F("amount_due")))
+    ).exclude(
+        id__in=paid_bills_qs.values_list("id", flat=True)
+    ).distinct()
+
+    unpaid_bills_qs = distribution_bills.exclude(
+        id__in=paid_bills_qs.values_list("id", flat=True)
+    ).exclude(
+        id__in=partial_bills_qs.values_list("id", flat=True)
+    ).distinct()
+
+    paid_count = paid_bills_qs.count()
+    partial_count = partial_bills_qs.count()
+    unpaid_count = unpaid_bills_qs.count()
 
     distribution_total = max(paid_count + partial_count + unpaid_count, 1)
 
