@@ -12,7 +12,8 @@ from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
 from properties.forms import PropertyCreateForm
-from properties.models import Property, AssemblyRateConfig
+from properties.models import AssemblyRateConfig, Property
+from properties.utils import link_or_create_citizen_for_owner
 
 
 def _get_current_assembly(request):
@@ -67,9 +68,12 @@ def _property_status(prop):
 
 def _property_location(prop):
     parts = []
+    address_line = getattr(prop, "address_line", "") or ""
     suburb = getattr(prop, "suburb", "") or ""
     area = getattr(prop, "area_town", "") or ""
 
+    if address_line:
+        parts.append(address_line)
     if suburb:
         parts.append(suburb)
     if area and area not in parts:
@@ -153,10 +157,9 @@ def property_registry(request):
         properties_qs = properties_qs.filter(
             Q(property_reference__icontains=search)
             | Q(owner__full_name__icontains=search)
-            | Q(owner__name__icontains=search)
-            | Q(owner__owner_name__icontains=search)
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
+            | Q(address_line__icontains=search)
         )
 
     if property_type:
@@ -183,12 +186,7 @@ def property_registry(request):
         owner_name = "—"
         owner = getattr(prop, "owner", None)
         if owner:
-            owner_name = (
-                getattr(owner, "full_name", None)
-                or getattr(owner, "name", None)
-                or getattr(owner, "owner_name", None)
-                or str(owner)
-            )
+            owner_name = getattr(owner, "full_name", None) or str(owner)
 
         property_rows.append(
             {
@@ -206,13 +204,11 @@ def property_registry(request):
             }
         )
 
-    type_choices = []
     if hasattr(Property, "PROPERTY_USE_CHOICES"):
         type_choices = list(Property.PROPERTY_USE_CHOICES)
-    elif hasattr(Property, "_meta"):
+    else:
         field = Property._meta.get_field("property_use")
-        if getattr(field, "choices", None):
-            type_choices = list(field.choices)
+        type_choices = list(field.choices) if getattr(field, "choices", None) else []
 
     start_index = page_obj.start_index() if paginator.count else 0
     end_index = page_obj.end_index() if paginator.count else 0
@@ -256,20 +252,42 @@ def add_property(request):
                 with transaction.atomic():
                     property_instance = form.save(assembly=context_assembly)
 
+                    update_fields = []
+
                     if hasattr(property_instance, "registered_by_id") and not property_instance.registered_by_id:
                         property_instance.registered_by = request.user
+                        update_fields.append("registered_by")
 
                     if hasattr(property_instance, "registration_source"):
                         role = get_user_role(request.user)
                         property_instance.registration_source = "field" if role == "field_officer" else "admin"
+                        update_fields.append("registration_source")
 
-                    property_instance.save()
+                    if update_fields:
+                        property_instance.save(update_fields=update_fields)
+
+                    owner = getattr(property_instance, "owner", None)
+                    account_result = link_or_create_citizen_for_owner(owner, default_password="1234")
 
                 messages.success(
                     request,
                     f"Property {property_instance.property_reference} was added successfully.",
                 )
+
+                if account_result.get("created"):
+                    messages.info(
+                        request,
+                        f"Citizen account created for {owner.full_name}. "
+                        f"Username: {account_result['username']} | Temporary password: 1234"
+                    )
+                elif account_result.get("linked"):
+                    messages.info(
+                        request,
+                        f"Property owner {owner.full_name} was linked to citizen account: {account_result['username']}."
+                    )
+
                 return redirect("properties:property-registry")
+
             except Exception as exc:
                 messages.error(request, f"Could not save the property. {exc}")
         else:

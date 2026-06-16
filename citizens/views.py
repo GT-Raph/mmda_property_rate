@@ -20,19 +20,23 @@ from admins.models import Assembly
 from billing.models import Bill
 from payments.models import Payment
 from properties.models import Property
-
-
-from .models import CitizenPreference, PropertyCertificate, CitizenDispute, CitizenDisputeAttachment
+from properties.utils import normalize_phone, normalize_text
 
 from .forms import (
     CitizenAddressForm,
+    CitizenDisputeForm,
     CitizenEmailForm,
     CitizenNameForm,
     CitizenNotificationForm,
     CitizenPasswordForm,
-    CitizenPhoneForm,
     CitizenPaymentForm,
-    CitizenDisputeForm,
+    CitizenPhoneForm,
+)
+from .models import (
+    CitizenDispute,
+    CitizenDisputeAttachment,
+    CitizenPreference,
+    PropertyCertificate,
 )
 
 
@@ -107,14 +111,6 @@ def _current_fee_value(bill):
 
     computed = amount_due - arrears - penalty
     return computed if computed > 0 else amount_due
-
-
-def _payment_model_field_names():
-    return {
-        field.name
-        for field in Payment._meta.get_fields()
-        if getattr(field, "concrete", False) and not getattr(field, "auto_created", False)
-    }
 
 
 def _create_payment_record(bill, amount, network, mobile_number, transaction_reference):
@@ -214,36 +210,52 @@ def _find_owner_for_user(user):
     owner_model = _get_owner_model()
     owner_field_names = {f.name for f in owner_model._meta.get_fields()}
 
-    for field_name in ["user", "auth_user", "account"]:
-        if field_name in owner_field_names:
-            try:
-                owner = owner_model.objects.filter(**{field_name: user}).first()
-                if owner:
-                    return owner
-            except Exception:
-                pass
+    if "linked_user" in owner_field_names:
+        owner = owner_model.objects.filter(linked_user=user).first()
+        if owner:
+            return owner
 
-    if user.email:
-        for field_name in ["email", "email_address"]:
-            if field_name in owner_field_names:
-                try:
-                    owner = owner_model.objects.filter(**{f"{field_name}__iexact": user.email}).first()
-                    if owner:
-                        return owner
-                except Exception:
-                    pass
+    user_email = (user.email or "").strip().lower()
+    if user_email and "email" in owner_field_names:
+        owner = owner_model.objects.filter(email__iexact=user_email).first()
+        if owner:
+            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
+                owner.linked_user = user
+                owner.save(update_fields=["linked_user"])
+            return owner
 
     profile = getattr(user, "profile", None)
-    phone_number = getattr(profile, "phone_number", "") if profile else ""
-    if phone_number:
-        for field_name in ["phone_number", "phone", "mobile"]:
-            if field_name in owner_field_names:
-                try:
-                    owner = owner_model.objects.filter(**{field_name: phone_number}).first()
-                    if owner:
-                        return owner
-                except Exception:
-                    pass
+    profile_phone = normalize_phone(getattr(profile, "phone_number", "") if profile else "")
+
+    if profile_phone and "primary_phone" in owner_field_names:
+        owner = owner_model.objects.filter(primary_phone=profile_phone).first()
+        if owner:
+            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
+                owner.linked_user = user
+                owner.save(update_fields=["linked_user"])
+            return owner
+
+    if profile_phone and "alternate_phone" in owner_field_names:
+        owner = owner_model.objects.filter(alternate_phone=profile_phone).first()
+        if owner:
+            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
+                owner.linked_user = user
+                owner.save(update_fields=["linked_user"])
+            return owner
+
+    full_name = normalize_text(user.get_full_name())
+    if full_name and "full_name" in owner_field_names:
+        owners_qs = owner_model.objects.filter(full_name__iexact=user.get_full_name().strip())
+
+        if profile and getattr(profile, "assembly_id", None) and "assembly" in owner_field_names:
+            owners_qs = owners_qs.filter(assembly_id=profile.assembly_id)
+
+        if owners_qs.count() == 1:
+            owner = owners_qs.first()
+            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
+                owner.linked_user = user
+                owner.save(update_fields=["linked_user"])
+            return owner
 
     return None
 
@@ -271,17 +283,12 @@ def _property_heading(prop):
 
 
 def _property_location(prop):
-    house_number = getattr(prop, "house_number", "") or ""
-    street_name = getattr(prop, "street_name", "") or ""
+    address_line = getattr(prop, "address_line", "") or ""
     suburb = getattr(prop, "suburb", "") or ""
     area_town = getattr(prop, "area_town", "") or ""
 
-    first_line = " ".join(part for part in [house_number, street_name] if part).strip()
-    second_line = ", ".join(part for part in [suburb, area_town] if part).strip(", ")
-
-    if first_line and second_line:
-        return f"{first_line}, {second_line}"
-    return first_line or second_line or "Location not available"
+    parts = [part for part in [address_line, suburb, area_town] if part]
+    return ", ".join(parts) if parts else "Location not available"
 
 
 def _property_status(prop):
@@ -381,9 +388,6 @@ def _safe_reverse(name, fallback="#", *args, **kwargs):
         return fallback
 
 
-# -----------------------------
-# CERTIFICATE HELPERS
-# -----------------------------
 def _certificate_property_field_name():
     field_names = {field.name for field in PropertyCertificate._meta.get_fields()}
     if "property_record" in field_names:
@@ -440,9 +444,6 @@ def _property_registered_date(prop):
     return "—"
 
 
-# -----------------------------
-# DASHBOARD
-# -----------------------------
 @login_required
 def citizen_dashboard(request):
     if get_user_role(request.user) != "citizen":
@@ -617,9 +618,6 @@ def citizen_dashboard(request):
     return render(request, "citizens/dashboard.html", context)
 
 
-# -----------------------------
-# PROPERTIES
-# -----------------------------
 @login_required
 def citizen_properties(request):
     if get_user_role(request.user) != "citizen":
@@ -742,9 +740,6 @@ def citizen_property_bills(request, property_id):
 
 @login_required
 def citizen_property_certificate(request, property_id):
-    """
-    Opens the QR certificate page for the exact property.
-    """
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
 
@@ -786,9 +781,6 @@ def citizen_property_certificate(request, property_id):
     return render(request, "citizens/property_certificate.html", context)
 
 
-# -----------------------------
-# BILLS / PAYMENTS
-# -----------------------------
 @login_required
 def citizen_bills(request):
     if get_user_role(request.user) != "citizen":
@@ -1001,7 +993,6 @@ def citizen_payment_processing(request):
 
 
 @login_required
-@login_required
 def citizen_payment_success(request):
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
@@ -1142,9 +1133,6 @@ def citizen_payment_history(request):
     return render(request, "citizens/payment_history.html", context)
 
 
-# -----------------------------
-# PROFILE / SETTINGS
-# -----------------------------
 def _citizen_only(request):
     if get_user_role(request.user) != "citizen":
         return redirect("portal-login")
@@ -1208,7 +1196,7 @@ def _display_owner_phone(owner, user):
     profile = getattr(user, "profile", None)
 
     if owner:
-        for field_name in ["phone_number", "phone", "mobile"]:
+        for field_name in ["primary_phone", "alternate_phone", "phone_number", "phone", "mobile"]:
             if hasattr(owner, field_name):
                 value = getattr(owner, field_name, "") or ""
                 if value:
@@ -1225,7 +1213,7 @@ def _display_owner_address(owner, preference, properties_qs):
         return preference.mailing_address
 
     if owner:
-        for field_name in ["address", "residential_address", "postal_address", "location"]:
+        for field_name in ["postal_address", "residential_address", "address", "location"]:
             if hasattr(owner, field_name):
                 value = getattr(owner, field_name, "") or ""
                 if value:
@@ -1394,7 +1382,7 @@ def citizen_update_phone(request):
             profile.save(update_fields=["phone_number"])
 
         owner_updates = []
-        updated_field = _set_owner_value(owner, ["phone_number", "phone", "mobile"], phone_number)
+        updated_field = _set_owner_value(owner, ["primary_phone", "alternate_phone", "phone_number", "phone", "mobile"], phone_number)
         if updated_field:
             owner_updates.append(updated_field)
         _save_owner(owner, owner_updates)
@@ -1428,7 +1416,7 @@ def citizen_update_address(request):
         preference.save(update_fields=["mailing_address", "updated_at"])
 
         owner_updates = []
-        updated_field = _set_owner_value(owner, ["address", "residential_address", "postal_address", "location"], address)
+        updated_field = _set_owner_value(owner, ["postal_address", "residential_address", "address", "location"], address)
         if updated_field:
             owner_updates.append(updated_field)
         _save_owner(owner, owner_updates)
@@ -1490,9 +1478,6 @@ def citizen_update_notifications(request):
     return render(request, "citizens/profile.html", context)
 
 
-# -----------------------------
-# CERTIFICATES
-# -----------------------------
 @login_required
 def citizen_certificates(request):
     if get_user_role(request.user) != "citizen":
