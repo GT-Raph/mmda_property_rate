@@ -388,7 +388,8 @@
         .chart-shell {
             width: 100%;
             overflow: hidden;
-            padding-left: 10px;
+            padding-left: 18px;
+            padding-right: 8px;
         }
 
         .chart-wrap {
@@ -748,7 +749,8 @@
             }
 
             .chart-shell {
-                padding-left: 0;
+                padding-left: 6px;
+                padding-right: 0;
             }
 
             .chart-wrap {
@@ -1082,12 +1084,13 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
+                clip: false,
                 layout: {
                     padding: {
                         top: 8,
                         right: 18,
                         bottom: 0,
-                        left: 18
+                        left: 26
                     }
                 },
                 plugins: {
@@ -1122,7 +1125,7 @@
                         beginAtZero: true,
                         grace: "10%",
                         afterFit(scale) {
-                            scale.width = 72;
+                            scale.width = 88;
                         },
                         grid: {
                             color: "rgba(0,0,0,0.10)",
@@ -1131,8 +1134,9 @@
                         },
                         ticks: {
                             color: "#7d7d7d",
-                            padding: 10,
+                            padding: 12,
                             maxTicksLimit: 6,
+                            mirror: false,
                             callback: function(value) {
                                 return Number(value).toLocaleString();
                             }
