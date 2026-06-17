@@ -104,7 +104,7 @@ def field_operations_dashboard(request):
     visit_qs = FieldVisit.objects.select_related("property__owner", "officer").order_by("-visited_at", "-created_at")
 
     if assembly:
-        officer_profiles = officer_profiles.filter(assembly=assembly)
+        officer_profiles = officer_profiles.filter(Q(assembly=assembly) | Q(assembly__isnull=True))
         visit_qs = visit_qs.filter(property__assembly=assembly)
 
     assigned_properties_qs = Property.objects.select_related("owner", "assembly").filter(
@@ -151,6 +151,7 @@ def field_operations_dashboard(request):
             {
                 "name": _officer_name(profile.user),
                 "code": profile.employee_id or f"FO-{profile.user_id:03d}",
+                "assembly_name": profile.assembly.name if profile.assembly else "Unassigned assembly",
                 "assigned": assigned_count,
                 "completed": completed_count,
                 "progress": progress,
