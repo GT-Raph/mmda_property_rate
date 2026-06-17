@@ -100,11 +100,43 @@ class UserProfile(TimeStampedModel):
     employee_id = models.CharField(max_length=50, blank=True)
     is_verified = models.BooleanField(default=False)
 
+    EMPLOYEE_ID_PREFIXES = {
+        "sys_admin": "SA",
+        "revenue_admin": "RA",
+        "property_officer": "PO",
+        "payment_officer": "PAY",
+        "billing_officer": "BO",
+        "report_officer": "RO",
+        "field_officer": "FO",
+    }
+
     class Meta:
         ordering = ["user__username"]
 
     def __str__(self):
         return f"{self.user.get_username()} ({self.role})"
+
+    def _build_employee_id(self):
+        prefix = self.EMPLOYEE_ID_PREFIXES.get(self.role)
+        if not prefix and self.user_id and self.user.is_staff:
+            prefix = "EMP"
+
+        if not prefix or not self.user_id:
+            return ""
+
+        return f"{prefix}-{self.user_id:05d}"
+
+    def save(self, *args, **kwargs):
+        if not self.employee_id and (self.role != "citizen" or (self.user_id and self.user.is_staff)):
+            self.employee_id = self._build_employee_id()
+
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None and self.employee_id:
+                update_fields = set(update_fields)
+                update_fields.add("employee_id")
+                kwargs["update_fields"] = update_fields
+
+        super().save(*args, **kwargs)
 
 
 class AdminPreference(TimeStampedModel):
