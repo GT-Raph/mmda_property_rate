@@ -291,7 +291,7 @@
 
         .page {
             padding: 20px 22px 34px;
-            max-width: 1120px;
+            max-width: 1320px;
         }
 
         .page-head {
@@ -366,15 +366,15 @@
 
         .form-card {
             overflow: hidden;
-            padding: 22px;
+            padding: 18px;
         }
 
         .form-section {
             margin-bottom: 24px;
-            padding: 18px;
+            padding: 22px;
             border: 1px solid var(--line);
             border-radius: 16px;
-            background: #fff;
+            background: linear-gradient(180deg, #ffffff 0%, #fcfcfc 100%);
         }
 
         .form-section:last-of-type {
@@ -386,7 +386,7 @@
             align-items: flex-start;
             justify-content: space-between;
             gap: 14px;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .section-title {
@@ -420,7 +420,7 @@
 
         .form-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 18px;
         }
 
@@ -516,13 +516,13 @@
 
         .actions-bar {
             position: sticky;
-            bottom: 14px;
+            bottom: 16px;
             margin-top: 24px;
             z-index: 10;
         }
 
         .actions {
-            padding: 14px;
+            padding: 16px 18px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -649,6 +649,14 @@
             .form-grid {
                 grid-template-columns: 1fr;
                 gap: 16px;
+            }
+
+            .form-card {
+                padding: 14px;
+            }
+
+            .form-section {
+                padding: 18px;
             }
 
             .section-head {

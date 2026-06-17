@@ -280,6 +280,25 @@
             align-items: center;
             gap: 10px;
             min-width: 0;
+            position: relative;
+        }
+
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            min-width: 0;
+        }
+
+        .user-trigger:focus-visible {
+            outline: 2px solid rgba(209, 172, 76, 0.35);
+            outline-offset: 4px;
+            border-radius: 14px;
         }
 
         .avatar {
@@ -317,6 +336,51 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            padding: 8px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+            z-index: 1200;
+        }
+
+        .user-dropdown[hidden] {
+            display: none;
+        }
+
+        .dropdown-action {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 0;
+            background: #fff5f5;
+            color: #c62828;
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.18s ease;
+            white-space: nowrap;
+        }
+
+        .dropdown-action:hover {
+            background: #ffe8e8;
+        }
+
+        .dropdown-action svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
         }
 
         .caret {
@@ -837,32 +901,48 @@
                     <img src="{% static 'images/icons/notification.png' %}" alt="Notifications">
                 </button>
 
-                <div class="user-box">
-                    <div class="avatar">
+                <div class="user-box" id="userMenu">
+                    <button class="user-trigger" type="button" id="userMenuButton" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+                        <span class="avatar">
                         {% if request.user.first_name or request.user.last_name %}
                             {{ request.user.get_full_name|slice:":1"|upper }}
                         {% else %}
                             {{ request.user.username|slice:":1"|upper }}
                         {% endif %}
-                    </div>
+                        </span>
 
-                    <div class="user-meta">
-                        <strong>
-                            {% if request.user.first_name or request.user.last_name %}
-                                {{ request.user.get_full_name }}
+                        <span class="user-meta">
+                            <strong>
+                                {% if request.user.first_name or request.user.last_name %}
+                                    {{ request.user.get_full_name }}
+                                {% else %}
+                                    {{ request.user.username }}
+                                {% endif %}
+                            </strong>
+
+                            {% if request.user.email %}
+                                <small>{{ request.user.email }}</small>
                             {% else %}
-                                {{ request.user.username }}
+                                <small>No email added</small>
                             {% endif %}
-                        </strong>
+                        </span>
 
-                        {% if request.user.email %}
-                            <small>{{ request.user.email }}</small>
-                        {% else %}
-                            <small>No email added</small>
-                        {% endif %}
+                        <span class="caret"></span>
+                    </button>
+
+                    <div class="user-dropdown" id="userDropdown" hidden>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-action">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                    <path d="M13 8L17 12L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M8 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                </svg>
+                                <span>Logout</span>
+                            </button>
+                        </form>
                     </div>
-
-                    <div class="caret"></div>
                 </div>
             </div>
         </div>
@@ -991,6 +1071,38 @@
 </div>
 
 <script>
+    const userMenu = document.getElementById("userMenu");
+    const userMenuButton = document.getElementById("userMenuButton");
+    const userDropdown = document.getElementById("userDropdown");
+
+    function closeUserMenu() {
+        if (!userDropdown.hidden) {
+            userDropdown.hidden = true;
+            userMenuButton.setAttribute("aria-expanded", "false");
+            userMenu.classList.remove("open");
+        }
+    }
+
+    function toggleUserMenu(event) {
+        event.stopPropagation();
+        const willOpen = userDropdown.hidden;
+        userDropdown.hidden = !willOpen;
+        userMenuButton.setAttribute("aria-expanded", String(willOpen));
+        userMenu.classList.toggle("open", willOpen);
+    }
+
+    document.addEventListener("click", function(event) {
+        if (!userMenu.contains(event.target)) {
+            closeUserMenu();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            closeUserMenu();
+        }
+    });
+
     function openSidebar() {
         document.getElementById("sidebar").classList.add("open");
         document.getElementById("mobileOverlay").classList.add("show");

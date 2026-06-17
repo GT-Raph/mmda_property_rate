@@ -1,9 +1,10 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.shortcuts import render
 
 from admins.decorators import module_required
 from admins.models import Assembly, UserProfile
 from billing.models import BillDispute
+from properties.models import Property
 from field_operations.models import FieldVisit
 
 
@@ -106,21 +107,45 @@ def field_operations_dashboard(request):
         officer_profiles = officer_profiles.filter(assembly=assembly)
         visit_qs = visit_qs.filter(property__assembly=assembly)
 
+    assigned_properties_qs = Property.objects.select_related("owner", "assembly").filter(
+        registration_source="field",
+        registered_by__isnull=False,
+    )
+    if assembly:
+        assigned_properties_qs = assigned_properties_qs.filter(assembly=assembly)
+
+    assigned_stats = assigned_properties_qs.values("registered_by_id").annotate(
+        assigned_count=Count("id", distinct=True),
+        completed_count=Count(
+            "id",
+            filter=Q(verification_status="verified"),
+            distinct=True,
+        ),
+        last_verified_at=Max("last_verified_at"),
+    )
+    assigned_stats_map = {row["registered_by_id"]: row for row in assigned_stats}
+
     officer_cards = []
-    for profile in officer_profiles[:3]:
-        officer_visits = visit_qs.filter(officer=profile.user)
-        assigned_count = officer_visits.values("property_id").distinct().count()
-        completed_count = officer_visits.filter(
-            Q(outcome__icontains="verified")
-            | Q(outcome__icontains="completed")
-            | Q(outcome__icontains="success")
-            | Q(notes__icontains="verified")
-            | Q(notes__icontains="completed")
-        ).count()
+    for profile in officer_profiles:
+        stats = assigned_stats_map.get(profile.user_id, {})
+        assigned_count = stats.get("assigned_count", 0) or 0
+        completed_count = stats.get("completed_count", 0) or 0
+        last_verified_at = stats.get("last_verified_at")
+
+        visit_activity = (
+            visit_qs.filter(officer=profile.user)
+            .aggregate(last_activity=Max("visited_at"))
+            .get("last_activity")
+        )
+
+        last_activity = max(
+            [dt for dt in [last_verified_at, visit_activity] if dt is not None],
+            default=None,
+        )
 
         progress = 0
         if assigned_count > 0:
-            progress = round((completed_count / assigned_count) * 100)
+            progress = min(100, round((completed_count / assigned_count) * 100))
 
         officer_cards.append(
             {
@@ -129,8 +154,14 @@ def field_operations_dashboard(request):
                 "assigned": assigned_count,
                 "completed": completed_count,
                 "progress": progress,
+                "last_activity": last_activity.strftime("%Y-%m-%d at %H:%M") if last_activity else "No activity yet",
             }
         )
+
+    officer_cards.sort(
+        key=lambda card: (card["assigned"] > 0, card["progress"], card["completed"], card["name"]),
+        reverse=True,
+    )
 
     recent_activities = []
     for visit in visit_qs[:6]:

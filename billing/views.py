@@ -1,9 +1,8 @@
-from datetime import date
 from decimal import Decimal
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
@@ -30,6 +29,29 @@ def _get_current_assembly(request):
             return None
 
     return None
+
+
+def _get_user_role(request):
+    if getattr(request.user, "is_superuser", False):
+        return "super_admin"
+
+    profile = getattr(request.user, "profile", None)
+    if profile and getattr(profile, "role", None):
+        return str(profile.role).strip().lower()
+
+    if getattr(request.user, "role", None):
+        return str(request.user.role).strip().lower()
+
+    return ""
+
+
+def _has_full_bill_access(request):
+    role = _get_user_role(request)
+    return getattr(request.user, "is_superuser", False) or role in {
+        "admin",
+        "super_admin",
+        "billing_officer",
+    }
 
 
 def _policy_title(policy):
@@ -79,21 +101,86 @@ def _get_rateable_value(bill):
 
 
 def _get_computed_rate(bill):
-    for attr in ["amount_due", "current_charge", "computed_amount", "bill_amount"]:
+    for attr in ["amount_due", "current_charge", "computed_amount", "bill_amount", "principal_amount"]:
         value = getattr(bill, attr, None)
         if value is not None:
             return value
     return Decimal("0.00")
 
 
+def _apply_bill_visibility_filter(bills_qs, request):
+    if _has_full_bill_access(request):
+        return bills_qs
+
+    return bills_qs.filter(property_record__registered_by=request.user)
+
+
+def _apply_property_visibility_filter(properties_qs, request):
+    if _has_full_bill_access(request):
+        return properties_qs
+
+    return properties_qs.filter(registered_by=request.user)
+
+
+def _get_latest_bill_year(context_assembly, request):
+    bills_qs = Bill.objects.all()
+
+    if context_assembly:
+        bills_qs = bills_qs.filter(assembly=context_assembly)
+
+    bills_qs = _apply_bill_visibility_filter(bills_qs, request)
+
+    latest = bills_qs.aggregate(latest_year=Max("billing_year"))["latest_year"]
+    return latest
+
+
+def _get_chart_data(bills_qs):
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"]
+    collected_values = [0, 0, 0, 0, 0, 0]
+    target_values = [0, 0, 0, 0, 0, 0]
+
+    first_half_bills = bills_qs.filter(created_at__month__lte=6)
+
+    for bill in first_half_bills:
+        month_index = min(max(bill.created_at.month, 1), 6) - 1
+        collected_values[month_index] += float(bill.amount_paid or 0)
+        target_values[month_index] += float(bill.amount_due or 0)
+
+    return month_labels, collected_values, target_values
+
+
+def _get_kpis(bills_qs):
+    total_bills = bills_qs.count()
+    total_due = Decimal("0.00")
+    total_paid = Decimal("0.00")
+
+    for bill in bills_qs:
+        total_due += bill.amount_due or Decimal("0.00")
+        total_paid += bill.amount_paid or Decimal("0.00")
+
+    collection_rate = Decimal("0.00")
+    if total_due > 0:
+        collection_rate = (total_paid / total_due) * Decimal("100")
+
+    return {
+        "collection_rate": f"{collection_rate.quantize(Decimal('0.1'))}%",
+        "collection_rate_note": f"{_money(total_paid)} collected out of {_money(total_due)}",
+        "bills_generated_count": f"{total_bills:,}",
+        "bills_generated_note": "for selected year",
+        "reports_generated_count": "24",
+        "reports_generated_note": "this week",
+    }
+
+
 @module_required("billing")
 def billing_management(request):
     context_assembly = _get_current_assembly(request)
 
+    latest_bill_year = _get_latest_bill_year(context_assembly, request)
     default_year = (
-        context_assembly.active_billing_year
-        if context_assembly and context_assembly.active_billing_year
-        else timezone.localdate().year
+        latest_bill_year
+        or (context_assembly.active_billing_year if context_assembly and context_assembly.active_billing_year else None)
+        or timezone.localdate().year
     )
 
     selected_year_raw = (request.GET.get("year") or request.POST.get("year") or str(default_year)).strip()
@@ -110,6 +197,8 @@ def billing_management(request):
 
         if context_assembly:
             properties_qs = properties_qs.filter(assembly=context_assembly)
+
+        properties_qs = _apply_property_visibility_filter(properties_qs, request)
 
         try:
             from billing.services import generate_missing_bills
@@ -150,6 +239,7 @@ def billing_management(request):
     if context_assembly:
         bills_qs = bills_qs.filter(assembly=context_assembly)
 
+    bills_qs = _apply_bill_visibility_filter(bills_qs, request)
     bills_qs = bills_qs.filter(billing_year=selected_year)
 
     if search:
@@ -163,6 +253,9 @@ def billing_management(request):
     if context_assembly:
         active_policy_qs = active_policy_qs.filter(assembly=context_assembly)
     active_policy = active_policy_qs.first()
+
+    month_labels, collected_values, target_values = _get_chart_data(bills_qs)
+    kpis = _get_kpis(bills_qs)
 
     paginator = Paginator(bills_qs, 5)
     page_obj = paginator.get_page(page_number)
@@ -205,5 +298,28 @@ def billing_management(request):
         "end_index": end_index,
         "search": search,
         "messages": messages.get_messages(request),
+        "chart_labels": month_labels,
+        "collected_values": collected_values,
+        "target_values": target_values,
+        "collection_rate": kpis["collection_rate"],
+        "collection_rate_note": kpis["collection_rate_note"],
+        "bills_generated_count": kpis["bills_generated_count"],
+        "bills_generated_note": kpis["bills_generated_note"],
+        "reports_generated_count": kpis["reports_generated_count"],
+        "reports_generated_note": kpis["reports_generated_note"],
+        "available_reports": [
+            {
+                "name": "Monthly Revenue Report",
+                "description": "Comprehensive revenue collection summary for the month",
+                "meta_1": "Format: PDF, Excel",
+                "meta_2": f"Year: {selected_year}",
+            },
+            {
+                "name": "Outstanding Bills Report",
+                "description": "Properties with overdue payments and follow-up actions",
+                "meta_1": "Format: PDF, Excel",
+                "meta_2": f"Assembly: {context_assembly.name if context_assembly else 'All'}",
+            },
+        ],
     }
     return render(request, "billing/billing_management.html", context)
