@@ -33,6 +33,7 @@
         }
 
         * { box-sizing: border-box; }
+
         html, body {
             margin: 0;
             padding: 0;
@@ -85,6 +86,7 @@
         }
 
         .nav a:hover { background: rgba(255,255,255,0.08); }
+
         .nav a.active {
             background: var(--gold-bg);
             color: #1f1f1f;
@@ -320,7 +322,7 @@
 
         .page {
             padding: 20px 22px 34px;
-            max-width: 1120px;
+            max-width: 1360px;
         }
 
         .page-head {
@@ -368,6 +370,30 @@
             border: 1px solid var(--line);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
+        }
+
+        .chart-card {
+            padding: 20px 22px 14px;
+            overflow: hidden;
+            margin-bottom: 22px;
+        }
+
+        .chart-card-head {
+            margin-bottom: 12px;
+        }
+
+        .chart-wrap {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            overflow: hidden;
+            padding: 6px 10px 0 0;
+        }
+
+        .chart-wrap canvas,
+        .chart-wrap svg {
+            display: block;
+            max-width: 100% !important;
         }
 
         .context-card {
@@ -485,7 +511,7 @@
         .toolbar {
             padding: 16px;
             display: grid;
-            grid-template-columns: 130px;
+            grid-template-columns: 220px;
             gap: 14px;
             border-bottom: 1px solid var(--line);
         }
@@ -708,6 +734,15 @@
 
             .context-grid { grid-template-columns: 1fr; }
 
+            .chart-card {
+                padding: 16px 14px 12px;
+            }
+
+            .chart-wrap {
+                height: 340px;
+                padding-right: 0;
+            }
+
             .table-footer {
                 flex-direction: column;
                 align-items: flex-start;
@@ -863,6 +898,15 @@
                 {% endfor %}
             {% endif %}
 
+            <section class="card chart-card">
+                <div class="chart-card-head">
+                    <h3 class="section-title">Collection vs Target</h3>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="collectionTargetChart"></canvas>
+                </div>
+            </section>
+
             <section class="card context-card">
                 <h3 class="section-title">Billing Context</h3>
 
@@ -982,6 +1026,7 @@
     </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     function openSidebar() {
         document.getElementById("sidebar").classList.add("open");
@@ -991,6 +1036,89 @@
     function closeSidebar() {
         document.getElementById("sidebar").classList.remove("open");
         document.getElementById("mobileOverlay").classList.remove("show");
+    }
+
+    const chartCanvas = document.getElementById("collectionTargetChart");
+
+    if (chartCanvas) {
+        new Chart(chartCanvas, {
+            type: "bar",
+            data: {
+                labels: {{ chart_labels|default:"['Jan','Feb','Mar','Apr','May','Jun']"|safe }},
+                datasets: [
+                    {
+                        label: "Collected",
+                        data: {{ collected_values|default:"[20000,21000,22000,21500,22000,650000]"|safe }},
+                        backgroundColor: "#c8a53c",
+                        borderRadius: 4,
+                        barThickness: 24
+                    },
+                    {
+                        label: "Target",
+                        data: {{ target_values|default:"[18000,18000,18000,18000,18000,40000]"|safe }},
+                        backgroundColor: "#d9c27a",
+                        borderRadius: 4,
+                        barThickness: 24
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                layout: {
+                    padding: {
+                        top: 8,
+                        right: 12,
+                        bottom: 0,
+                        left: 8
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            boxWidth: 14,
+                            boxHeight: 14,
+                            padding: 18
+                        }
+                    },
+                    tooltip: {
+                        enabled: true
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: "#7d7d7d",
+                            font: {
+                                size: 13
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grace: "8%",
+                        grid: {
+                            color: "rgba(0,0,0,0.10)",
+                            borderDash: [4, 4],
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: "#7d7d7d",
+                            padding: 8,
+                            callback: function(value) {
+                                return Number(value).toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 </script>
 </body>
