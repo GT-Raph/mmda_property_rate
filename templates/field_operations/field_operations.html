@@ -3,8 +3,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>{{ page_title }}</title>
+
     <style>
         :root {
             --bg: #f5f5f5;
@@ -13,24 +19,33 @@
             --text: #171717;
             --muted: #7d7d7d;
             --sidebar: #050505;
-            --sidebar-line: rgba(255,255,255,0.08);
+            --sidebar-line: rgba(255, 255, 255, 0.08);
             --gold: #d1ac4c;
             --gold-bg: #ead79f;
-            --gold-soft: #f7efcf;
+            --gold-soft: #f6edcf;
             --green: #16a34a;
             --green-soft: #d9f7df;
-            --yellow: #d79a00;
-            --yellow-soft: #f9edbf;
+            --blue: #2563eb;
+            --blue-soft: #dbeafe;
+            --purple: #9333ea;
+            --purple-soft: #f0e1ff;
             --red: #ef4444;
             --red-soft: #fde2e2;
-            --shadow: 0 4px 18px rgba(0,0,0,0.04);
+            --yellow: #d79a00;
+            --yellow-soft: #f9edbf;
+            --gray-soft: #eef0f3;
+            --shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
             --radius: 18px;
             --sidebar-width: 230px;
             --topbar-height: 78px;
         }
 
-        * { box-sizing: border-box; }
-        html, body {
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
             margin: 0;
             padding: 0;
             font-family: Arial, Helvetica, sans-serif;
@@ -38,16 +53,30 @@
             color: var(--text);
         }
 
-        body { min-height: 100vh; }
-        a { color: inherit; text-decoration: none; }
-        .layout { min-height: 100vh; }
+        body {
+            min-height: 100vh;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input {
+            font-family: inherit;
+        }
+
+        .layout {
+            min-height: 100vh;
+        }
 
         .sidebar {
             position: fixed;
             inset: 0 auto 0 0;
             width: var(--sidebar-width);
             background: var(--sidebar);
-            color: #fff;
+            color: #ffffff;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -60,28 +89,42 @@
             flex-shrink: 0;
         }
 
-        .brand h2 { margin: 0 0 6px; font-size: 18px; font-weight: 800; }
-        .brand p { margin: 0; font-size: 13px; color: rgba(255,255,255,0.68); }
+        .brand h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.68);
+        }
 
         .nav {
             padding: 18px 14px;
             flex: 1;
-            overflow: hidden;
+            overflow-y: auto;
         }
 
         .nav a {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: rgba(255,255,255,0.9);
+            color: rgba(255, 255, 255, 0.9);
             padding: 12px 14px;
             border-radius: 12px;
             font-size: 15px;
             margin-bottom: 8px;
-            transition: 0.18s ease;
+            transition:
+                background 0.18s ease,
+                color 0.18s ease;
         }
 
-        .nav a:hover { background: rgba(255,255,255,0.08); }
+        .nav a:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
         .nav a.active {
             background: var(--gold-bg);
             color: #1f1f1f;
@@ -97,24 +140,10 @@
             justify-content: center;
         }
 
-        .nav-icon-img {
+        .nav-icon svg {
             width: 18px;
             height: 18px;
-            object-fit: contain;
             display: block;
-            filter: brightness(0) invert(1);
-            opacity: 0.96;
-            transition: filter 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
-        }
-
-        .nav a:hover .nav-icon-img {
-            opacity: 1;
-            transform: scale(1.03);
-        }
-
-        .nav a.active .nav-icon-img {
-            filter: none;
-            opacity: 1;
         }
 
         .sidebar-footer {
@@ -122,7 +151,7 @@
             padding: 16px 14px 18px;
             font-size: 12px;
             line-height: 1.45;
-            color: rgba(255,255,255,0.62);
+            color: rgba(255, 255, 255, 0.62);
             flex-shrink: 0;
         }
 
@@ -136,7 +165,7 @@
             top: 0;
             z-index: 500;
             height: var(--topbar-height);
-            background: #fff;
+            background: #ffffff;
             border-bottom: 1px solid var(--line);
             display: flex;
             align-items: center;
@@ -159,7 +188,7 @@
             height: 42px;
             border: 1px solid var(--line);
             border-radius: 10px;
-            background: #fff;
+            background: #ffffff;
             cursor: pointer;
             flex-shrink: 0;
             align-items: center;
@@ -178,7 +207,7 @@
             display: block;
             width: 100%;
             height: 2px;
-            background: #333;
+            background: #333333;
             border-radius: 999px;
         }
 
@@ -200,8 +229,8 @@
         }
 
         .search-wrap input:focus {
-            background: #fff;
-            border-color: #ddd;
+            background: #ffffff;
+            border-color: #dddddd;
         }
 
         .search-icon {
@@ -214,6 +243,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
         }
 
         .search-icon svg {
@@ -235,7 +265,7 @@
             height: 40px;
             border: 1px solid var(--line);
             border-radius: 10px;
-            background: #fff;
+            background: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -246,7 +276,7 @@
         .notification-btn svg {
             width: 18px;
             height: 18px;
-            color: #333;
+            color: #333333;
             display: block;
         }
 
@@ -258,7 +288,7 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #ef4444;
+            background: var(--red);
         }
 
         .user-box {
@@ -282,62 +312,17 @@
         }
 
         .user-trigger:focus-visible {
-            outline: 2px solid rgba(209, 172, 76, 0.35);
+            outline: 2px solid rgba(209, 172, 76, 0.4);
             outline-offset: 4px;
-            border-radius: 14px;
-        }
-
-        .user-dropdown {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            min-width: 180px;
-            padding: 8px;
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
-            z-index: 1200;
-        }
-
-        .user-dropdown[hidden] {
-            display: none;
-        }
-
-        .dropdown-action {
-            width: 100%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            border: 0;
-            background: #fff5f5;
-            color: #c62828;
             border-radius: 12px;
-            padding: 11px 12px;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.18s ease;
-            white-space: nowrap;
-        }
-
-        .dropdown-action:hover {
-            background: #ffe8e8;
-        }
-
-        .dropdown-action svg {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
         }
 
         .avatar {
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: var(--gold);
-            color: #fff;
+            color: #ffffff;
             display: grid;
             place-items: center;
             font-size: 13px;
@@ -347,14 +332,14 @@
 
         .user-meta {
             min-width: 0;
-            line-height: 1.15;
+            line-height: 1.2;
         }
 
         .user-meta strong {
             display: block;
             font-size: 14px;
             font-weight: 700;
-            color: #222;
+            color: #222222;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -379,35 +364,75 @@
             margin-top: -3px;
         }
 
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            min-width: 190px;
+            padding: 8px;
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+            z-index: 1200;
+        }
+
+        .user-dropdown[hidden] {
+            display: none;
+        }
+
+        .dropdown-action {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 0;
+            background: #fff5f5;
+            color: #c62828;
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .dropdown-action:hover {
+            background: #ffe8e8;
+        }
+
+        .dropdown-action svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
         .page {
-            padding: 20px 22px 34px;
-            max-width: 1120px;
+            padding: 24px 24px 40px;
+            max-width: 1200px;
+        }
+
+        .page-heading {
+            margin-bottom: 24px;
         }
 
         .page h1 {
             margin: 0;
-            font-size: 30px;
+            font-size: 32px;
             font-weight: 800;
-            color: #111;
+            color: #111111;
         }
 
         .page-subtitle {
-            margin: 6px 0 4px;
-            font-size: 14px;
+            margin: 7px 0 0;
+            font-size: 15px;
             color: #7c8188;
         }
 
         .assembly-caption {
-            margin: 0 0 22px;
+            margin: 5px 0 0;
             font-size: 13px;
             color: #9a9a9a;
-        }
-
-        .officer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 18px;
-            margin-bottom: 22px;
         }
 
         .card {
@@ -415,6 +440,434 @@
             border: 1px solid var(--line);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .stat-card {
+            padding: 18px;
+            min-height: 150px;
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        .stat-icon svg {
+            width: 21px;
+            height: 21px;
+            display: block;
+        }
+
+        .accent-blue {
+            background: #dfeafe;
+            color: var(--blue);
+        }
+
+        .accent-green {
+            background: #d9f7df;
+            color: var(--green);
+        }
+
+        .accent-purple {
+            background: var(--purple-soft);
+            color: var(--purple);
+        }
+
+        .accent-gold {
+            background: #fff5bf;
+            color: #c58a00;
+        }
+
+        .stat-label {
+            margin-bottom: 8px;
+            color: #7c8188;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            margin-bottom: 5px;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 800;
+            color: #111111;
+        }
+
+        .stat-value.value-green {
+            color: var(--green);
+        }
+
+        .stat-note {
+            color: #9a9a9a;
+            font-size: 12px;
+        }
+
+        .quick-actions-card {
+            padding: 18px;
+            margin-bottom: 18px;
+            background: linear-gradient(
+                105deg,
+                #050505 0%,
+                #111111 58%,
+                #1d1d1d 100%
+            );
+            color: #ffffff;
+            border-color: #111111;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .section-link {
+            color: var(--gold);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .quick-action {
+            min-height: 62px;
+            padding: 0 16px;
+            border-radius: 11px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(
+                100deg,
+                rgba(255, 255, 255, 0.08),
+                rgba(255, 255, 255, 0.14)
+            );
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            transition:
+                transform 0.18s ease,
+                background 0.18s ease;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.16);
+        }
+
+        .quick-action svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .quick-action span {
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .dashboard-panel {
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .assignment-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .assignment-card {
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 13px;
+            background: #ffffff;
+        }
+
+        .assignment-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .assignment-reference-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 7px;
+        }
+
+        .assignment-reference {
+            font-size: 15px;
+            font-weight: 800;
+            color: #202020;
+        }
+
+        .assignment-location,
+        .assignment-owner {
+            margin-top: 4px;
+            color: #7c8188;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .pill svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .priority-high {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .priority-medium {
+            background: var(--yellow-soft);
+            color: #b77b00;
+        }
+
+        .priority-low {
+            background: var(--gray-soft);
+            color: #667085;
+        }
+
+        .status-pending {
+            background: var(--yellow-soft);
+            color: #b77b00;
+        }
+
+        .status-progress {
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .status-completed {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .assignment-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            padding-top: 13px;
+            margin-top: 13px;
+            border-top: 1px solid var(--line);
+            color: #818894;
+            font-size: 12px;
+        }
+
+        .assignment-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .assignment-meta-item svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .assignment-action {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+
+        .assignment-button {
+            min-width: 170px;
+            min-height: 40px;
+            padding: 0 16px;
+            border-radius: 9px;
+            background: var(--gold-bg);
+            color: #1f1f1f;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .recent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 13px;
+            border-radius: 12px;
+            background: #fafafa;
+            transition: background 0.18s ease;
+        }
+
+        .recent-item:hover {
+            background: #f5f5f5;
+        }
+
+        .recent-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .recent-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .activity-green {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .activity-blue {
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .activity-yellow {
+            background: var(--yellow-soft);
+            color: #b77b00;
+        }
+
+        .activity-red {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .recent-content {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .recent-reference {
+            margin-bottom: 4px;
+            color: #202020;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .recent-location {
+            margin-bottom: 4px;
+            color: #7c8188;
+            font-size: 12px;
+        }
+
+        .recent-datetime {
+            color: #9a9a9a;
+            font-size: 11px;
+        }
+
+        .performance-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .performance-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 8px;
+        }
+
+        .performance-label {
+            color: #7c8188;
+            font-size: 13px;
+        }
+
+        .performance-value {
+            color: #171717;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .performance-track {
+            width: 100%;
+            height: 7px;
+            border-radius: 999px;
+            background: #ececec;
+            overflow: hidden;
+        }
+
+        .performance-fill {
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        .bar-green {
+            background: var(--green);
+        }
+
+        .bar-blue {
+            background: var(--blue);
+        }
+
+        .bar-purple {
+            background: var(--purple);
+        }
+
+        .empty-state {
+            padding: 24px 15px;
+            text-align: center;
+            color: #8a8a8a;
+            font-size: 13px;
+        }
+
+        .officer-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(280px, 1fr)
+            );
+            gap: 18px;
+            margin-bottom: 22px;
         }
 
         .officer-card {
@@ -429,8 +882,8 @@
         }
 
         .officer-icon {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             background: #faf6eb;
             color: var(--gold);
@@ -440,11 +893,9 @@
             flex-shrink: 0;
         }
 
-        .officer-icon img {
-            width: 18px;
-            height: 18px;
-            object-fit: contain;
-            display: block;
+        .officer-icon svg {
+            width: 19px;
+            height: 19px;
         }
 
         .officer-meta h3 {
@@ -455,7 +906,7 @@
 
         .officer-meta small {
             color: #9a9a9a;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .officer-stats {
@@ -468,13 +919,13 @@
         }
 
         .officer-stats span {
-            font-size: 14px;
             color: #7c8188;
+            font-size: 14px;
         }
 
         .officer-stats strong {
-            font-size: 14px;
             color: #202020;
+            font-size: 14px;
         }
 
         .officer-stats strong.completed {
@@ -482,21 +933,17 @@
         }
 
         .officer-footer {
-            margin-bottom: 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            font-size: 13px;
+            margin-bottom: 12px;
             color: #7c8188;
-        }
-
-        .officer-footer strong {
-            color: #1d1d1d;
-            font-size: 14px;
+            font-size: 12px;
         }
 
         .officer-last-activity {
+            min-width: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -504,8 +951,8 @@
 
         .officer-progress-value {
             flex-shrink: 0;
-            font-weight: 800;
             color: #1d1d1d;
+            font-weight: 800;
         }
 
         .progress-track {
@@ -518,146 +965,121 @@
 
         .progress-fill {
             height: 100%;
-            background: #d7bd77;
             border-radius: 999px;
+            background: #d7bd77;
         }
 
-        .panel {
+        .admin-panel {
             padding: 0;
             overflow: hidden;
         }
 
-        .panel-header {
-            padding: 22px 22px 18px;
+        .admin-panel-header {
+            padding: 20px;
             border-bottom: 1px solid var(--line);
         }
 
-        .panel-header h2 {
+        .admin-panel-header h2 {
             margin: 0;
             font-size: 18px;
             font-weight: 800;
         }
 
-        .activity-list {
+        .admin-activity-list {
             display: flex;
             flex-direction: column;
         }
 
-        .activity-item {
+        .admin-activity-item {
             display: flex;
-            gap: 16px;
             align-items: flex-start;
-            padding: 22px;
+            gap: 15px;
+            padding: 20px;
             border-top: 1px solid var(--line);
         }
 
-        .activity-item:first-child {
+        .admin-activity-item:first-child {
             border-top: 0;
         }
 
-        .activity-icon {
+        .admin-activity-icon {
             width: 42px;
             height: 42px;
             border-radius: 50%;
+            flex-shrink: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
         }
 
-        .activity-icon svg {
+        .admin-activity-icon svg {
             width: 18px;
             height: 18px;
-            display: block;
         }
 
-        .activity-green {
-            background: var(--green-soft);
-            color: var(--green);
-        }
-
-        .activity-yellow {
-            background: var(--yellow-soft);
-            color: var(--yellow);
-        }
-
-        .activity-red {
-            background: var(--red-soft);
-            color: var(--red);
-        }
-
-        .activity-main {
+        .admin-activity-main {
             flex: 1;
             min-width: 0;
         }
 
-        .activity-row-top {
+        .admin-activity-top {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 8px;
+            gap: 15px;
+            margin-bottom: 7px;
         }
 
-        .activity-title {
-            margin: 0 0 6px;
-            font-size: 17px;
+        .admin-activity-title {
+            margin: 0 0 5px;
+            font-size: 16px;
             font-weight: 800;
-            color: #171717;
         }
 
-        .activity-ref {
-            font-size: 14px;
+        .admin-activity-reference {
             color: #8a8a8a;
+            font-size: 13px;
+        }
+
+        .admin-activity-description {
             margin-bottom: 10px;
+            color: #333333;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
-        .activity-desc {
-            font-size: 14px;
-            line-height: 1.55;
-            color: #222;
-            margin-bottom: 12px;
-        }
-
-        .activity-meta {
+        .admin-activity-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 18px;
-            font-size: 13px;
+            gap: 16px;
             color: #818894;
+            font-size: 12px;
         }
 
-        .meta-chip {
+        .admin-meta-item {
             display: inline-flex;
             align-items: center;
             gap: 6px;
         }
 
-        .meta-chip svg {
+        .admin-meta-item svg {
             width: 14px;
             height: 14px;
-            display: block;
         }
 
         .status-pill {
             display: inline-flex;
             align-items: center;
-            padding: 5px 12px;
+            padding: 5px 11px;
             border-radius: 999px;
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             white-space: nowrap;
-            flex-shrink: 0;
         }
 
         .status-verified {
             background: var(--green-soft);
             color: var(--green);
-        }
-
-        .status-pending {
-            background: var(--yellow-soft);
-            color: var(--yellow);
         }
 
         .status-discrepancy {
@@ -669,24 +1091,38 @@
             display: none;
         }
 
-        @media (max-width: 860px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.25s ease;
-                width: 250px;
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .sidebar.open { transform: translateX(0); }
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 860px) {
+            .sidebar {
+                width: 250px;
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
 
             .mobile-overlay {
                 display: block;
                 position: fixed;
                 inset: 0;
-                background: rgba(0, 0, 0, 0.35);
                 z-index: 900;
+                background: rgba(0, 0, 0, 0.35);
                 opacity: 0;
                 visibility: hidden;
-                transition: 0.2s ease;
+                transition:
+                    opacity 0.2s ease,
+                    visibility 0.2s ease;
             }
 
             .mobile-overlay.show {
@@ -694,14 +1130,17 @@
                 visibility: visible;
             }
 
-            .content { margin-left: 0; }
+            .content {
+                margin-left: 0;
+            }
 
             .menu-toggle {
                 display: inline-flex;
             }
 
-            .search-wrap { max-width: none; }
-            .topbar { padding: 0 14px; }
+            .topbar {
+                padding: 0 14px;
+            }
         }
 
         @media (max-width: 680px) {
@@ -717,30 +1156,93 @@
                 width: 100%;
             }
 
-            .topbar-right { justify-content: space-between; }
-            .search-wrap { max-width: none; }
-
-            .page {
-                padding: 16px 14px 26px;
+            .topbar-right {
+                justify-content: space-between;
             }
 
-            .page h1 { font-size: 24px; }
+            .search-wrap {
+                max-width: none;
+            }
 
-            .activity-row-top {
+            .page {
+                padding: 18px 14px 30px;
+            }
+
+            .page h1 {
+                font-size: 26px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 11px;
+            }
+
+            .stat-card {
+                min-height: 136px;
+                padding: 14px;
+            }
+
+            .quick-actions-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .quick-action {
+                min-height: 58px;
+                padding: 0 10px;
+            }
+
+            .assignment-top,
+            .admin-activity-top {
                 flex-direction: column;
                 align-items: flex-start;
             }
 
-            .activity-item { padding: 18px 16px; }
-            .officer-card { padding: 18px; }
+            .assignment-action {
+                justify-content: stretch;
+            }
+
+            .assignment-button {
+                width: 100%;
+            }
+
+            .dashboard-panel,
+            .quick-actions-card {
+                padding: 15px;
+            }
+
+            .admin-activity-item {
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .user-meta {
+                max-width: 145px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .section-header {
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
+
 <body>
-<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+<div
+    class="mobile-overlay"
+    id="mobileOverlay"
+    onclick="closeSidebar()"
+></div>
 
 <div class="layout">
-    <aside class="sidebar" id="sidebar">
+    <aside
+        class="sidebar"
+        id="sidebar"
+    >
         <div class="brand">
             <h2>Admin Portal</h2>
             <p>MMDA Management</p>
@@ -748,50 +1250,238 @@
 
         <nav class="nav">
             {% if portal_access.dashboard %}
-                <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='dashboard' %}</span>
+                <a
+                    href="{% url 'admins:admin-dashboard' %}"
+                    class="{% if request.path == '/dashboard/' %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M4 11L12 4L20 11V20H4V11Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M9 20V14H15V20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </span>
+
                     <span>Dashboard</span>
                 </a>
             {% endif %}
 
             {% if portal_access.properties %}
-                <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='property' %}</span>
+                <a
+                    href="{% url 'properties:property-registry' %}"
+                    class="{% if '/properties/' in request.path %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M4 20V8L12 3L20 8V20H4Z"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M8 20V13H16V20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </span>
+
                     <span>Properties</span>
                 </a>
             {% endif %}
 
             {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
-                    <span>Billing & Payments</span>
+                <a
+                    href="{% url 'billing:billing-management' %}"
+                    class="{% if '/billing/' in request.path %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <rect
+                                x="3"
+                                y="5"
+                                width="18"
+                                height="14"
+                                rx="2"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            ></rect>
+                            <path
+                                d="M3 10H21"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            ></path>
+                            <path
+                                d="M7 15H11"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                        </svg>
+                    </span>
+
+                    <span>Billing &amp; Payments</span>
                 </a>
             {% endif %}
 
             {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}" class="active">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
-                    <span>Field Officers</span>
+                <a
+                    href="{% url 'field_operations:field-operations' %}"
+                    class="active"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                cx="12"
+                                cy="8"
+                                r="3.2"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            ></circle>
+                            <path
+                                d="M5 20C6.9 16.7 9.3 15.2 12 15.2C14.7 15.2 17.1 16.7 19 20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                        </svg>
+                    </span>
+
+                    <span>
+                        {% if is_field_officer %}
+                            Field Dashboard
+                        {% else %}
+                            Field Officers
+                        {% endif %}
+                    </span>
                 </a>
             {% endif %}
 
             {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
+                <a
+                    href="{% url 'admins:reports-analytics' %}"
+                    class="{% if '/dashboard/reports/' in request.path %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M5 19V11"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                            <path
+                                d="M12 19V5"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                            <path
+                                d="M19 19V14"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                        </svg>
+                    </span>
+
                     <span>Reports</span>
                 </a>
             {% endif %}
 
             {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='assembly' %}</span>
+                <a
+                    href="{% url 'admins:assembly-management' %}"
+                    class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M4 20H20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                            ></path>
+                            <path
+                                d="M6 20V9L12 5L18 9V20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linejoin="round"
+                            ></path>
+                            <path
+                                d="M9 20V14H15V20"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            ></path>
+                        </svg>
+                    </span>
+
                     <span>Assembly</span>
                 </a>
             {% endif %}
 
             {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='settings' %}</span>
+                <a
+                    href="{% url 'admins:settings' %}"
+                    class="{% if '/dashboard/settings/' in request.path %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="3"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            ></circle>
+                            <path
+                                d="M19.4 15A1.7 1.7 0 0 0 19.74 16.87L19.8 16.94A2 2 0 1 1 16.94 19.8L16.87 19.74A1.7 1.7 0 0 0 15 19.4A1.7 1.7 0 0 0 14 20.95V21A2 2 0 1 1 10 21V20.95A1.7 1.7 0 0 0 9 19.4A1.7 1.7 0 0 0 7.13 19.74L7.06 19.8A2 2 0 1 1 4.2 16.94L4.26 16.87A1.7 1.7 0 0 0 4.6 15A1.7 1.7 0 0 0 3.05 14H3A2 2 0 1 1 3 10H3.05A1.7 1.7 0 0 0 4.6 9A1.7 1.7 0 0 0 4.26 7.13L4.2 7.06A2 2 0 1 1 7.06 4.2L7.13 4.26A1.7 1.7 0 0 0 9 4.6A1.7 1.7 0 0 0 10 3.05V3A2 2 0 1 1 14 3V3.05A1.7 1.7 0 0 0 15 4.6A1.7 1.7 0 0 0 16.87 4.26L16.94 4.2A2 2 0 1 1 19.8 7.06L19.74 7.13A1.7 1.7 0 0 0 19.4 9A1.7 1.7 0 0 0 20.95 10H21A2 2 0 1 1 21 14H20.95A1.7 1.7 0 0 0 19.4 15Z"
+                                stroke="currentColor"
+                                stroke-width="1.3"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </span>
+
                     <span>Settings</span>
                 </a>
             {% endif %}
@@ -804,39 +1494,96 @@
     </aside>
 
     <main class="content">
-        <div class="topbar">
+        <header class="topbar">
             <div class="topbar-left">
-                <button class="menu-toggle" type="button" onclick="openSidebar()" aria-label="Open menu">
-                    <span class="menu-bars"><span></span><span></span><span></span></span>
+                <button
+                    class="menu-toggle"
+                    type="button"
+                    onclick="openSidebar()"
+                    aria-label="Open menu"
+                >
+                    <span class="menu-bars">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
                 </button>
 
                 <div class="search-wrap">
-                    <span class="search-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"></circle>
-                            <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                    <span
+                        class="search-icon"
+                        aria-hidden="true"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
+                            <circle
+                                cx="11"
+                                cy="11"
+                                r="6.5"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            ></circle>
+                            <path
+                                d="M16 16L21 21"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            ></path>
                         </svg>
                     </span>
-                    <input type="text" placeholder="Search properties, bills, payments...">
+
+                    <input
+                        type="search"
+                        placeholder="Search properties, bills, payments..."
+                        aria-label="Search"
+                    >
                 </div>
             </div>
 
             <div class="topbar-right">
-                <button class="notification-btn" type="button" aria-label="Notifications">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"/>
-                        <path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <button
+                    class="notification-btn"
+                    type="button"
+                    aria-label="Notifications"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                    >
+                        <path
+                            d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        ></path>
+                        <path
+                            d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                            stroke-linecap="round"
+                        ></path>
                     </svg>
                 </button>
 
-                <div class="user-box" id="userMenu">
-                    <button class="user-trigger" type="button" id="userMenuButton" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+                <div
+                    class="user-box"
+                    id="userMenu"
+                >
+                    <button
+                        class="user-trigger"
+                        type="button"
+                        id="userMenuButton"
+                        onclick="toggleUserMenu(event)"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                    >
                         <div class="avatar">
-                        {% if request.user.first_name or request.user.last_name %}
-                            {{ request.user.get_full_name|slice:":1"|upper }}
-                        {% else %}
-                            {{ request.user.username|slice:":1"|upper }}
-                        {% endif %}
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.get_full_name|slice:":1"|upper }}
+                            {% else %}
+                                {{ request.user.username|slice:":1"|upper }}
+                            {% endif %}
                         </div>
 
                         <div class="user-meta">
@@ -848,190 +1595,1022 @@
                                 {% endif %}
                             </strong>
 
-                            {% if request.user.email %}
+                            {% if is_field_officer %}
+                                <small>{{ officer_zone }}</small>
+                            {% elif request.user.email %}
                                 <small>{{ request.user.email }}</small>
                             {% else %}
                                 <small>No email added</small>
                             {% endif %}
                         </div>
 
-                        <div class="user-caret"></div>
+                        <span
+                            class="user-caret"
+                            aria-hidden="true"
+                        ></span>
                     </button>
 
-                    <div class="user-dropdown" id="userDropdown" hidden>
-                        <form method="post" action="{% url 'logout' %}">
+                    <div
+                        class="user-dropdown"
+                        id="userDropdown"
+                        hidden
+                    >
+                        <form
+                            method="post"
+                            action="{% url 'logout' %}"
+                        >
                             {% csrf_token %}
-                            <button type="submit" class="dropdown-action">
-                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                    <path d="M13 8L17 12L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                    <path d="M8 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+
+                            <button
+                                type="submit"
+                                class="dropdown-action"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                    ></path>
+                                    <path
+                                        d="M13 8L17 12L13 16"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    ></path>
+                                    <path
+                                        d="M8 12H17"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                    ></path>
                                 </svg>
+
                                 <span>Logout</span>
                             </button>
                         </form>
                     </div>
                 </div>
             </div>
-        </div>
+        </header>
 
         <div class="page">
-            <h1>{{ page_title }}</h1>
-            <div class="page-subtitle">{{ page_subtitle }}</div>
-            {% if context_assembly %}
-                <div class="assembly-caption">{{ context_assembly.name }}</div>
-            {% endif %}
+            <div class="page-heading">
+                <h1>{{ page_title }}</h1>
 
-            <section class="officer-grid">
-                {% for officer in officer_cards %}
-                    <div class="card officer-card">
-                        <div class="officer-head">
-                            <div class="officer-icon">
-                                <img src="{% static 'images/person.png' %}" alt="Officer">
-                            </div>
-                            <div class="officer-meta">
-                                <h3>{{ officer.name }}</h3>
-                                <small>{{ officer.code }} · {{ officer.assembly_name }}</small>
-                            </div>
-                        </div>
+                <p class="page-subtitle">
+                    {{ page_subtitle }}
+                </p>
 
-                        <div class="officer-stats">
-                            <span>Assigned</span>
-                            <strong>{{ officer.assigned }} properties</strong>
+                {% if context_assembly and not is_field_officer %}
+                    <p class="assembly-caption">
+                        {{ context_assembly.name }}
+                    </p>
+                {% endif %}
+            </div>
 
-                            <span>Completed</span>
-                            <strong class="completed">{{ officer.completed }} verifications</strong>
-                        </div>
-
-                        <div class="officer-footer">
-                            <div class="officer-last-activity">Last activity: {{ officer.last_activity }}</div>
-                            <strong class="officer-progress-value">{{ officer.progress }}%</strong>
-                        </div>
-
-                        <div class="progress-track">
-                            <div class="progress-fill" style="width: {{ officer.progress }}%;"></div>
-                        </div>
-                    </div>
-                {% empty %}
-                    <div class="card officer-card">
-                        <div class="officer-meta">
-                            <h3>No field officers found</h3>
-                            <small>Add officers or field activity to populate this section.</small>
-                        </div>
-                    </div>
-                {% endfor %}
-            </section>
-
-            <section class="card panel">
-                <div class="panel-header">
-                    <h2>Recent Field Activity</h2>
-                </div>
-
-                <div class="activity-list">
-                    {% for item in recent_activities %}
-                        <div class="activity-item">
-                            <div class="activity-icon {{ item.icon_class }}">
-                                {% if item.status_class == 'status-verified' %}
-                                    <svg viewBox="0 0 24 24" fill="none">
-                                        <path d="M5 12.5L9.2 16.7L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+            {% if is_field_officer %}
+                <section class="stats-grid">
+                    {% for card in summary_cards %}
+                        <article class="card stat-card">
+                            <div class="stat-icon {{ card.accent_class }}">
+                                {% if card.icon_name == "pin" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M12 21C12 21 18.5 14.7 18.5 10C18.5 6.41 15.59 3.5 12 3.5C8.41 3.5 5.5 6.41 5.5 10C5.5 14.7 12 21 12 21Z"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></path>
+                                        <circle
+                                            cx="12"
+                                            cy="10"
+                                            r="2.4"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
                                     </svg>
-                                {% elif item.status_class == 'status-pending' %}
-                                    <svg viewBox="0 0 24 24" fill="none">
-                                        <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"></circle>
-                                        <path d="M12 8V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                {% elif card.icon_name == "check" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="8"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                        <path
+                                            d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        ></path>
+                                    </svg>
+                                {% elif card.icon_name == "trend" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M5 16L10 11L13 14L19 8"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        ></path>
+                                        <path
+                                            d="M15 8H19V12"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        ></path>
                                     </svg>
                                 {% else %}
-                                    <svg viewBox="0 0 24 24" fill="none">
-                                        <path d="M12 4L21 20H3L12 4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
-                                        <path d="M12 10V14" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                        <circle cx="12" cy="17" r="1" fill="currentColor"></circle>
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <rect
+                                            x="4"
+                                            y="7"
+                                            width="16"
+                                            height="12"
+                                            rx="2"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></rect>
+                                        <path
+                                            d="M8 7L9.3 5.5H14.7L16 7"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linejoin="round"
+                                        ></path>
+                                        <circle
+                                            cx="12"
+                                            cy="13"
+                                            r="3"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
                                     </svg>
                                 {% endif %}
                             </div>
 
-                            <div class="activity-main">
-                                <div class="activity-row-top">
-                                    <div>
-                                        <h3 class="activity-title">{{ item.title }}</h3>
-                                        <div class="activity-ref">{{ item.property_ref }} • {{ item.location }}</div>
-                                    </div>
-                                    <span class="status-pill {{ item.status_class }}">{{ item.status }}</span>
-                                </div>
-
-                                <div class="activity-desc">{{ item.description }}</div>
-
-                                <div class="activity-meta">
-                                    <span class="meta-chip">
-                                        <svg viewBox="0 0 24 24" fill="none">
-                                            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle>
-                                            <path d="M4 20C5.8 16.8 8.5 15.2 12 15.2C15.5 15.2 18.2 16.8 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                                        </svg>
-                                        {{ item.officer }}
-                                    </span>
-
-                                    <span class="meta-chip">
-                                        <svg viewBox="0 0 24 24" fill="none">
-                                            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"></circle>
-                                            <path d="M12 8V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                        </svg>
-                                        {{ item.datetime }}
-                                    </span>
-                                </div>
+                            <div class="stat-label">
+                                {{ card.label }}
                             </div>
-                        </div>
-                    {% empty %}
-                        <div class="activity-item">
-                            <div class="activity-main">
-                                <div class="activity-title">No field activity yet.</div>
+
+                            <div class="stat-value {{ card.value_class }}">
+                                {{ card.value }}
                             </div>
-                        </div>
+
+                            <div class="stat-note">
+                                {{ card.note }}
+                            </div>
+                        </article>
                     {% endfor %}
-                </div>
-            </section>
+                </section>
+
+                <section class="card quick-actions-card">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            Quick Actions
+                        </h2>
+                    </div>
+
+                    <div class="quick-actions-grid">
+                        {% for action in quick_actions %}
+                            <a
+                                href="{{ action.url }}"
+                                class="quick-action"
+                            >
+                                {% if action.icon_name == "check" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="8"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                        <path
+                                            d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        ></path>
+                                    </svg>
+                                {% elif action.icon_name == "camera" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <rect
+                                            x="4"
+                                            y="7"
+                                            width="16"
+                                            height="12"
+                                            rx="2"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></rect>
+                                        <path
+                                            d="M8 7L9.3 5.5H14.7L16 7"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linejoin="round"
+                                        ></path>
+                                        <circle
+                                            cx="12"
+                                            cy="13"
+                                            r="3"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                    </svg>
+                                {% elif action.icon_name == "route" %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="7"
+                                            cy="7"
+                                            r="2.5"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                        <circle
+                                            cx="17"
+                                            cy="17"
+                                            r="2.5"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                        <path
+                                            d="M9.5 7H13C15.2 7 17 8.8 17 11V14.5"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                        ></path>
+                                        <path
+                                            d="M14.5 14H11C8.8 14 7 12.2 7 10V9.5"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                        ></path>
+                                    </svg>
+                                {% else %}
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M12 21C12 21 18.5 14.7 18.5 10C18.5 6.41 15.59 3.5 12 3.5C8.41 3.5 5.5 6.41 5.5 10C5.5 14.7 12 21 12 21Z"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></path>
+                                        <circle
+                                            cx="12"
+                                            cy="10"
+                                            r="2.4"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                    </svg>
+                                {% endif %}
+
+                                <span>{{ action.label }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="card dashboard-panel">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            Today's Assignments
+                        </h2>
+
+                        <a
+                            href="{{ view_all_assignments_url }}"
+                            class="section-link"
+                        >
+                            View All Tasks
+                        </a>
+                    </div>
+
+                    {% if assignment_items %}
+                        <div class="assignment-list">
+                            {% for item in assignment_items %}
+                                <article class="assignment-card">
+                                    <div class="assignment-top">
+                                        <div>
+                                            <div class="assignment-reference-row">
+                                                <span class="assignment-reference">
+                                                    {{ item.reference }}
+                                                </span>
+
+                                                <span class="pill {{ item.priority_class }}">
+                                                    {{ item.priority_label }}
+                                                </span>
+                                            </div>
+
+                                            <div class="assignment-location">
+                                                {{ item.location }}
+                                            </div>
+
+                                            <div class="assignment-owner">
+                                                Owner: {{ item.owner_name }}
+                                            </div>
+                                        </div>
+
+                                        <span class="pill {{ item.status_class }}">
+                                            {% if item.status_icon == "check" %}
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    aria-hidden="true"
+                                                >
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="8"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                    ></circle>
+                                                    <path
+                                                        d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    ></path>
+                                                </svg>
+                                            {% elif item.status_icon == "progress" %}
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    aria-hidden="true"
+                                                >
+                                                    <path
+                                                        d="M12 4A8 8 0 1 0 20 12"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                        stroke-linecap="round"
+                                                    ></path>
+                                                    <path
+                                                        d="M20 6V12H14"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    ></path>
+                                                </svg>
+                                            {% else %}
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    aria-hidden="true"
+                                                >
+                                                    <circle
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="8"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                    ></circle>
+                                                    <path
+                                                        d="M12 8V12L15 14"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    ></path>
+                                                </svg>
+                                            {% endif %}
+
+                                            {{ item.status_label }}
+                                        </span>
+                                    </div>
+
+                                    <div class="assignment-meta">
+                                        <span class="assignment-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M12 21C12 21 18.5 14.7 18.5 10C18.5 6.41 15.59 3.5 12 3.5C8.41 3.5 5.5 6.41 5.5 10C5.5 14.7 12 21 12 21Z"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></path>
+                                                <circle
+                                                    cx="12"
+                                                    cy="10"
+                                                    r="2.4"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                            </svg>
+
+                                            {{ item.location_label }}
+                                        </span>
+
+                                        <span class="assignment-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="8"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                                <path
+                                                    d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                            </svg>
+
+                                            {{ item.task_label }}
+                                        </span>
+                                    </div>
+
+                                    <div class="assignment-action">
+                                        <a
+                                            href="{{ item.detail_url }}"
+                                            class="assignment-button"
+                                        >
+                                            {{ item.action_label }}
+                                        </a>
+                                    </div>
+                                </article>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            No property assignments are available.
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section class="card dashboard-panel">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            Recent Activity
+                        </h2>
+
+                        <a
+                            href="{{ view_all_assignments_url }}"
+                            class="section-link"
+                        >
+                            View All
+                        </a>
+                    </div>
+
+                    {% if recent_activity %}
+                        <div class="recent-list">
+                            {% for item in recent_activity %}
+                                <a
+                                    href="{{ item.detail_url }}"
+                                    class="recent-item"
+                                >
+                                    <span class="recent-icon {{ item.icon_class }}">
+                                        {% if item.icon_name == "check" %}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="8"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                                <path
+                                                    d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                            </svg>
+                                        {% elif item.icon_name == "progress" %}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M12 4A8 8 0 1 0 20 12"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                ></path>
+                                                <path
+                                                    d="M20 6V12H14"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                            </svg>
+                                        {% elif item.icon_name == "warning" %}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <path
+                                                    d="M12 4L21 20H3L12 4Z"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                                <path
+                                                    d="M12 10V14"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                ></path>
+                                                <circle
+                                                    cx="12"
+                                                    cy="17"
+                                                    r="1"
+                                                    fill="currentColor"
+                                                ></circle>
+                                            </svg>
+                                        {% else %}
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="8"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                                <path
+                                                    d="M12 8V12L15 14"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                            </svg>
+                                        {% endif %}
+                                    </span>
+
+                                    <span class="recent-content">
+                                        <span class="recent-reference">
+                                            {{ item.reference }}
+                                        </span>
+
+                                        <span class="recent-location">
+                                            {{ item.location }}
+                                        </span>
+
+                                        <span class="recent-datetime">
+                                            {{ item.datetime }}
+                                        </span>
+                                    </span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            No recent field activity is available.
+                        </div>
+                    {% endif %}
+                </section>
+
+                <section class="card dashboard-panel">
+                    <div class="section-header">
+                        <h2 class="section-title">
+                            Performance Overview
+                        </h2>
+                    </div>
+
+                    <div class="performance-list">
+                        {% for row in performance_rows %}
+                            <div>
+                                <div class="performance-heading">
+                                    <span class="performance-label">
+                                        {{ row.label }}
+                                    </span>
+
+                                    <strong class="performance-value">
+                                        {{ row.value }}
+                                    </strong>
+                                </div>
+
+                                <div class="performance-track">
+                                    <div
+                                        class="performance-fill {{ row.bar_class }}"
+                                        style="width: {{ row.width }}%;"
+                                    ></div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% else %}
+                <section class="officer-grid">
+                    {% for officer in officer_cards %}
+                        <article class="card officer-card">
+                            <div class="officer-head">
+                                <div class="officer-icon">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        aria-hidden="true"
+                                    >
+                                        <circle
+                                            cx="12"
+                                            cy="8"
+                                            r="3.2"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                        ></circle>
+                                        <path
+                                            d="M5 20C6.9 16.7 9.3 15.2 12 15.2C14.7 15.2 17.1 16.7 19 20"
+                                            stroke="currentColor"
+                                            stroke-width="1.8"
+                                            stroke-linecap="round"
+                                        ></path>
+                                    </svg>
+                                </div>
+
+                                <div class="officer-meta">
+                                    <h3>{{ officer.name }}</h3>
+
+                                    <small>
+                                        {{ officer.code }} ·
+                                        {{ officer.assembly_name }}
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="officer-stats">
+                                <span>Assigned</span>
+
+                                <strong>
+                                    {{ officer.assigned }}
+                                    properties
+                                </strong>
+
+                                <span>Completed</span>
+
+                                <strong class="completed">
+                                    {{ officer.completed }}
+                                    verifications
+                                </strong>
+                            </div>
+
+                            <div class="officer-footer">
+                                <span class="officer-last-activity">
+                                    Last activity:
+                                    {{ officer.last_activity }}
+                                </span>
+
+                                <strong class="officer-progress-value">
+                                    {{ officer.progress }}%
+                                </strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    class="progress-fill"
+                                    style="width: {{ officer.progress }}%;"
+                                ></div>
+                            </div>
+                        </article>
+                    {% empty %}
+                        <article class="card officer-card">
+                            <div class="officer-meta">
+                                <h3>No field officers found</h3>
+
+                                <small>
+                                    Add field officers to display
+                                    their performance here.
+                                </small>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </section>
+
+                <section class="card admin-panel">
+                    <div class="admin-panel-header">
+                        <h2>Recent Field Activity</h2>
+                    </div>
+
+                    <div class="admin-activity-list">
+                        {% for item in recent_activities %}
+                            <article class="admin-activity-item">
+                                <div class="admin-activity-icon {{ item.icon_class }}">
+                                    {% if item.icon_name == "check" %}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            aria-hidden="true"
+                                        >
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="8"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            ></circle>
+                                            <path
+                                                d="M8.2 12.3L10.7 14.8L15.9 9.6"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            ></path>
+                                        </svg>
+                                    {% elif item.icon_name == "clock" %}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            aria-hidden="true"
+                                        >
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="8"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                            ></circle>
+                                            <path
+                                                d="M12 8V12L15 14"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                            ></path>
+                                        </svg>
+                                    {% else %}
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                d="M12 4L21 20H3L12 4Z"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                                stroke-linejoin="round"
+                                            ></path>
+                                            <path
+                                                d="M12 10V14"
+                                                stroke="currentColor"
+                                                stroke-width="1.8"
+                                                stroke-linecap="round"
+                                            ></path>
+                                            <circle
+                                                cx="12"
+                                                cy="17"
+                                                r="1"
+                                                fill="currentColor"
+                                            ></circle>
+                                        </svg>
+                                    {% endif %}
+                                </div>
+
+                                <div class="admin-activity-main">
+                                    <div class="admin-activity-top">
+                                        <div>
+                                            <h3 class="admin-activity-title">
+                                                {{ item.title }}
+                                            </h3>
+
+                                            <div class="admin-activity-reference">
+                                                {{ item.property_ref }} ·
+                                                {{ item.location }}
+                                            </div>
+                                        </div>
+
+                                        <span class="status-pill {{ item.status_class }}">
+                                            {{ item.status }}
+                                        </span>
+                                    </div>
+
+                                    <div class="admin-activity-description">
+                                        {{ item.description }}
+                                    </div>
+
+                                    <div class="admin-activity-meta">
+                                        <span class="admin-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="8"
+                                                    r="3.2"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                                <path
+                                                    d="M5 20C6.9 16.7 9.3 15.2 12 15.2C14.7 15.2 17.1 16.7 19 20"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                ></path>
+                                            </svg>
+
+                                            {{ item.officer }}
+                                        </span>
+
+                                        <span class="admin-meta-item">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                aria-hidden="true"
+                                            >
+                                                <circle
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="8"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                ></circle>
+                                                <path
+                                                    d="M12 8V12L15 14"
+                                                    stroke="currentColor"
+                                                    stroke-width="1.8"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                ></path>
+                                            </svg>
+
+                                            {{ item.datetime }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </article>
+                        {% empty %}
+                            <div class="empty-state">
+                                No field activity has been recorded.
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
         </div>
     </main>
 </div>
 
 <script>
     const userMenu = document.getElementById("userMenu");
-    const userMenuButton = document.getElementById("userMenuButton");
-    const userDropdown = document.getElementById("userDropdown");
+    const userMenuButton = document.getElementById(
+        "userMenuButton"
+    );
+    const userDropdown = document.getElementById(
+        "userDropdown"
+    );
 
     function closeUserMenu() {
-        if (!userDropdown.hidden) {
+        if (
+            userDropdown
+            && !userDropdown.hidden
+        ) {
             userDropdown.hidden = true;
-            userMenuButton.setAttribute("aria-expanded", "false");
+
+            if (userMenuButton) {
+                userMenuButton.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            }
         }
     }
 
     function toggleUserMenu(event) {
         event.stopPropagation();
+
+        if (!userDropdown) {
+            return;
+        }
+
         const willOpen = userDropdown.hidden;
+
         userDropdown.hidden = !willOpen;
-        userMenuButton.setAttribute("aria-expanded", String(willOpen));
+
+        if (userMenuButton) {
+            userMenuButton.setAttribute(
+                "aria-expanded",
+                String(willOpen)
+            );
+        }
     }
 
-    document.addEventListener("click", function(event) {
-        if (!userMenu.contains(event.target)) {
-            closeUserMenu();
+    document.addEventListener(
+        "click",
+        function(event) {
+            if (
+                userMenu
+                && !userMenu.contains(event.target)
+            ) {
+                closeUserMenu();
+            }
         }
-    });
+    );
 
-    document.addEventListener("keydown", function(event) {
-        if (event.key === "Escape") {
-            closeUserMenu();
+    document.addEventListener(
+        "keydown",
+        function(event) {
+            if (event.key === "Escape") {
+                closeUserMenu();
+                closeSidebar();
+            }
         }
-    });
+    );
 
     function openSidebar() {
-        document.getElementById("sidebar").classList.add("open");
-        document.getElementById("mobileOverlay").classList.add("show");
+        const sidebar = document.getElementById(
+            "sidebar"
+        );
+
+        const overlay = document.getElementById(
+            "mobileOverlay"
+        );
+
+        if (sidebar) {
+            sidebar.classList.add("open");
+        }
+
+        if (overlay) {
+            overlay.classList.add("show");
+        }
     }
 
     function closeSidebar() {
-        document.getElementById("sidebar").classList.remove("open");
-        document.getElementById("mobileOverlay").classList.remove("show");
+        const sidebar = document.getElementById(
+            "sidebar"
+        );
+
+        const overlay = document.getElementById(
+            "mobileOverlay"
+        );
+
+        if (sidebar) {
+            sidebar.classList.remove("open");
+        }
+
+        if (overlay) {
+            overlay.classList.remove("show");
+        }
     }
+
+    window.addEventListener(
+        "resize",
+        function() {
+            if (window.innerWidth > 860) {
+                closeSidebar();
+            }
+        }
+    );
 </script>
 </body>
 </html>

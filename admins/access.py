@@ -13,6 +13,7 @@ ALL_MODULES = (
     "citizen_dashboard",
 )
 
+
 ROLE_MODULES = {
     "sys_admin": {
         "dashboard",
@@ -58,9 +59,8 @@ ROLE_MODULES = {
         "settings",
     },
     "field_officer": {
-        "dashboard",
-        "properties",
         "field_operations",
+        "properties",
         "settings",
     },
     "citizen": {
@@ -71,7 +71,7 @@ ROLE_MODULES = {
 
 
 def get_user_role(user):
-    if not user.is_authenticated:
+    if not user or not user.is_authenticated:
         return None
 
     if user.is_superuser:
@@ -88,47 +88,80 @@ def get_user_role(user):
 
 def build_portal_access(module_names):
     module_names = set(module_names or [])
-    return {module: module in module_names for module in ALL_MODULES}
+
+    return {
+        module: module in module_names
+        for module in ALL_MODULES
+    }
 
 
 def get_allowed_module_names(user):
     role = get_user_role(user)
-    return ROLE_MODULES.get(role, set())
+
+    return ROLE_MODULES.get(
+        role,
+        set(),
+    )
 
 
 def get_allowed_modules(user):
-    return build_portal_access(get_allowed_module_names(user))
+    return build_portal_access(
+        get_allowed_module_names(user)
+    )
 
 
 def can_access(user, module_name):
-    if not user.is_authenticated:
+    if not user or not user.is_authenticated:
         return False
 
     if user.is_superuser:
         return True
 
-    return get_allowed_modules(user).get(module_name, False)
+    return get_allowed_modules(user).get(
+        module_name,
+        False,
+    )
 
 
 def landing_url_for_user(user):
     role = get_user_role(user)
 
     if role == "field_officer":
-        return reverse("admins:admin-dashboard")
+        return reverse(
+            "field_operations:field-operations"
+        )
 
     if role == "property_officer":
-        return reverse("properties:property-registry")
+        return reverse(
+            "properties:property-registry"
+        )
 
-    if role in ["billing_officer", "payment_officer"]:
-        return reverse("billing:billing-management")
+    if role in {
+        "billing_officer",
+        "payment_officer",
+    }:
+        return reverse(
+            "billing:billing-management"
+        )
 
     if role == "report_officer":
-        return reverse("admins:reports-analytics")
+        return reverse(
+            "admins:reports-analytics"
+        )
 
     if role == "citizen":
-        return reverse("citizens:dashboard")
+        return reverse(
+            "citizens:dashboard"
+        )
 
-    if role in ["sys_admin", "revenue_admin"]:
-        return reverse("admins:admin-dashboard")
+    if role in {
+        "sys_admin",
+        "revenue_admin",
+    }:
+        return reverse(
+            "admins:admin-dashboard"
+        )
 
-    return reverse("admins:settings")
+    return reverse(
+        "admins:settings"
+    )
