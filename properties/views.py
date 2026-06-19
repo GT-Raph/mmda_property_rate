@@ -48,7 +48,6 @@ def _property_type_label(prop):
 
 def _property_type_class(prop):
     label = _property_type_label(prop).lower()
-
     if "mixed" in label:
         return "type-mixed"
     if "commercial" in label:
@@ -111,10 +110,7 @@ def property_rate_preview(request):
     community_area_id = (request.GET.get("community_area") or "").strip()
 
     if not property_use or not community_area_id or not rateable_value_raw:
-        return JsonResponse(
-            {"error": "Property use, community / area and rateable value are required."},
-            status=400,
-        )
+        return JsonResponse({"error": "Property use, community / area and rateable value are required."}, status=400)
 
     try:
         rateable_value = Decimal(rateable_value_raw)
@@ -140,17 +136,14 @@ def property_rate_preview(request):
         building_type=building_type,
     )
     if not policy:
-        return JsonResponse(
-            {"error": "No active rate policy matches the selected billing year, community / area, property use and building type."},
-            status=404,
-        )
+        return JsonResponse({"error": "No active rate policy matches the selected billing year, community / area, property use and building type."}, status=404)
 
     principal = policy.calculate_principal(rateable_value)
 
     return JsonResponse(
         {
             "policy_name": policy.policy_name,
-            "property_class": policy.property_class,
+            "property_class": policy.property_class.name,
             "rate_impost": str(policy.rate_impost),
             "minimum_charge": str(policy.minimum_charge),
             "annual_rate": str(principal),
@@ -179,6 +172,7 @@ def property_registry(request):
         "community_area",
         "applied_rate_policy",
     ).order_by("-created_at")
+    
 
     if context_assembly:
         properties_qs = properties_qs.filter(assembly=context_assembly)
@@ -193,7 +187,7 @@ def property_registry(request):
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
             | Q(address_line__icontains=search)
-            | Q(property_class__icontains=search)
+            | Q(property_class__name__icontains=search)
             | Q(community_area__name__icontains=search)
         )
 
@@ -205,9 +199,7 @@ def property_registry(request):
             verification_status__in=["pending", "under_review", "unverified"]
         )
     elif status == "pending":
-        properties_qs = properties_qs.filter(
-            Q(verification_status__in=["pending", "under_review", "unverified"])
-        )
+        properties_qs = properties_qs.filter(Q(verification_status__in=["pending", "under_review", "unverified"]))
     elif status == "inactive":
         properties_qs = properties_qs.filter(is_active=False)
 
@@ -231,7 +223,7 @@ def property_registry(request):
                 "location": _property_location(prop),
                 "type_label": _property_type_label(prop),
                 "type_class": _property_type_class(prop),
-                "property_class": getattr(prop, "property_class", "") or "—",
+                "property_class": getattr(getattr(prop, "property_class", None), "name", "—"),
                 "community_area": getattr(getattr(prop, "community_area", None), "name", "—"),
                 "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
                 "status_label": status_label,
@@ -240,9 +232,6 @@ def property_registry(request):
         )
 
     type_choices = list(Property.PROPERTY_USE_CHOICES)
-
-    start_index = page_obj.start_index() if paginator.count else 0
-    end_index = page_obj.end_index() if paginator.count else 0
 
     context = {
         "page_title": "Property Registry" if user_role != "field_officer" else "My Registered Properties",
@@ -255,8 +244,8 @@ def property_registry(request):
         "properties": property_rows,
         "page_obj": page_obj,
         "paginator": paginator,
-        "start_index": start_index,
-        "end_index": end_index,
+        "start_index": page_obj.start_index() if paginator.count else 0,
+        "end_index": page_obj.end_index() if paginator.count else 0,
         "search": search,
         "selected_type": property_type,
         "selected_status": status,
@@ -300,10 +289,7 @@ def add_property(request):
                     owner = getattr(property_instance, "owner", None)
                     account_result = link_or_create_citizen_for_owner(owner, default_password="1234")
 
-                messages.success(
-                    request,
-                    f"Property {property_instance.property_reference} was added successfully.",
-                )
+                messages.success(request, f"Property {property_instance.property_reference} was added successfully.")
 
                 if account_result.get("created"):
                     messages.info(

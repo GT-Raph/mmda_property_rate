@@ -400,7 +400,7 @@ class PropertyCreateForm(PropertyBaseForm):
 
         matched_policy = self.resolve_rate_policy(assembly) if assembly else None
         instance.applied_rate_policy = matched_policy
-        instance.property_class = matched_policy.property_class if matched_policy else ""
+        instance.property_class = matched_policy.property_class if matched_policy else None
 
         if commit:
             instance.save()

@@ -36,7 +36,6 @@ def _choose_master_owner(owners):
             _owner_property_count(owner),
             -owner.id,
         )
-
     return sorted(owners, key=score, reverse=True)[0]
 
 
@@ -269,7 +268,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "suburb",
         "area_town",
         "community_area__name",
-        "property_class",
+        "property_class__name",
         "digital_address",
     )
     autocomplete_fields = ("owner", "registered_by", "community_area", "applied_rate_policy")

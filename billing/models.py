@@ -91,12 +91,6 @@ class RatePolicy(TimeStampedModel):
 
     class Meta:
         ordering = ["assembly__name", "-year", "property_use", "property_class", "building_type", "-effective_from"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["assembly", "year", "policy_name"],
-                name="unique_rate_policy_name_per_year_and_assembly",
-            )
-        ]
         indexes = [
             models.Index(fields=["assembly", "year", "property_use", "building_type"]),
             models.Index(fields=["assembly", "status"]),
