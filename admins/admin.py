@@ -104,3 +104,7 @@ class UserAdmin(BaseUserAdmin):
         make_field_officer,
         make_citizen,
     ]
+
+admin.site.site_header = "MMDA Property Rate System"
+admin.site.site_title = "MMDA Admin"
+admin.site.index_title = "Welcome to MMDA Administration"
