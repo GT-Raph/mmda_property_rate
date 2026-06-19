@@ -3,8 +3,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="robots"
+        content="noindex, nofollow"
+    >
+
     <title>PRMS Portal</title>
+
     <style>
         :root {
             --bg-dark: #111214;
@@ -20,7 +31,12 @@
             --blue-soft: #edf4ff;
             --blue-border: #b7cffc;
             --blue-text: #1f49c7;
-            --shadow: 0 30px 60px rgba(0, 0, 0, 0.28);
+            --red-soft: #fff2f2;
+            --red-border: #efc2c2;
+            --red-text: #b42318;
+            --shadow:
+                0 30px 60px
+                rgba(0, 0, 0, 0.28);
             --radius: 20px;
         }
 
@@ -28,16 +44,35 @@
             box-sizing: border-box;
         }
 
+        html,
         body {
             margin: 0;
+            padding: 0;
+        }
+
+        body {
             min-height: 100vh;
-            font-family: Arial, Helvetica, sans-serif;
-            background: linear-gradient(90deg, var(--bg-dark) 0%, var(--bg-dark-2) 100%);
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            background:
+                linear-gradient(
+                    90deg,
+                    var(--bg-dark) 0%,
+                    var(--bg-dark-2) 100%
+                );
             color: var(--text);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 28px 18px;
+        }
+
+        button,
+        input,
+        select {
+            font-family: inherit;
         }
 
         .page {
@@ -87,12 +122,15 @@
 
         .subtitle small {
             display: block;
+            margin-top: 3px;
             font-size: 14px;
         }
 
         .highlight-box {
-            border: 1px solid var(--gold-border);
-            background: rgba(220, 194, 120, 0.08);
+            border:
+                1px solid var(--gold-border);
+            background:
+                rgba(220, 194, 120, 0.08);
             border-radius: 12px;
             padding: 22px 24px;
             margin-bottom: 24px;
@@ -112,8 +150,10 @@
         }
 
         .selected-assembly {
-            border: 1px solid var(--gold-border);
-            background: rgba(220, 194, 120, 0.08);
+            border:
+                1px solid var(--gold-border);
+            background:
+                rgba(220, 194, 120, 0.08);
             border-radius: 12px;
             padding: 16px 18px;
             margin-bottom: 28px;
@@ -131,14 +171,22 @@
         }
 
         .assembly-icon {
-            width: 34px;
-            height: 34px;
+            width: 38px;
+            height: 38px;
             border-radius: 10px;
-            display: grid;
-            place-items: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             color: var(--gold-dark);
-            font-size: 18px;
+            background:
+                rgba(220, 194, 120, 0.15);
             flex-shrink: 0;
+        }
+
+        .assembly-icon svg {
+            width: 21px;
+            height: 21px;
+            display: block;
         }
 
         .selected-assembly-text {
@@ -163,10 +211,20 @@
         }
 
         .change-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             color: var(--gold-dark);
             font-size: 14px;
+            font-weight: 700;
             text-decoration: none;
             white-space: nowrap;
+        }
+
+        .change-link svg {
+            width: 15px;
+            height: 15px;
+            display: block;
         }
 
         .change-link:hover {
@@ -194,9 +252,12 @@
             background: #f7f7f7;
             padding: 0 18px;
             font-size: 16px;
-            color: #222;
+            color: #222222;
             outline: none;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            transition:
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                background 0.2s ease;
         }
 
         .input-field::placeholder {
@@ -206,22 +267,43 @@
         .input-field:focus,
         .select-field:focus {
             border-color: var(--gold-dark);
-            background: #fff;
-            box-shadow: 0 0 0 4px rgba(202, 169, 79, 0.12);
+            background: #ffffff;
+            box-shadow:
+                0 0 0 4px
+                rgba(202, 169, 79, 0.12);
         }
 
         .primary-btn {
             width: 100%;
-            height: 60px;
+            min-height: 60px;
             border: none;
             border-radius: 10px;
-            background: linear-gradient(90deg, #cfad47 0%, #e5cf91 100%);
-            color: #fff;
+            background:
+                linear-gradient(
+                    90deg,
+                    #cfad47 0%,
+                    #e5cf91 100%
+                );
+            color: #ffffff;
             font-size: 17px;
             font-weight: 800;
             cursor: pointer;
-            box-shadow: 0 10px 22px rgba(202, 169, 79, 0.22);
-            transition: opacity 0.2s ease, transform 0.15s ease;
+            box-shadow:
+                0 10px 22px
+                rgba(202, 169, 79, 0.22);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition:
+                opacity 0.2s ease,
+                transform 0.15s ease;
+        }
+
+        .primary-btn svg {
+            width: 19px;
+            height: 19px;
+            display: block;
         }
 
         .primary-btn:hover {
@@ -247,6 +329,7 @@
             gap: 10px;
             color: #4a4a4a;
             font-size: 14px;
+            cursor: pointer;
         }
 
         .remember-wrap input[type="checkbox"] {
@@ -268,7 +351,8 @@
 
         .note-box {
             margin-top: 26px;
-            border: 1px solid var(--blue-border);
+            border:
+                1px solid var(--blue-border);
             background: var(--blue-soft);
             border-radius: 10px;
             padding: 16px 18px;
@@ -291,9 +375,15 @@
         }
 
         .form-errors {
-            background: #fff2f2;
-            border: 1px solid #efc2c2;
-            color: #b42318;
+            background: var(--red-soft);
+            border:
+                1px solid var(--red-border);
+            color: var(--red-text);
+        }
+
+        .form-errors ul {
+            margin: 0;
+            padding-left: 20px;
         }
 
         .message-box {
@@ -302,14 +392,25 @@
             color: #8a6300;
         }
 
+        .field-error {
+            margin-top: 7px;
+            color: var(--red-text);
+            font-size: 13px;
+        }
+
         .footer-text {
             margin-top: 26px;
-            color: rgba(255, 255, 255, 0.82);
+            color:
+                rgba(255, 255, 255, 0.82);
             font-size: 14px;
             text-align: center;
         }
 
         @media (max-width: 760px) {
+            body {
+                padding: 20px 14px;
+            }
+
             .card {
                 padding: 32px 22px 26px;
             }
@@ -330,15 +431,22 @@
         }
     </style>
 </head>
+
 <body>
-    <div class="page">
-        <div class="card">
+    <main class="page">
+        <section class="card">
             <div class="logo-wrap">
-                <img src="{% static 'images/mmda_logo_1.png' %}" alt="PRMS Logo">
+                <img
+                    src="{% static 'images/mmda_logo_1.png' %}"
+                    alt="PRMS Logo"
+                >
             </div>
 
             {% if selected_assembly %}
-                <h1 class="title">PRMS Portal</h1>
+                <h1 class="title">
+                    PRMS Portal
+                </h1>
+
                 <p class="subtitle">
                     Property Rate Management System
                     <small>Ghana MMDA Platform</small>
@@ -346,70 +454,234 @@
 
                 <div class="selected-assembly">
                     <div class="selected-assembly-left">
-                        <div class="assembly-icon">🏢</div>
+                        <span
+                            class="assembly-icon"
+                            aria-hidden="true"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                            >
+                                <path
+                                    d="M4 20H20"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                ></path>
+
+                                <path
+                                    d="M6 20V9L12 5L18 9V20"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linejoin="round"
+                                ></path>
+
+                                <path
+                                    d="M9 20V14H15V20"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                ></path>
+
+                                <path
+                                    d="M9 10H9.01M12 10H12.01M15 10H15.01"
+                                    stroke="currentColor"
+                                    stroke-width="2.3"
+                                    stroke-linecap="round"
+                                ></path>
+                            </svg>
+                        </span>
+
                         <div class="selected-assembly-text">
-                            <small>Selected Assembly</small>
-                            <strong>{{ selected_assembly.name }}</strong>
+                            <small>
+                                Selected Assembly
+                            </small>
+
+                            <strong>
+                                {{ selected_assembly.name }}
+                            </strong>
                         </div>
                     </div>
-                    <a href="?change_assembly=1" class="change-link">← Change</a>
+
+                    <a
+                        href="{% url 'portal-login' %}?change_assembly=1"
+                        class="change-link"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M15 6L9 12L15 18"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+
+                        <span>Change</span>
+                    </a>
                 </div>
 
-                {% if form.errors %}
-                    <div class="form-errors">
-                        Invalid email/username or password.
+                {% if form.non_field_errors %}
+                    <div
+                        class="form-errors"
+                        role="alert"
+                    >
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% elif form.errors %}
+                    <div
+                        class="form-errors"
+                        role="alert"
+                    >
+                        Please correct the errors below.
                     </div>
                 {% endif %}
 
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="message-box">{{ message }}</div>
+                        <div
+                            class="message-box"
+                            role="status"
+                        >
+                            {{ message }}
+                        </div>
                     {% endfor %}
                 {% endif %}
 
-                <form method="post">
+                <form
+                    method="post"
+                    action="{% url 'portal-login' %}"
+                    autocomplete="on"
+                >
                     {% csrf_token %}
-                    <input type="hidden" name="stage" value="login">
-                    <input type="hidden" name="assembly_id" value="{{ selected_assembly.id }}">
+
+                    <input
+                        type="hidden"
+                        name="stage"
+                        value="login"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="assembly_id"
+                        value="{{ selected_assembly.id }}"
+                    >
 
                     <div class="field-group">
-                        <label for="id_username">Email Address</label>
+                        <label for="id_username">
+                            Email Address
+                        </label>
+
                         <input
                             type="text"
                             id="id_username"
                             name="username"
                             class="input-field"
-                            placeholder="Enter your email"
-                            value="{{ form.username.value|default:'' }}"
+                            placeholder="Enter your email or username"
+                            value="{{ form.username.value|default_if_none:'' }}"
+                            autocomplete="username"
+                            autocapitalize="none"
+                            spellcheck="false"
                             required
                         >
+
+                        {% for error in form.username.errors %}
+                            <div class="field-error">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
                     </div>
 
                     <div class="field-group">
-                        <label for="id_password">Password</label>
+                        <label for="id_password">
+                            Password
+                        </label>
+
                         <input
                             type="password"
                             id="id_password"
                             name="password"
                             class="input-field"
                             placeholder="Enter your password"
+                            autocomplete="current-password"
                             required
                         >
+
+                        {% for error in form.password.errors %}
+                            <div class="field-error">
+                                {{ error }}
+                            </div>
+                        {% endfor %}
                     </div>
 
-                    <button type="submit" class="primary-btn">↪ Sign In</button>
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            ></path>
+
+                            <path
+                                d="M13 8L17 12L13 16"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+
+                            <path
+                                d="M8 12H17"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            ></path>
+                        </svg>
+
+                        <span>Sign In</span>
+                    </button>
 
                     <div class="bottom-row">
-                        <label class="remember-wrap" for="remember_me">
-                            <input type="checkbox" id="remember_me" name="remember_me">
+                        <label
+                            class="remember-wrap"
+                            for="remember_me"
+                        >
+                            <input
+                                type="checkbox"
+                                id="remember_me"
+                                name="remember_me"
+                                value="1"
+                            >
+
                             <span>Remember me</span>
                         </label>
 
-                        <a href="#" class="forgot-link">Forgot Password</a>
+                        <a
+                            href="#"
+                            class="forgot-link"
+                        >
+                            Forgot Password
+                        </a>
                     </div>
                 </form>
             {% else %}
-                <h1 class="title">Welcome to PRMS</h1>
+                <h1 class="title">
+                    Welcome to PRMS
+                </h1>
+
                 <p class="subtitle">
                     Property Rate Management System
                     <small>Ghana MMDA Platform</small>
@@ -417,31 +689,67 @@
 
                 <div class="highlight-box">
                     <h3>Select Your Assembly</h3>
-                    <p>Choose the Metropolitan, Municipal, or District Assembly you belong to</p>
+
+                    <p>
+                        Choose the Metropolitan, Municipal,
+                        or District Assembly you belong to.
+                    </p>
                 </div>
 
                 {% if assembly_error %}
-                    <div class="form-errors">{{ assembly_error }}</div>
+                    <div
+                        class="form-errors"
+                        role="alert"
+                    >
+                        {{ assembly_error }}
+                    </div>
                 {% endif %}
 
                 {% if messages %}
                     {% for message in messages %}
-                        <div class="message-box">{{ message }}</div>
+                        <div
+                            class="message-box"
+                            role="status"
+                        >
+                            {{ message }}
+                        </div>
                     {% endfor %}
                 {% endif %}
 
-                <form method="post">
+                <form
+                    method="post"
+                    action="{% url 'portal-login' %}"
+                    autocomplete="off"
+                >
                     {% csrf_token %}
-                    <input type="hidden" name="stage" value="assembly">
+
+                    <input
+                        type="hidden"
+                        name="stage"
+                        value="assembly"
+                    >
 
                     <div class="field-group">
-                        <label for="assembly_id">Assembly Name *</label>
-                        <select id="assembly_id" name="assembly_id" class="select-field" required>
-                            <option value="">--Select your assembly--</option>
+                        <label for="assembly_id">
+                            Assembly Name
+                        </label>
+
+                        <select
+                            id="assembly_id"
+                            name="assembly_id"
+                            class="select-field"
+                            required
+                        >
+                            <option value="">
+                                Select your assembly
+                            </option>
+
                             {% for assembly in assemblies %}
                                 <option
                                     value="{{ assembly.id }}"
-                                    {% if selected_assembly_id|stringformat:"s" == assembly.id|stringformat:"s" %}selected{% endif %}
+                                    {% if selected_assembly_id|stringformat:"s" == assembly.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
                                 >
                                     {{ assembly.name }}
                                 </option>
@@ -449,17 +757,40 @@
                         </select>
                     </div>
 
-                    <button type="submit" class="primary-btn">Continue to Login →</button>
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                    >
+                        <span>Continue to Login</span>
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M9 6L15 12L9 18"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            ></path>
+                        </svg>
+                    </button>
                 </form>
 
                 <div class="note-box">
-                    <strong>Note:</strong> You can only access data from the assembly you select.
-                    Make sure to choose the correct assembly you're authorized to access.
+                    <strong>Note:</strong>
+                    You can only access data from the assembly
+                    you select. Choose the assembly assigned to
+                    your account.
                 </div>
             {% endif %}
-        </div>
+        </section>
 
-        <p class="footer-text">© 2026 Ghana MMDA. All rights reserved.</p>
-    </div>
+        <p class="footer-text">
+            © 2026 Ghana MMDA. All rights reserved.
+        </p>
+    </main>
 </body>
 </html>
