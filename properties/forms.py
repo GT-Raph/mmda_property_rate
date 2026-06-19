@@ -3,9 +3,11 @@ import re
 from decimal import Decimal
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import modelform_factory
 from django.utils import timezone
 
+from billing.models import CommunityArea, RatePolicy
 from properties.models import Property
 
 
@@ -24,6 +26,7 @@ OWNER_MODEL_FIELDS = _model_field_map(OWNER_MODEL)
 PROPERTY_FIELD_CANDIDATES = [
     "property_use",
     "building_type",
+    "community_area",
     "occupancy_status",
     "number_of_floors",
     "number_of_units",
@@ -49,11 +52,7 @@ PROPERTY_FORM_FIELDS = [
     and getattr(PROPERTY_MODEL_FIELDS[field_name], "editable", True)
 ]
 
-OWNER_AUTO_SET_FIELDS = {
-    "assembly",
-    "created_at",
-    "updated_at",
-}
+OWNER_AUTO_SET_FIELDS = {"assembly", "created_at", "updated_at"}
 
 OWNER_FORM_FIELDS = [
     field_name
@@ -134,6 +133,11 @@ class PropertyCreateForm(PropertyBaseForm):
             if original_required:
                 self.owner_required_field_names.append(prefixed_name)
 
+        if "community_area" in self.fields:
+            self.fields["community_area"].label = "Community / Area"
+            self.fields["community_area"].queryset = CommunityArea.objects.filter(is_active=True).select_related("assembly").order_by("sub_metro", "name")
+            self.fields["community_area"].empty_label = "Select community / area"
+
         placeholders = {
             "address_line": "Enter full address",
             "area_town": "Enter area or town",
@@ -144,7 +148,6 @@ class PropertyCreateForm(PropertyBaseForm):
             "longitude": "Longitude",
             "rateable_value": "Enter rateable value",
             "owner_full_name": "Enter owner's full name",
-            "owner_phone_number": "Enter phone number",
             "owner_primary_phone": "Enter phone number",
             "owner_alternate_phone": "Enter alternate phone number",
             "owner_email": "Enter email address",
@@ -180,27 +183,14 @@ class PropertyCreateForm(PropertyBaseForm):
                 self.fields[field_name].label = label
 
         if "rateable_value" in self.fields:
-            self.fields["rateable_value"].widget.attrs.update(
-                {
-                    "step": "0.01",
-                    "min": "0",
-                }
-            )
+            self.fields["rateable_value"].widget.attrs.update({"step": "0.01", "min": "0"})
 
         for coordinate_field in ["latitude", "longitude"]:
             if coordinate_field in self.fields:
-                self.fields[coordinate_field].widget.attrs.update(
-                    {
-                        "readonly": "readonly",
-                    }
-                )
+                self.fields[coordinate_field].widget.attrs.update({"readonly": "readonly"})
 
         if "verification_status" in self.fields:
-            choices = [
-                choice[0]
-                for choice in self.fields["verification_status"].choices
-                if choice[0]
-            ]
+            choices = [choice[0] for choice in self.fields["verification_status"].choices if choice[0]]
             if "pending" in choices and not self.initial.get("verification_status"):
                 self.fields["verification_status"].initial = "pending"
 
@@ -224,15 +214,6 @@ class PropertyCreateForm(PropertyBaseForm):
         return self.cleaned_data.get(f"owner_{field_name}")
 
     def _find_existing_owner_match(self, assembly=None):
-        """
-        Try to find an existing owner using the strongest available match.
-        Match priority:
-        1. linked_user
-        2. ghana_card_number
-        3. primary/alternate phone
-        4. email
-        5. exact full_name within the same assembly
-        """
         queryset = OWNER_MODEL.objects.all()
 
         if assembly is not None and "assembly" in OWNER_MODEL_FIELDS:
@@ -286,6 +267,30 @@ class PropertyCreateForm(PropertyBaseForm):
 
         return None
 
+    def resolve_rate_policy(self, assembly):
+        if self.cleaned_data.get("is_exempt"):
+            return None
+
+        property_use = self.cleaned_data.get("property_use")
+        building_type = self.cleaned_data.get("building_type")
+        community_area = self.cleaned_data.get("community_area")
+
+        if not property_use or not community_area:
+            raise ValidationError("Property use and community / area are required to match a rate policy.")
+
+        policy = RatePolicy.get_applicable_policy(
+            assembly=assembly,
+            property_use=property_use,
+            community_area=community_area,
+            building_type=building_type,
+            on_date=timezone.localdate(),
+            year=timezone.localdate().year,
+        )
+        if not policy:
+            raise ValidationError("No active rate policy matches the selected billing year, community / area, property use and building type.")
+
+        return policy
+
     def clean(self):
         cleaned_data = super().clean()
 
@@ -297,33 +302,20 @@ class PropertyCreateForm(PropertyBaseForm):
             for field_name in self.owner_field_names
         }
 
-        has_new_owner_data = any(
-            value not in [None, "", []]
-            for value in owner_values.values()
-        )
-
+        has_new_owner_data = any(value not in [None, "", []] for value in owner_values.values())
         wants_new_owner = bool(create_new_owner or (not existing_owner and has_new_owner_data))
 
         if existing_owner and wants_new_owner:
-            self.add_error(
-                "existing_owner",
-                "Choose either an existing owner or add a new owner, not both.",
-            )
+            self.add_error("existing_owner", "Choose either an existing owner or add a new owner, not both.")
 
         if not existing_owner and not wants_new_owner:
-            self.add_error(
-                "existing_owner",
-                "Select an existing owner or enter new owner details.",
-            )
+            self.add_error("existing_owner", "Select an existing owner or enter new owner details.")
 
         if wants_new_owner:
             for field_name in self.owner_required_field_names:
                 value = cleaned_data.get(field_name)
                 if value in [None, ""]:
-                    self.add_error(
-                        field_name,
-                        f"{self.fields[field_name].label} is required.",
-                    )
+                    self.add_error(field_name, f"{self.fields[field_name].label} is required.")
 
         cleaned_data["_wants_new_owner"] = wants_new_owner
         return cleaned_data
@@ -397,11 +389,7 @@ class PropertyCreateForm(PropertyBaseForm):
         if hasattr(instance, "verification_status"):
             existing_status = getattr(instance, "verification_status", "")
             if not existing_status and "verification_status" in self.fields:
-                choices = [
-                    choice[0]
-                    for choice in self.fields["verification_status"].choices
-                    if choice[0]
-                ]
+                choices = [choice[0] for choice in self.fields["verification_status"].choices if choice[0]]
                 if "pending" in choices:
                     instance.verification_status = "pending"
                 elif choices:
@@ -409,6 +397,10 @@ class PropertyCreateForm(PropertyBaseForm):
 
         if hasattr(instance, "is_active") and getattr(instance, "is_active", None) is None:
             instance.is_active = True
+
+        matched_policy = self.resolve_rate_policy(assembly) if assembly else None
+        instance.applied_rate_policy = matched_policy
+        instance.property_class = matched_policy.property_class if matched_policy else ""
 
         if commit:
             instance.save()

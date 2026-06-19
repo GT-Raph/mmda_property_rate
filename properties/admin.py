@@ -249,7 +249,9 @@ class PropertyAdmin(admin.ModelAdmin):
         "property_reference",
         "owner",
         "property_use",
+        "property_class",
         "building_type",
+        "community_area",
         "area_town",
         "suburb",
         "rateable_value",
@@ -257,7 +259,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "registered_by",
         "created_at",
     )
-    list_filter = ("assembly", "property_use", "building_type", "is_active", "verification_status")
+    list_filter = ("assembly", "property_use", "property_class", "building_type", "is_active", "verification_status")
     search_fields = (
         "property_reference",
         "owner__full_name",
@@ -266,6 +268,8 @@ class PropertyAdmin(admin.ModelAdmin):
         "address_line",
         "suburb",
         "area_town",
+        "community_area__name",
+        "property_class",
         "digital_address",
     )
-    autocomplete_fields = ("owner", "registered_by")
+    autocomplete_fields = ("owner", "registered_by", "community_area", "applied_rate_policy")

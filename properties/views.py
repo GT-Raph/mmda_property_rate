@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
@@ -12,7 +13,7 @@ from django.views.decorators.http import require_GET
 from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
-from billing.models import RatePolicy
+from billing.models import CommunityArea, RatePolicy
 from properties.forms import PropertyCreateForm
 from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
@@ -84,11 +85,12 @@ def _property_location(prop):
     return ", ".join(parts) if parts else "—"
 
 
-def _get_active_rate_policy(*, assembly, property_use, building_type, preview_date=None):
+def _get_active_rate_policy(*, assembly, property_use, community_area, building_type, preview_date=None):
     preview_date = preview_date or timezone.localdate()
     return RatePolicy.get_applicable_policy(
         assembly=assembly,
         property_use=property_use,
+        community_area=community_area,
         building_type=building_type,
         on_date=preview_date,
         year=preview_date.year,
@@ -106,10 +108,11 @@ def property_rate_preview(request):
     property_use = (request.GET.get("property_use") or "").strip()
     building_type = (request.GET.get("building_type") or "").strip()
     rateable_value_raw = (request.GET.get("rateable_value") or "").strip()
+    community_area_id = (request.GET.get("community_area") or "").strip()
 
-    if not property_use or not building_type or not rateable_value_raw:
+    if not property_use or not community_area_id or not rateable_value_raw:
         return JsonResponse(
-            {"error": "Property use, building type and rateable value are required."},
+            {"error": "Property use, community / area and rateable value are required."},
             status=400,
         )
 
@@ -121,14 +124,24 @@ def property_rate_preview(request):
     if rateable_value < 0:
         return JsonResponse({"error": "Rateable value cannot be negative."}, status=400)
 
+    try:
+        community_area = CommunityArea.objects.get(
+            pk=community_area_id,
+            assembly=context_assembly,
+            is_active=True,
+        )
+    except CommunityArea.DoesNotExist:
+        return JsonResponse({"error": "Selected community / area was not found."}, status=404)
+
     policy = _get_active_rate_policy(
         assembly=context_assembly,
         property_use=property_use,
+        community_area=community_area,
         building_type=building_type,
     )
     if not policy:
         return JsonResponse(
-            {"error": "No active rate policy matches this property use and building type for the current year."},
+            {"error": "No active rate policy matches the selected billing year, community / area, property use and building type."},
             status=404,
         )
 
@@ -136,12 +149,15 @@ def property_rate_preview(request):
 
     return JsonResponse(
         {
+            "policy_name": policy.policy_name,
+            "property_class": policy.property_class,
             "rate_impost": str(policy.rate_impost),
             "minimum_charge": str(policy.minimum_charge),
             "annual_rate": str(principal),
             "annual_rate_display": f"GH₵ {principal:,.2f}",
             "policy_year": policy.year,
-            "policy_label": str(policy),
+            "community_area": community_area.name,
+            "sub_metro": community_area.get_sub_metro_display(),
         }
     )
 
@@ -157,7 +173,12 @@ def property_registry(request):
     status = (request.GET.get("status") or "").strip()
     page_number = request.GET.get("page", 1)
 
-    properties_qs = Property.objects.select_related("owner", "assembly").order_by("-created_at")
+    properties_qs = Property.objects.select_related(
+        "owner",
+        "assembly",
+        "community_area",
+        "applied_rate_policy",
+    ).order_by("-created_at")
 
     if context_assembly:
         properties_qs = properties_qs.filter(assembly=context_assembly)
@@ -172,6 +193,8 @@ def property_registry(request):
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
             | Q(address_line__icontains=search)
+            | Q(property_class__icontains=search)
+            | Q(community_area__name__icontains=search)
         )
 
     if property_type:
@@ -208,9 +231,9 @@ def property_registry(request):
                 "location": _property_location(prop),
                 "type_label": _property_type_label(prop),
                 "type_class": _property_type_class(prop),
-                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}"
-                if getattr(prop, "rateable_value", None)
-                else "GH₵ 0",
+                "property_class": getattr(prop, "property_class", "") or "—",
+                "community_area": getattr(getattr(prop, "community_area", None), "name", "—"),
+                "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
                 "status_label": status_label,
                 "status_class": status_class,
             }
@@ -295,6 +318,9 @@ def add_property(request):
 
                 return redirect("properties:property-registry")
 
+            except ValidationError as exc:
+                form.add_error(None, exc)
+                messages.error(request, "Please resolve the rate policy validation error and try again.")
             except Exception as exc:
                 messages.error(request, f"Could not save the property. {exc}")
         else:

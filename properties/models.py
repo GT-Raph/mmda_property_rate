@@ -5,7 +5,6 @@ from django.db import models
 
 from admins.models import Assembly, TimeStampedModel
 
-from decimal import Decimal
 
 class Owner(TimeStampedModel):
     assembly = models.ForeignKey(
@@ -101,11 +100,29 @@ class Property(TimeStampedModel):
     suburb = models.CharField(max_length=100, blank=True)
     landmark = models.CharField(max_length=255, blank=True)
 
+    community_area = models.ForeignKey(
+        "billing.CommunityArea",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="properties",
+    )
+
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
     property_use = models.CharField(max_length=20, choices=PROPERTY_USE_CHOICES)
     building_type = models.CharField(max_length=20, choices=BUILDING_TYPE_CHOICES)
+    property_class = models.CharField(max_length=100, blank=True, editable=False)
+    applied_rate_policy = models.ForeignKey(
+        "billing.RatePolicy",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="applied_properties",
+        editable=False,
+    )
+
     number_of_floors = models.PositiveIntegerField(default=1)
     number_of_units = models.PositiveIntegerField(default=1)
     year_built = models.PositiveIntegerField(null=True, blank=True)

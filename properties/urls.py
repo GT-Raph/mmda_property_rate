@@ -1,8 +1,7 @@
 from django.urls import path
 
-from admins import views
-from .views import add_property, property_registry
 from . import views
+from .views import add_property, property_registry
 
 app_name = "properties"
 
