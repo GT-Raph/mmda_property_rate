@@ -55,6 +55,59 @@ class CommunityArea(TimeStampedModel):
         return f"{self.name} ({self.get_sub_metro_display()})"
 
 
+class PropertyClass(TimeStampedModel):
+    assembly = models.ForeignKey(
+        Assembly,
+        on_delete=models.CASCADE,
+        related_name="property_classes",
+    )
+    property_use = models.CharField(
+        max_length=20,
+        choices=Property.PROPERTY_USE_CHOICES,
+    )
+    name = models.CharField(max_length=100)
+    covered_areas = models.ManyToManyField(
+        CommunityArea,
+        related_name="property_classes",
+        help_text=(
+            "Select all communities/areas that belong to this class. "
+            "These areas will be copied automatically into a Rate Policy "
+            "when this class is selected."
+        ),
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["assembly__name", "property_use", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assembly", "property_use", "name"],
+                name="unique_property_class_per_use",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["assembly", "property_use", "is_active"]),
+            models.Index(fields=["name"]),
+        ]
+        verbose_name = "Property class"
+        verbose_name_plural = "Property classes"
+
+    def __str__(self):
+        return f"{self.name} - {self.get_property_use_display()}"
+
+    def clean(self):
+        super().clean()
+
+        self.name = (self.name or "").strip()
+
+        if not self.name:
+            raise ValidationError({"name": "Property class name is required."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean(exclude=["covered_areas"])
+        super().save(*args, **kwargs)
+
+
 class RatePolicy(TimeStampedModel):
     assembly = models.ForeignKey(
         Assembly,
@@ -67,12 +120,18 @@ class RatePolicy(TimeStampedModel):
         max_length=20,
         choices=Property.PROPERTY_USE_CHOICES,
     )
-    property_class = models.CharField(max_length=100)
+    property_class = models.CharField(
+        max_length=100,
+        help_text="Select a class configured under Property classes in Django admin.",
+    )
     covered_areas = models.ManyToManyField(
         CommunityArea,
         blank=True,
         related_name="rate_policies",
-        help_text="Select one or more communities/areas this class applies to. Leave empty only for a broad fallback policy.",
+        help_text=(
+            "Automatically populated from the selected property class. "
+            "To change these areas, edit the Property class master record."
+        ),
     )
     building_type = models.CharField(
         max_length=20,
@@ -90,7 +149,14 @@ class RatePolicy(TimeStampedModel):
     notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["assembly__name", "-year", "property_use", "property_class", "building_type", "-effective_from"]
+        ordering = [
+            "assembly__name",
+            "-year",
+            "property_use",
+            "property_class",
+            "building_type",
+            "-effective_from",
+        ]
         indexes = [
             models.Index(fields=["assembly", "year", "property_use", "building_type"]),
             models.Index(fields=["assembly", "status"]),
@@ -111,6 +177,24 @@ class RatePolicy(TimeStampedModel):
 
         if not self.property_class:
             raise ValidationError({"property_class": "Property class is required."})
+
+        if self.assembly_id and self.property_use and self.property_class:
+            class_exists = PropertyClass.objects.filter(
+                assembly_id=self.assembly_id,
+                property_use=self.property_use,
+                name__iexact=self.property_class,
+                is_active=True,
+            ).exists()
+
+            if not class_exists:
+                raise ValidationError(
+                    {
+                        "property_class": (
+                            "This property class is not configured for the selected "
+                            "assembly and property use. Create it under Property classes first."
+                        )
+                    }
+                )
 
         if self.effective_to and self.effective_to < self.effective_from:
             raise ValidationError({"effective_to": "Effective to date cannot be earlier than effective from date."})
@@ -135,7 +219,15 @@ class RatePolicy(TimeStampedModel):
         super().save(*args, **kwargs)
 
     @classmethod
-    def get_applicable_policy(cls, assembly, property_use, community_area=None, building_type="", on_date=None, year=None):
+    def get_applicable_policy(
+        cls,
+        assembly,
+        property_use,
+        community_area=None,
+        building_type="",
+        on_date=None,
+        year=None,
+    ):
         if not assembly or not property_use:
             return None
 
@@ -158,18 +250,31 @@ class RatePolicy(TimeStampedModel):
 
         if community_area:
             exact_area_qs = base_qs.filter(covered_areas=community_area)
+
             if building_type:
-                exact_area_exact_type = ordered(exact_area_qs.filter(building_type=building_type)).first()
+                exact_area_exact_type = ordered(
+                    exact_area_qs.filter(building_type=building_type)
+                ).first()
+
                 if exact_area_exact_type:
                     return exact_area_exact_type
 
-            exact_area_all_type = ordered(exact_area_qs.filter(building_type="")).first()
+            exact_area_all_type = ordered(
+                exact_area_qs.filter(building_type="")
+            ).first()
+
             if exact_area_all_type:
                 return exact_area_all_type
 
-        no_area_qs = base_qs.annotate(area_count=models.Count("covered_areas")).filter(area_count=0)
+        no_area_qs = base_qs.annotate(
+            area_count=models.Count("covered_areas")
+        ).filter(area_count=0)
+
         if building_type:
-            no_area_exact_type = ordered(no_area_qs.filter(building_type=building_type)).first()
+            no_area_exact_type = ordered(
+                no_area_qs.filter(building_type=building_type)
+            ).first()
+
             if no_area_exact_type:
                 return no_area_exact_type
 
@@ -178,8 +283,10 @@ class RatePolicy(TimeStampedModel):
     def calculate_principal(self, rateable_value):
         rateable_value = Decimal(rateable_value or 0)
         principal = rateable_value * (self.rate_impost or Decimal("0.00000"))
+
         if principal < (self.minimum_charge or Decimal("0.00")):
             principal = self.minimum_charge or Decimal("0.00")
+
         return principal.quantize(Decimal("0.01"))
 
 
@@ -300,8 +407,13 @@ class Bill(TimeStampedModel):
                 self.property_class_snapshot = ""
         else:
             if not self.rate_policy_id:
-                raise ValidationError("No active rate policy matches this property's billing year, area, use, class and building type.")
-            self.principal_amount = self.rate_policy.calculate_principal(self.rateable_value_snapshot)
+                raise ValidationError(
+                    "No active rate policy matches this property's billing year, "
+                    "area, use, class and building type."
+                )
+            self.principal_amount = self.rate_policy.calculate_principal(
+                self.rateable_value_snapshot
+            )
 
         self.amount_due = (
             (self.principal_amount or Decimal("0.00"))
