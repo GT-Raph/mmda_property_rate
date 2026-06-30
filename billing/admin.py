@@ -86,17 +86,18 @@ class PropertyClassAdminForm(forms.ModelForm):
         self.fields[
             "covered_areas"
         ].help_text = (
-            "Select every community/area that belongs "
+            "Select every community or area that belongs "
             "to this class. When this class is selected "
-            "in Rate Policies, all of these areas will "
+            "in a Rate Policy, all of these areas will "
             "be added automatically."
         )
 
-        community_areas_url = reverse(
-            "admin:"
-            "billing_propertyclass_"
-            "community_areas"
-        )
+        try:
+            community_areas_url = reverse(
+                "admin:billing_propertyclass_community_areas"
+            )
+        except Exception:
+            community_areas_url = ""
 
         self.fields[
             "assembly"
@@ -115,10 +116,6 @@ class PropertyClassAdminForm(forms.ModelForm):
             "assembly"
         )
 
-        property_use = cleaned_data.get(
-            "property_use"
-        )
-
         name = (
             cleaned_data.get("name")
             or ""
@@ -132,35 +129,25 @@ class PropertyClassAdminForm(forms.ModelForm):
         self.instance.name = name
 
         if covered_areas and assembly:
-            invalid_areas = (
-                covered_areas.exclude(
-                    assembly=assembly
-                )
+            invalid_areas = covered_areas.exclude(
+                assembly=assembly
             )
 
             if invalid_areas.exists():
                 raise ValidationError(
                     {
                         "covered_areas": (
-                            "Every selected area "
-                            "must belong to the "
-                            "selected assembly."
+                            "Every selected area must "
+                            "belong to the selected assembly."
                         )
                     }
                 )
 
-        if (
-            assembly
-            and property_use
-            and covered_areas
-        ):
+        if assembly and covered_areas:
             overlapping_classes = (
                 PropertyClass.objects.filter(
                     assembly=assembly,
-                    property_use=property_use,
-                    covered_areas__in=(
-                        covered_areas
-                    ),
+                    covered_areas__in=covered_areas,
                 )
                 .exclude(
                     pk=self.instance.pk
@@ -170,37 +157,18 @@ class PropertyClassAdminForm(forms.ModelForm):
 
             if overlapping_classes.exists():
                 class_names = ", ".join(
-                    overlapping_classes
-                    .values_list(
+                    overlapping_classes.values_list(
                         "name",
                         flat=True,
-                    )
-                )
-
-                property_use_choices = dict(
-                    PropertyClass
-                    ._meta
-                    .get_field(
-                        "property_use"
-                    )
-                    .choices
-                )
-
-                property_use_label = (
-                    property_use_choices.get(
-                        property_use,
-                        property_use,
                     )
                 )
 
                 raise ValidationError(
                     {
                         "covered_areas": (
-                            "One or more selected "
-                            "areas are already "
-                            "assigned to another "
-                            f"{property_use_label} "
-                            "class: "
+                            "One or more selected areas are "
+                            "already assigned to another "
+                            "property class in this assembly: "
                             f"{class_names}."
                         )
                     }
@@ -215,9 +183,9 @@ class RatePolicyAdminForm(forms.ModelForm):
         required=True,
         choices=(),
         help_text=(
-            "Choose a class configured under "
-            "Property classes. The covered areas "
-            "will load automatically."
+            "Choose a class configured under Property "
+            "classes. The covered areas will load "
+            "automatically."
         ),
     )
 
@@ -238,11 +206,6 @@ class RatePolicyAdminForm(forms.ModelForm):
             "assembly",
         )
 
-        property_use = _get_bound_value(
-            self,
-            "property_use",
-        )
-
         if hasattr(assembly_id, "pk"):
             assembly_id = assembly_id.pk
 
@@ -255,26 +218,11 @@ class RatePolicyAdminForm(forms.ModelForm):
         )
 
         if assembly_id:
-            class_queryset = (
-                class_queryset.filter(
-                    assembly_id=assembly_id
-                )
+            class_queryset = class_queryset.filter(
+                assembly_id=assembly_id
             )
         else:
-            class_queryset = (
-                class_queryset.none()
-            )
-
-        if property_use:
-            class_queryset = (
-                class_queryset.filter(
-                    property_use=property_use
-                )
-            )
-        else:
-            class_queryset = (
-                class_queryset.none()
-            )
+            class_queryset = class_queryset.none()
 
         class_choices = [
             (
@@ -283,13 +231,10 @@ class RatePolicyAdminForm(forms.ModelForm):
             ),
             *[
                 (
-                    str(
-                        property_class.pk
-                    ),
+                    str(property_class.pk),
                     property_class.name,
                 )
-                for property_class
-                in class_queryset
+                for property_class in class_queryset
             ],
         ]
 
@@ -311,16 +256,10 @@ class RatePolicyAdminForm(forms.ModelForm):
             matched_class = (
                 PropertyClass.objects.filter(
                     assembly_id=(
-                        self.instance
-                        .assembly_id
-                    ),
-                    property_use=(
-                        self.instance
-                        .property_use
+                        self.instance.assembly_id
                     ),
                     name__iexact=(
-                        self.instance
-                        .property_class
+                        self.instance.property_class
                     ),
                     is_active=True,
                 )
@@ -333,6 +272,7 @@ class RatePolicyAdminForm(forms.ModelForm):
                 ] = str(
                     matched_class.pk
                 )
+
             else:
                 legacy_value = (
                     f"{LEGACY_CLASS_PREFIX}"
@@ -357,9 +297,7 @@ class RatePolicyAdminForm(forms.ModelForm):
             "property_class"
         ].choices = class_choices
 
-        areas_queryset = (
-            CommunityArea.objects.none()
-        )
+        areas_queryset = CommunityArea.objects.none()
 
         if assembly_id:
             areas_queryset = (
@@ -385,36 +323,40 @@ class RatePolicyAdminForm(forms.ModelForm):
         self.fields[
             "covered_areas"
         ].help_text = (
-            "This list is controlled by the "
-            "selected Property class. All areas "
-            "assigned to that class will be saved "
-            "automatically."
+            "This list is controlled by the selected "
+            "Property class. All areas assigned to that "
+            "class will be saved automatically."
         )
 
         try:
             property_classes_url = reverse(
-                "admin:"
-                "billing_ratepolicy_"
-                "property_classes"
+                "admin:billing_ratepolicy_property_classes"
             )
 
             property_class_areas_url = reverse(
-                "admin:"
-                "billing_ratepolicy_"
-                "property_class_areas"
+                "admin:billing_ratepolicy_property_class_areas"
             )
+
         except Exception:
             property_classes_url = ""
             property_class_areas_url = ""
 
+        class_url_attributes = {
+            "data-property-classes-url": (
+                property_classes_url
+            ),
+        }
+
+        self.fields[
+            "assembly"
+        ].widget.attrs.update(
+            class_url_attributes
+        )
+
         self.fields[
             "property_use"
         ].widget.attrs.update(
-            {
-                "data-property-classes-url": (
-                    property_classes_url
-                ),
-            }
+            class_url_attributes
         )
 
         self.fields[
@@ -452,13 +394,10 @@ class RatePolicyAdminForm(forms.ModelForm):
 
             if not legacy_name:
                 raise ValidationError(
-                    "The legacy property class "
-                    "is invalid."
+                    "The legacy property class is invalid."
                 )
 
-            self.selected_property_class = (
-                None
-            )
+            self.selected_property_class = None
 
             return legacy_name
 
@@ -473,6 +412,7 @@ class RatePolicyAdminForm(forms.ModelForm):
                     is_active=True,
                 )
             )
+
         except (
             PropertyClass.DoesNotExist,
             ValueError,
@@ -486,32 +426,14 @@ class RatePolicyAdminForm(forms.ModelForm):
             "assembly"
         )
 
-        property_use = (
-            self.cleaned_data.get(
-                "property_use"
-            )
-        )
-
         if (
             assembly
             and property_class.assembly_id
             != assembly.id
         ):
             raise ValidationError(
-                "The selected property class "
-                "does not belong to the selected "
-                "assembly."
-            )
-
-        if (
-            property_use
-            and property_class.property_use
-            != property_use
-        ):
-            raise ValidationError(
-                "The selected property class "
-                "does not belong to the selected "
-                "property use."
+                "The selected property class does "
+                "not belong to the selected assembly."
             )
 
         self.selected_property_class = (
@@ -573,8 +495,7 @@ class RatePolicyAdminForm(forms.ModelForm):
 
         if selected_class:
             class_areas = (
-                selected_class
-                .covered_areas
+                selected_class.covered_areas
                 .filter(
                     is_active=True
                 )
@@ -591,14 +512,14 @@ class RatePolicyAdminForm(forms.ModelForm):
                 raise ValidationError(
                     {
                         "property_class": (
-                            "The selected property "
-                            "class has no active "
-                            "areas. Add areas to the "
-                            "class before creating a "
-                            "rate policy."
+                            "The selected property class "
+                            "has no active areas. Add areas "
+                            "to the class before creating "
+                            "a rate policy."
                         )
                     }
                 )
+
         else:
             if posted_areas:
                 current_area_ids = set(
@@ -607,6 +528,7 @@ class RatePolicyAdminForm(forms.ModelForm):
                         flat=True,
                     )
                 )
+
             else:
                 current_area_ids = set()
 
@@ -631,15 +553,11 @@ class RatePolicyAdminForm(forms.ModelForm):
                 RatePolicy.objects.filter(
                     assembly=assembly,
                     year=year,
-                    property_use=(
-                        property_use
-                    ),
+                    property_use=property_use,
                     property_class__iexact=(
                         property_class
                     ),
-                    building_type=(
-                        building_type
-                    ),
+                    building_type=building_type,
                     status="active",
                 )
                 .exclude(
@@ -650,8 +568,7 @@ class RatePolicyAdminForm(forms.ModelForm):
             for other in conflicts:
                 other_end = (
                     other.effective_to
-                    or other.effective_from
-                    .replace(
+                    or other.effective_from.replace(
                         month=12,
                         day=31,
                     )
@@ -668,8 +585,7 @@ class RatePolicyAdminForm(forms.ModelForm):
                     continue
 
                 other_area_ids = set(
-                    other.covered_areas
-                    .values_list(
+                    other.covered_areas.values_list(
                         "id",
                         flat=True,
                     )
@@ -684,8 +600,8 @@ class RatePolicyAdminForm(forms.ModelForm):
                 ):
                     raise ValidationError(
                         "Another active rate policy "
-                        "overlaps with the same "
-                        "area(s), class, year and "
+                        "overlaps with the same areas, "
+                        "class, year, property use and "
                         "building type."
                     )
 
@@ -694,10 +610,10 @@ class RatePolicyAdminForm(forms.ModelForm):
                     and not other_area_ids
                 ):
                     raise ValidationError(
-                        "Another active fallback "
-                        "policy already overlaps "
-                        "with the same class, year "
-                        "and building type."
+                        "Another active fallback policy "
+                        "already overlaps with the same "
+                        "class, year, property use and "
+                        "building type."
                     )
 
         return cleaned_data
@@ -740,7 +656,6 @@ class PropertyClassAdmin(admin.ModelAdmin):
 
     list_display = (
         "name",
-        "property_use",
         "assembly",
         "area_count",
         "is_active",
@@ -748,7 +663,6 @@ class PropertyClassAdmin(admin.ModelAdmin):
 
     list_filter = (
         "assembly",
-        "property_use",
         "is_active",
     )
 
@@ -768,7 +682,6 @@ class PropertyClassAdmin(admin.ModelAdmin):
 
     ordering = (
         "assembly__name",
-        "property_use",
         "name",
     )
 
@@ -778,11 +691,10 @@ class PropertyClassAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "assembly",
-                    "property_use",
                     "name",
                     "covered_areas",
                     "is_active",
-                )
+                ),
             },
         ),
     )
@@ -856,7 +768,10 @@ class PropertyClassAdmin(admin.ModelAdmin):
     @admin.display(
         description="Areas"
     )
-    def area_count(self, obj):
+    def area_count(
+        self,
+        obj,
+    ):
         return obj.covered_areas.count()
 
 
@@ -920,7 +835,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     "property_class",
                     "covered_areas",
                     "building_type",
-                )
+                ),
             },
         ),
         (
@@ -929,7 +844,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                 "fields": (
                     "rate_impost",
                     "minimum_charge",
-                )
+                ),
             },
         ),
         (
@@ -940,15 +855,14 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     "effective_to",
                     "status",
                     "notes",
-                )
+                ),
             },
         ),
     )
 
     class Media:
         js = (
-            "billing/js/"
-            "rate_policy_admin.js",
+            "billing/js/rate_policy_admin.js",
         )
 
     def get_urls(self):
@@ -991,13 +905,6 @@ class RatePolicyAdmin(admin.ModelAdmin):
             or ""
         ).strip()
 
-        property_use = (
-            request.GET.get(
-                "property_use"
-            )
-            or ""
-        ).strip()
-
         queryset = (
             PropertyClass.objects.filter(
                 is_active=True
@@ -1009,13 +916,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
             queryset = queryset.filter(
                 assembly_id=assembly_id
             )
-        else:
-            queryset = queryset.none()
 
-        if property_use:
-            queryset = queryset.filter(
-                property_use=property_use
-            )
         else:
             queryset = queryset.none()
 
@@ -1024,9 +925,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                 "id": str(
                     property_class.pk
                 ),
-                "text": (
-                    property_class.name
-                ),
+                "text": property_class.name,
             }
             for property_class in queryset
         ]
@@ -1062,6 +961,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     is_active=True,
                 )
             )
+
         except (
             PropertyClass.DoesNotExist,
             ValueError,
@@ -1075,8 +975,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
             )
 
         areas = (
-            property_class
-            .covered_areas
+            property_class.covered_areas
             .filter(
                 is_active=True
             )
@@ -1089,10 +988,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
         results = [
             {
                 "id": str(area.pk),
-                "text": (
-                    f"{area.name} "
-                    f"({area.get_sub_metro_display()})"
-                ),
+                "text": str(area),
             }
             for area in areas
         ]
@@ -1103,9 +999,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     "id": str(
                         property_class.pk
                     ),
-                    "name": (
-                        property_class.name
-                    ),
+                    "name": property_class.name,
                 },
                 "results": results,
             }
@@ -1137,13 +1031,8 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     assembly=(
                         form.instance.assembly
                     ),
-                    property_use=(
-                        form.instance
-                        .property_use
-                    ),
                     name__iexact=(
-                        form.instance
-                        .property_class
+                        form.instance.property_class
                     ),
                     is_active=True,
                 )
@@ -1152,9 +1041,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
 
         if selected_class:
             form.instance.covered_areas.set(
-                selected_class
-                .covered_areas
-                .filter(
+                selected_class.covered_areas.filter(
                     is_active=True
                 )
             )
@@ -1192,10 +1079,8 @@ class BillAdmin(admin.ModelAdmin):
 
     search_fields = (
         "bill_number",
-        "property_record__"
-        "property_reference",
-        "property_record__"
-        "owner__full_name",
+        "property_record__property_reference",
+        "property_record__owner__full_name",
         "policy_name_snapshot",
         "property_class_snapshot",
     )
@@ -1207,9 +1092,7 @@ class BillAdmin(admin.ModelAdmin):
 
 
 @admin.register(BillDispute)
-class BillDisputeAdmin(
-    admin.ModelAdmin
-):
+class BillDisputeAdmin(admin.ModelAdmin):
     list_display = (
         "bill",
         "issue_type",
@@ -1225,9 +1108,7 @@ class BillDisputeAdmin(
 
     search_fields = (
         "bill__bill_number",
-        "bill__property_record__"
-        "property_reference",
-        "bill__property_record__"
-        "owner__full_name",
+        "bill__property_record__property_reference",
+        "bill__property_record__owner__full_name",
         "description",
     )
