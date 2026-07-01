@@ -36,6 +36,7 @@ DEBUG = os.getenv("DEBUG", "False").strip().lower() == "true"
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
+    "mmda-property-rate.onrender.com"
 ]
 
 # Add your Render hostname automatically if available
@@ -53,7 +54,9 @@ if extra_allowed_hosts:
 # Remove duplicates while preserving order
 ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
 
-CSRF_TRUSTED_ORIGINS = []
+CSRF_TRUSTED_ORIGINS = [
+    "https://mmda-property-rate.onrender.com",
+]
 
 if render_external_hostname:
     CSRF_TRUSTED_ORIGINS.append(f"https://{render_external_hostname}")
@@ -240,6 +243,7 @@ SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "http://127.0.0.1:8000")
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000
