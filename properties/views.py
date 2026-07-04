@@ -266,8 +266,13 @@ def add_property(request):
     portal_access = get_allowed_modules(request.user)
 
     if not context_assembly:
-        messages.error(request, "No active assembly was found for your account.")
-        return redirect("properties:property-registry")
+        messages.error(
+            request,
+            "No active assembly was found for your account.",
+        )
+        return redirect(
+            "properties:property-registry"
+        )
 
     if request.method == "POST":
         form = PropertyCreateForm(
@@ -276,56 +281,164 @@ def add_property(request):
         )
 
         if form.is_valid():
+            property_instance = None
+
             try:
                 with transaction.atomic():
-                    property_instance = form.save(assembly=context_assembly)
+                    property_instance = form.save(
+                        assembly=context_assembly
+                    )
 
                     update_fields = []
 
-                    if hasattr(property_instance, "registered_by_id") and not property_instance.registered_by_id:
-                        property_instance.registered_by = request.user
-                        update_fields.append("registered_by")
+                    if (
+                        hasattr(
+                            property_instance,
+                            "registered_by_id",
+                        )
+                        and not property_instance.registered_by_id
+                    ):
+                        property_instance.registered_by = (
+                            request.user
+                        )
+                        update_fields.append(
+                            "registered_by"
+                        )
 
-                    if hasattr(property_instance, "registration_source"):
-                        role = get_user_role(request.user)
-                        property_instance.registration_source = "field" if role == "field_officer" else "admin"
-                        update_fields.append("registration_source")
+                    if hasattr(
+                        property_instance,
+                        "registration_source",
+                    ):
+                        role = get_user_role(
+                            request.user
+                        )
+
+                        property_instance.registration_source = (
+                            "field"
+                            if role == "field_officer"
+                            else "admin"
+                        )
+
+                        update_fields.append(
+                            "registration_source"
+                        )
 
                     if update_fields:
-                        property_instance.save(update_fields=update_fields)
-
-                    owner = getattr(property_instance, "owner", None)
-                    account_result = link_or_create_citizen_for_owner(owner, default_password="1234")
-
-                messages.success(request, f"Property {property_instance.property_reference} was added successfully.")
-
-                if account_result.get("created"):
-                    messages.info(
-                        request,
-                        f"Citizen account created for {owner.full_name}. Username: {account_result['username']} | Temporary password: 1234"
-                    )
-                elif account_result.get("linked"):
-                    messages.info(
-                        request,
-                        f"Property owner {owner.full_name} was linked to citizen account: {account_result['username']}."
-                    )
-
-                return redirect("properties:property-registry")
+                        property_instance.save(
+                            update_fields=update_fields
+                        )
 
             except ValidationError as exc:
-                form.add_error(None, exc)
-                messages.error(request, "Please resolve the rate policy validation error and try again.")
-            except Exception as exc:
                 logger.exception(
-                    "Unexpected error while saving property"
+                    "Rate policy validation failed "
+                    "while saving property."
+                )
+
+                form.add_error(
+                    None,
+                    exc,
                 )
 
                 messages.error(
                     request,
-                    "Could not save the property. Please try again.",
+                    (
+                        "Please resolve the rate policy "
+                        "validation error and try again."
+                    ),
                 )
+
+            except Exception as exc:
+                logger.exception(
+                    "Property database save failed."
+                )
+
+                messages.error(
+                    request,
+                    (
+                        "Could not save the property. "
+                        f"Error: {exc}"
+                    ),
+                )
+
+            else:
+                owner = getattr(
+                    property_instance,
+                    "owner",
+                    None,
+                )
+
+                account_result = {
+                    "created": False,
+                    "linked": False,
+                    "username": "",
+                }
+
+                try:
+                    account_result = (
+                        link_or_create_citizen_for_owner(
+                            owner,
+                            default_password="1234",
+                        )
+                    )
+
+                except Exception as exc:
+                    logger.exception(
+                        "Property saved, but citizen "
+                        "account creation failed."
+                    )
+
+                    messages.warning(
+                        request,
+                        (
+                            "The property was saved successfully, "
+                            "but the citizen account could not be "
+                            f"created automatically. Error: {exc}"
+                        ),
+                    )
+
+                messages.success(
+                    request,
+                    (
+                        f"Property "
+                        f"{property_instance.property_reference} "
+                        "was added successfully."
+                    ),
+                )
+
+                if account_result.get("created"):
+                    messages.info(
+                        request,
+                        (
+                            "Citizen account created for "
+                            f"{owner.full_name}. Username: "
+                            f"{account_result['username']} | "
+                            "Temporary password: 1234"
+                        ),
+                    )
+
+                elif account_result.get("linked"):
+                    messages.info(
+                        request,
+                        (
+                            f"Property owner {owner.full_name} "
+                            "was linked to citizen account: "
+                            f"{account_result['username']}."
+                        ),
+                    )
+
+                return redirect(
+                    "properties:property-registry"
+                )
+
         else:
-            messages.error(request, "Please correct the highlighted errors and try again.")
+            messages.error(
+                request,
+                (
+                    "Please correct the highlighted "
+                    "errors and try again."
+                ),
+            )
+
     else:
         form = PropertyCreateForm(
             assembly=context_assembly,
@@ -333,12 +446,28 @@ def add_property(request):
 
     context = {
         "page_title": "Add Property",
-        "page_subtitle": "Register a new property into the system",
+        "page_subtitle": (
+            "Register a new property into the system"
+        ),
         "context_assembly": context_assembly,
         "form": form,
-        "property_fields": [form[name] for name in form.property_field_names],
-        "owner_selector_fields": [form[name] for name in form.owner_selector_field_names],
-        "owner_fields": [form[name] for name in form.owner_field_names],
+        "property_fields": [
+            form[name]
+            for name in form.property_field_names
+        ],
+        "owner_selector_fields": [
+            form[name]
+            for name in form.owner_selector_field_names
+        ],
+        "owner_fields": [
+            form[name]
+            for name in form.owner_field_names
+        ],
         "portal_access": portal_access,
     }
-    return render(request, "properties/property_form.html", context)
+
+    return render(
+        request,
+        "properties/property_form.html",
+        context,
+    )

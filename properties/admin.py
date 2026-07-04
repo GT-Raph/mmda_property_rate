@@ -268,7 +268,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "suburb",
         "area_town",
         "community_area__name",
-        "property_class__name",
+        "property_class",
         "digital_address",
     )
     autocomplete_fields = ("owner", "registered_by", "community_area", "applied_rate_policy")
