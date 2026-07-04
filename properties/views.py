@@ -18,9 +18,28 @@ from properties.forms import PropertyCreateForm
 from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
 import logging
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
+def log_view_errors(view_function):
+    @wraps(view_function)
+    def wrapper(*args, **kwargs):
+        try:
+            return view_function(
+                *args,
+                **kwargs,
+            )
+        except Exception:
+            logger.exception(
+                "Unhandled error inside %s",
+                view_function.__name__,
+            )
+            raise
+
+    return wrapper
+
+@log_view_errors
 def _get_current_assembly(request):
     assembly_id = request.session.get("active_assembly_id")
 
@@ -158,6 +177,7 @@ def property_rate_preview(request):
 
 
 @module_required("properties")
+@log_view_errors
 def property_registry(request):
     context_assembly = _get_current_assembly(request)
     portal_access = get_allowed_modules(request.user)

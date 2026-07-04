@@ -622,9 +622,14 @@
             transition: 0.18s ease;
         }
 
-        .icon-btn:hover {
+        .icon-btn:hover:not(:disabled) {
             background: #f7f7f7;
             border-color: #ececec;
+        }
+
+        .icon-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
         }
 
         .icon-btn svg {
@@ -919,7 +924,7 @@
                 </a>
             </div>
 
-            <!-- {% if messages %}
+            {% if messages %}
                 <div class="message-stack">
                     {% for message in messages %}
                         <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
@@ -927,7 +932,7 @@
                         </div>
                     {% endfor %}
                 </div>
-            {% endif %} -->
+            {% endif %}
 
             <section class="card registry-card">
                 <form method="get" class="toolbar">
@@ -990,23 +995,43 @@
                                     </td>
                                     <td>
                                         <div class="actions">
-                                            <a href="{% url 'property_detail' property.id %}" class="icon-btn" title="View">
+                                            <button
+                                                type="button"
+                                                class="icon-btn"
+                                                title="View feature coming soon"
+                                                aria-label="View feature coming soon"
+                                                disabled
+                                            >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M2 12C3.8 8.5 7.2 6 12 6C16.8 6 20.2 8.5 22 12C20.2 15.5 16.8 18 12 18C7.2 18 3.8 15.5 2 12Z" stroke="currentColor" stroke-width="1.8"></path>
                                                     <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
                                                 </svg>
-                                            </a>
-                                            <a href="{% url 'property_edit' property.id %}" class="icon-btn" title="Edit">
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="icon-btn"
+                                                title="Edit feature coming soon"
+                                                aria-label="Edit feature coming soon"
+                                                disabled
+                                            >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M4 20H8L18 10C18.6 9.4 18.6 8.4 18 7.8L16.2 6C15.6 5.4 14.6 5.4 14 6L4 16V20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
                                                 </svg>
-                                            </a>
-                                            <a href="{% url 'property_document' property.id %}" class="icon-btn" title="Document">
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="icon-btn"
+                                                title="Document feature coming soon"
+                                                aria-label="Document feature coming soon"
+                                                disabled
+                                            >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M8 3H14L19 8V20C19 20.6 18.6 21 18 21H8C7.4 21 7 20.6 7 20V4C7 3.4 7.4 3 8 3Z" stroke="currentColor" stroke-width="1.8"></path>
                                                     <path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8"></path>
                                                 </svg>
-                                            </a>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
