@@ -17,7 +17,9 @@ from billing.models import CommunityArea, RatePolicy
 from properties.forms import PropertyCreateForm
 from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
+import logging
 
+logger = logging.getLogger(__name__)
 
 def _get_current_assembly(request):
     assembly_id = request.session.get("active_assembly_id")
@@ -187,7 +189,7 @@ def property_registry(request):
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
             | Q(address_line__icontains=search)
-            | Q(property_class__name__icontains=search)
+            | Q(property_class__icontains=search)
             | Q(community_area__name__icontains=search)
         )
 
@@ -223,7 +225,10 @@ def property_registry(request):
                 "location": _property_location(prop),
                 "type_label": _property_type_label(prop),
                 "type_class": _property_type_class(prop),
-                "property_class": getattr(getattr(prop, "property_class", None), "name", "—"),
+                "property_class": (
+                    prop.property_class
+                    or "—"
+                ),
                 "community_area": getattr(getattr(prop, "community_area", None), "name", "—"),
                 "rateable_value": f"GH₵ {prop.rateable_value:,.0f}" if getattr(prop, "rateable_value", None) else "GH₵ 0",
                 "status_label": status_label,
@@ -311,7 +316,14 @@ def add_property(request):
                 form.add_error(None, exc)
                 messages.error(request, "Please resolve the rate policy validation error and try again.")
             except Exception as exc:
-                messages.error(request, f"Could not save the property. {exc}")
+                logger.exception(
+                    "Unexpected error while saving property"
+                )
+
+                messages.error(
+                    request,
+                    "Could not save the property. Please try again.",
+                )
         else:
             messages.error(request, "Please correct the highlighted errors and try again.")
     else:

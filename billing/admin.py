@@ -232,7 +232,7 @@ class RatePolicyAdminForm(forms.ModelForm):
             *[
                 (
                     str(property_class.pk),
-                    property_class.name,
+                    property_class,
                 )
                 for property_class in class_queryset
             ],
@@ -440,7 +440,7 @@ class RatePolicyAdminForm(forms.ModelForm):
             property_class
         )
 
-        return property_class.name
+        return selected_value
 
     def clean(self):
         cleaned_data = super().clean()
@@ -925,7 +925,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                 "id": str(
                     property_class.pk
                 ),
-                "text": property_class.name,
+                "text": property_class,
             }
             for property_class in queryset
         ]
@@ -999,7 +999,7 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     "id": str(
                         property_class.pk
                     ),
-                    "name": property_class.name,
+                    "name": property_class,
                 },
                 "results": results,
             }
