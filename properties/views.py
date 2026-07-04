@@ -265,7 +265,10 @@ def add_property(request):
         return redirect("properties:property-registry")
 
     if request.method == "POST":
-        form = PropertyCreateForm(request.POST)
+        form = PropertyCreateForm(
+            request.POST,
+            assembly=context_assembly,
+        )
 
         if form.is_valid():
             try:
@@ -312,7 +315,9 @@ def add_property(request):
         else:
             messages.error(request, "Please correct the highlighted errors and try again.")
     else:
-        form = PropertyCreateForm()
+        form = PropertyCreateForm(
+            assembly=context_assembly,
+        )
 
     context = {
         "page_title": "Add Property",
