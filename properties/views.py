@@ -143,7 +143,7 @@ def property_rate_preview(request):
     return JsonResponse(
         {
             "policy_name": policy.policy_name,
-            "property_class": policy.property_class.name,
+            "property_class": policy.property_class,
             "rate_impost": str(policy.rate_impost),
             "minimum_charge": str(policy.minimum_charge),
             "annual_rate": str(principal),
