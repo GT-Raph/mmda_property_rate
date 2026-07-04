@@ -12,12 +12,12 @@ class Owner(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="owners",
     )
-    linked_user = models.OneToOneField(
+    linked_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="owner_profile",
+        related_name="owner_records",
     )
     full_name = models.CharField(max_length=255)
     primary_phone = models.CharField(max_length=20)

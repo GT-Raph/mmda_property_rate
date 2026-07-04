@@ -164,27 +164,103 @@ def _mark_bill_paid(bill, payment_amount):
     return payment_amount
 
 
+def _get_owner_model():
+    return Property._meta.get_field("owner").remote_field.model
+
+
+def _accessible_assemblies_for_user(user):
+    if not user or not user.is_authenticated:
+        return Assembly.objects.none()
+
+    profile = getattr(user, "profile", None)
+
+    if profile and hasattr(profile, "accessible_assemblies"):
+        return profile.accessible_assemblies()
+
+    if profile and getattr(profile, "role", "") != "citizen":
+        if profile.assembly_id:
+            return Assembly.objects.filter(
+                pk=profile.assembly_id,
+                is_active=True,
+            )
+        return Assembly.objects.none()
+
+    owner_model = _get_owner_model()
+    owner_assembly_ids = owner_model.objects.filter(
+        linked_user=user,
+        assembly__is_active=True,
+    ).values_list("assembly_id", flat=True)
+
+    allowed_ids = set(owner_assembly_ids)
+
+    if profile:
+        if profile.assembly_id:
+            allowed_ids.add(profile.assembly_id)
+
+        allowed_manager = getattr(profile, "allowed_assemblies", None)
+        if allowed_manager is not None:
+            allowed_ids.update(
+                allowed_manager.filter(is_active=True).values_list(
+                    "id",
+                    flat=True,
+                )
+            )
+
+    return Assembly.objects.filter(
+        id__in=allowed_ids,
+        is_active=True,
+    ).order_by("name")
+
+
 def _get_current_assembly(request):
+    profile = getattr(request.user, "profile", None)
+    role = getattr(profile, "role", "") if profile else ""
     assembly_id = request.session.get("active_assembly_id")
+
+    if role == "citizen":
+        accessible = _accessible_assemblies_for_user(request.user)
+
+        if assembly_id:
+            selected = accessible.filter(pk=assembly_id).first()
+            if selected:
+                return selected
+
+            request.session.pop("active_assembly_id", None)
+
+        if profile and profile.assembly_id:
+            default_assembly = accessible.filter(
+                pk=profile.assembly_id
+            ).first()
+            if default_assembly:
+                request.session["active_assembly_id"] = default_assembly.id
+                return default_assembly
+
+        first_assembly = accessible.first()
+        if first_assembly:
+            request.session["active_assembly_id"] = first_assembly.id
+            return first_assembly
+
+        return None
 
     if assembly_id:
         try:
-            return Assembly.objects.get(id=assembly_id, is_active=True)
+            return Assembly.objects.get(
+                id=assembly_id,
+                is_active=True,
+            )
         except Assembly.DoesNotExist:
-            pass
+            request.session.pop("active_assembly_id", None)
 
-    profile = getattr(request.user, "profile", None)
     if profile and profile.assembly_id:
         try:
-            return Assembly.objects.get(id=profile.assembly_id, is_active=True)
+            return Assembly.objects.get(
+                id=profile.assembly_id,
+                is_active=True,
+            )
         except Assembly.DoesNotExist:
             return None
 
     return None
-
-
-def _get_owner_model():
-    return Property._meta.get_field("owner").remote_field.model
 
 
 def _owner_name(owner):
@@ -199,73 +275,112 @@ def _owner_name(owner):
     )
 
 
-def _find_owner_for_user(user):
+def _grant_owner_assembly_access(user, owner):
+    profile = getattr(user, "profile", None)
+    if not profile or not owner or not owner.assembly_id:
+        return
+
+    update_fields = []
+
+    if getattr(profile, "role", "") != "citizen":
+        profile.role = "citizen"
+        update_fields.append("role")
+
+    if not profile.assembly_id:
+        profile.assembly = owner.assembly
+        update_fields.append("assembly")
+
+    if update_fields:
+        profile.save(update_fields=update_fields)
+
+    allowed_manager = getattr(profile, "allowed_assemblies", None)
+    if allowed_manager is not None:
+        allowed_manager.add(owner.assembly)
+
+
+def _find_owner_for_user(user, assembly=None):
     if not user or not user.is_authenticated:
         return None
 
-    owner = getattr(user, "owner_profile", None)
+    owner_model = _get_owner_model()
+    owner_field_names = {
+        field.name
+        for field in owner_model._meta.get_fields()
+    }
+
+    linked_qs = owner_model.objects.filter(linked_user=user)
+    if assembly is not None and "assembly" in owner_field_names:
+        linked_qs = linked_qs.filter(assembly=assembly)
+
+    owner = linked_qs.order_by("id").first()
     if owner:
+        _grant_owner_assembly_access(user, owner)
         return owner
 
-    owner_model = _get_owner_model()
-    owner_field_names = {f.name for f in owner_model._meta.get_fields()}
-
-    if "linked_user" in owner_field_names:
-        owner = owner_model.objects.filter(linked_user=user).first()
-        if owner:
-            return owner
+    fallback_qs = owner_model.objects.all()
+    if assembly is not None and "assembly" in owner_field_names:
+        fallback_qs = fallback_qs.filter(assembly=assembly)
 
     user_email = (user.email or "").strip().lower()
     if user_email and "email" in owner_field_names:
-        owner = owner_model.objects.filter(email__iexact=user_email).first()
+        owner = fallback_qs.filter(email__iexact=user_email).first()
         if owner:
-            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
-                owner.linked_user = user
-                owner.save(update_fields=["linked_user"])
+            owner.linked_user = user
+            owner.save(update_fields=["linked_user"])
+            _grant_owner_assembly_access(user, owner)
             return owner
 
     profile = getattr(user, "profile", None)
-    profile_phone = normalize_phone(getattr(profile, "phone_number", "") if profile else "")
+    profile_phone = normalize_phone(
+        getattr(profile, "phone_number", "") if profile else ""
+    )
 
-    if profile_phone and "primary_phone" in owner_field_names:
-        owner = owner_model.objects.filter(primary_phone=profile_phone).first()
-        if owner:
-            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
-                owner.linked_user = user
-                owner.save(update_fields=["linked_user"])
-            return owner
+    if profile_phone:
+        for phone_field in ["primary_phone", "alternate_phone"]:
+            if phone_field not in owner_field_names:
+                continue
 
-    if profile_phone and "alternate_phone" in owner_field_names:
-        owner = owner_model.objects.filter(alternate_phone=profile_phone).first()
-        if owner:
-            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
-                owner.linked_user = user
-                owner.save(update_fields=["linked_user"])
-            return owner
+            for candidate in fallback_qs.exclude(**{phone_field: ""}):
+                if normalize_phone(getattr(candidate, phone_field, "")) == profile_phone:
+                    candidate.linked_user = user
+                    candidate.save(update_fields=["linked_user"])
+                    _grant_owner_assembly_access(user, candidate)
+                    return candidate
 
     full_name = normalize_text(user.get_full_name())
     if full_name and "full_name" in owner_field_names:
-        owners_qs = owner_model.objects.filter(full_name__iexact=user.get_full_name().strip())
-
-        if profile and getattr(profile, "assembly_id", None) and "assembly" in owner_field_names:
-            owners_qs = owners_qs.filter(assembly_id=profile.assembly_id)
+        owners_qs = fallback_qs.filter(
+            full_name__iexact=user.get_full_name().strip()
+        )
 
         if owners_qs.count() == 1:
             owner = owners_qs.first()
-            if hasattr(owner, "linked_user_id") and not owner.linked_user_id:
-                owner.linked_user = user
-                owner.save(update_fields=["linked_user"])
+            owner.linked_user = user
+            owner.save(update_fields=["linked_user"])
+            _grant_owner_assembly_access(user, owner)
             return owner
 
     return None
 
 
+def _owner_q(owner, prefix):
+    if owner and getattr(owner, "linked_user_id", None):
+        return Q(**{f"{prefix}__linked_user_id": owner.linked_user_id})
+    return Q(**{prefix: owner})
+
+
 def _owner_properties_queryset(owner, assembly=None):
-    qs = Property.objects.filter(owner=owner).order_by("-created_at")
+    if not owner:
+        return Property.objects.none()
+
+    qs = Property.objects.filter(
+        _owner_q(owner, "owner")
+    ).order_by("-created_at")
+
     if assembly:
         qs = qs.filter(assembly=assembly)
-    return qs
 
+    return qs
 
 def _property_type_label(prop):
     if hasattr(prop, "get_property_use_display"):
@@ -378,7 +493,12 @@ def _annual_rate_for_property(property_obj):
 def _citizen_owner_or_none(request):
     if get_user_role(request.user) != "citizen":
         return None
-    return _find_owner_for_user(request.user)
+
+    context_assembly = _get_current_assembly(request)
+    return _find_owner_for_user(
+        request.user,
+        assembly=context_assembly,
+    )
 
 
 def _safe_reverse(name, fallback="#", *args, **kwargs):
@@ -450,7 +570,10 @@ def citizen_dashboard(request):
         return redirect("portal-login")
 
     context_assembly = _get_current_assembly(request)
-    owner = _find_owner_for_user(request.user)
+    owner = _find_owner_for_user(
+        request.user,
+        assembly=context_assembly,
+    )
 
     owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
     owner_short_name = request.user.first_name or owner_name.split()[0]
@@ -491,7 +614,7 @@ def citizen_dashboard(request):
 
     properties_qs = _owner_properties_queryset(owner, context_assembly)
 
-    bills_qs = Bill.objects.filter(property_record__owner=owner).select_related(
+    bills_qs = Bill.objects.filter(_owner_q(owner, "property_record__owner")).select_related(
         "property_record",
         "rate_policy",
     ).order_by("-billing_year", "-created_at")
@@ -500,7 +623,7 @@ def citizen_dashboard(request):
         bills_qs = bills_qs.filter(assembly=context_assembly)
 
     payments_qs = Payment.objects.filter(
-        Q(property__owner=owner) | Q(bill__property_record__owner=owner),
+        _owner_q(owner, "property__owner") | _owner_q(owner, "bill__property_record__owner"),
         status="successful",
     ).select_related("property", "bill").order_by("-paid_at", "-created_at")
 
@@ -684,7 +807,7 @@ def citizen_property_bills(request, property_id):
 
     context_assembly = _get_current_assembly(request)
 
-    property_qs = Property.objects.filter(owner=owner)
+    property_qs = Property.objects.filter(_owner_q(owner, "owner"))
     if context_assembly:
         property_qs = property_qs.filter(assembly=context_assembly)
 
@@ -749,7 +872,7 @@ def citizen_property_certificate(request, property_id):
 
     context_assembly = _get_current_assembly(request)
 
-    property_qs = Property.objects.filter(owner=owner)
+    property_qs = Property.objects.filter(_owner_q(owner, "owner"))
     if context_assembly:
         property_qs = property_qs.filter(assembly=context_assembly)
 
@@ -798,7 +921,7 @@ def citizen_bills(request):
     unpaid_count = 0
 
     if owner:
-        bills_qs = Bill.objects.filter(property_record__owner=owner).select_related(
+        bills_qs = Bill.objects.filter(_owner_q(owner, "property_record__owner")).select_related(
             "property_record",
             "rate_policy",
         ).order_by("-billing_year", "-created_at")
@@ -877,7 +1000,7 @@ def citizen_bill_detail(request, bill_id):
 
     context_assembly = _get_current_assembly(request)
 
-    bill_qs = Bill.objects.filter(property_record__owner=owner).select_related("property_record", "rate_policy")
+    bill_qs = Bill.objects.filter(_owner_q(owner, "property_record__owner")).select_related("property_record", "rate_policy")
     if context_assembly:
         bill_qs = bill_qs.filter(assembly=context_assembly)
 
@@ -922,15 +1045,15 @@ def citizen_payment_confirm(request):
         selected_bill_ids = request.GET.getlist("bill")
         if request.GET.get("all") == "1":
             selected_bill_ids = list(
-                Bill.objects.filter(property_record__owner=owner)
+                Bill.objects.filter(_owner_q(owner, "property_record__owner"))
                 .exclude(status__in=["paid", "cancelled"])
                 .values_list("id", flat=True)
             )
         form = CitizenPaymentForm()
 
     bills_qs = Bill.objects.filter(
+        _owner_q(owner, "property_record__owner"),
         id__in=selected_bill_ids,
-        property_record__owner=owner,
     ).select_related("property_record", "rate_policy")
 
     if context_assembly:
@@ -1015,8 +1138,8 @@ def citizen_payment_success(request):
         master_reference = f"TXN-{uuid.uuid4().hex[:16].upper()}"
 
         bills_qs = Bill.objects.filter(
+            _owner_q(owner, "property_record__owner"),
             id__in=bill_ids,
-            property_record__owner=owner,
         ).select_related("property_record").order_by("id")
 
         if context_assembly:
@@ -1082,7 +1205,7 @@ def citizen_payment_history(request):
     context_assembly = _get_current_assembly(request)
 
     payments_qs = Payment.objects.filter(
-        Q(property__owner=owner) | Q(bill__property_record__owner=owner),
+        _owner_q(owner, "property__owner") | _owner_q(owner, "bill__property_record__owner"),
         status="successful",
     ).select_related("property", "bill").order_by("-paid_at", "-created_at")
 
@@ -1228,7 +1351,10 @@ def _display_owner_address(owner, preference, properties_qs):
 
 def _build_citizen_profile_context(request, *, active_modal="", form_overrides=None):
     context_assembly = _get_current_assembly(request)
-    owner = _find_owner_for_user(request.user)
+    owner = _find_owner_for_user(
+        request.user,
+        assembly=context_assembly,
+    )
     preference = _get_or_create_citizen_preference(request.user)
 
     properties_qs = _owner_properties_queryset(owner, context_assembly) if owner else Property.objects.none()
@@ -1302,7 +1428,7 @@ def citizen_update_name(request):
     if redirect_response:
         return redirect_response
 
-    owner = _find_owner_for_user(request.user)
+    owner = _citizen_owner_or_none(request)
     form = CitizenNameForm(request.POST)
 
     if form.is_valid():
@@ -1337,7 +1463,7 @@ def citizen_update_email(request):
     if redirect_response:
         return redirect_response
 
-    owner = _find_owner_for_user(request.user)
+    owner = _citizen_owner_or_none(request)
     form = CitizenEmailForm(request.POST)
 
     if form.is_valid():
@@ -1370,7 +1496,7 @@ def citizen_update_phone(request):
     if redirect_response:
         return redirect_response
 
-    owner = _find_owner_for_user(request.user)
+    owner = _citizen_owner_or_none(request)
     profile = getattr(request.user, "profile", None)
     form = CitizenPhoneForm(request.POST)
 
@@ -1405,7 +1531,7 @@ def citizen_update_address(request):
     if redirect_response:
         return redirect_response
 
-    owner = _find_owner_for_user(request.user)
+    owner = _citizen_owner_or_none(request)
     preference = _get_or_create_citizen_preference(request.user)
     form = CitizenAddressForm(request.POST)
 
@@ -1539,7 +1665,9 @@ def citizen_certificate_download(request, certificate_uuid):
     prop_filter = f"{_certificate_property_field_name()}__owner"
     assembly_filter = f"{_certificate_property_field_name()}__assembly"
 
-    certificate_qs = _certificate_queryset().filter(**{prop_filter: owner})
+    certificate_qs = _certificate_queryset().filter(
+        _owner_q(owner, prop_filter)
+    )
 
     if context_assembly:
         certificate_qs = certificate_qs.filter(**{assembly_filter: context_assembly})
@@ -1579,7 +1707,9 @@ def citizen_certificate_qr(request, certificate_uuid):
     prop_filter = f"{_certificate_property_field_name()}__owner"
     assembly_filter = f"{_certificate_property_field_name()}__assembly"
 
-    certificate_qs = _certificate_queryset().filter(**{prop_filter: owner})
+    certificate_qs = _certificate_queryset().filter(
+        _owner_q(owner, prop_filter)
+    )
 
     if context_assembly:
         certificate_qs = certificate_qs.filter(**{assembly_filter: context_assembly})
@@ -1644,7 +1774,7 @@ def citizen_submit_dispute(request):
     properties_qs = _owner_properties_queryset(owner, context_assembly)
 
     bills_qs = Bill.objects.filter(
-        property_record__owner=owner
+        _owner_q(owner, "property_record__owner")
     ).select_related("property_record").order_by("-billing_year", "-created_at")
 
     if context_assembly:

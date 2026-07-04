@@ -1,6 +1,6 @@
 from django.conf import settings
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 
 User = get_user_model()
@@ -39,7 +39,10 @@ class ReportRun(TimeStampedModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_report_key_display()} - {self.created_at:%Y-%m-%d %H:%M}"
+        return (
+            f"{self.get_report_key_display()} - "
+            f"{self.created_at:%Y-%m-%d %H:%M}"
+        )
 
 
 class Assembly(TimeStampedModel):
@@ -90,6 +93,19 @@ class UserProfile(TimeStampedModel):
         related_name="user_profiles",
         null=True,
         blank=True,
+        help_text=(
+            "Default assembly for the account. Citizens may also have access "
+            "to additional assemblies through Allowed assemblies."
+        ),
+    )
+    allowed_assemblies = models.ManyToManyField(
+        Assembly,
+        blank=True,
+        related_name="allowed_user_profiles",
+        help_text=(
+            "Assemblies this account can access. This is especially important "
+            "for citizens who own properties in more than one assembly."
+        ),
     )
     role = models.CharField(
         max_length=30,
@@ -126,8 +142,63 @@ class UserProfile(TimeStampedModel):
 
         return f"{prefix}-{self.user_id:05d}"
 
+    def accessible_assemblies(self):
+        """
+        Return every active assembly this profile may access.
+
+        For citizens, access comes from both allowed_assemblies and linked
+        owner records. For staff accounts, the assigned default assembly is
+        used.
+        """
+        if not self.user_id:
+            return Assembly.objects.none()
+
+        if self.role == "sys_admin":
+            return Assembly.objects.filter(is_active=True).order_by("name")
+
+        if self.role != "citizen":
+            if not self.assembly_id:
+                return Assembly.objects.none()
+            return Assembly.objects.filter(
+                pk=self.assembly_id,
+                is_active=True,
+            )
+
+        allowed_ids = set(
+            self.allowed_assemblies.filter(is_active=True).values_list(
+                "id",
+                flat=True,
+            )
+        )
+
+        if self.assembly_id:
+            allowed_ids.add(self.assembly_id)
+
+        owner_manager = getattr(self.user, "owner_records", None)
+        if owner_manager is not None:
+            allowed_ids.update(
+                owner_manager.filter(assembly__is_active=True).values_list(
+                    "assembly_id",
+                    flat=True,
+                )
+            )
+
+        return Assembly.objects.filter(
+            id__in=allowed_ids,
+            is_active=True,
+        ).order_by("name")
+
+    def can_access_assembly(self, assembly_or_id):
+        assembly_id = getattr(assembly_or_id, "pk", assembly_or_id)
+        if not assembly_id:
+            return False
+        return self.accessible_assemblies().filter(pk=assembly_id).exists()
+
     def save(self, *args, **kwargs):
-        if not self.employee_id and (self.role != "citizen" or (self.user_id and self.user.is_staff)):
+        if not self.employee_id and (
+            self.role != "citizen"
+            or (self.user_id and self.user.is_staff)
+        ):
             self.employee_id = self._build_employee_id()
 
             update_fields = kwargs.get("update_fields")
@@ -167,7 +238,11 @@ class LoginAudit(TimeStampedModel):
     user_agent = models.TextField(blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     device_name = models.CharField(max_length=255, blank=True)
-    location_label = models.CharField(max_length=255, blank=True, default="Unknown")
+    location_label = models.CharField(
+        max_length=255,
+        blank=True,
+        default="Unknown",
+    )
     last_seen = models.DateTimeField(default=timezone.now)
     is_active = models.BooleanField(default=True)
 
@@ -179,4 +254,7 @@ class LoginAudit(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.user.get_username()} - {self.device_name or 'Session'}"
+        return (
+            f"{self.user.get_username()} - "
+            f"{self.device_name or 'Session'}"
+        )

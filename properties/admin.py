@@ -130,8 +130,22 @@ class OwnerAdminForm(forms.ModelForm):
 
         qs = Owner.objects.exclude(pk=self.instance.pk)
 
-        if linked_user and qs.filter(linked_user=linked_user).exists():
-            raise ValidationError({"linked_user": "Owner with this linked user already exists."})
+        if (
+            linked_user
+            and assembly
+            and qs.filter(
+                linked_user=linked_user,
+                assembly=assembly,
+            ).exists()
+        ):
+            raise ValidationError(
+                {
+                    "linked_user": (
+                        "This citizen already has an owner record "
+                        "in the selected assembly."
+                    )
+                }
+            )
 
         possible_dupes = qs
         if assembly:
