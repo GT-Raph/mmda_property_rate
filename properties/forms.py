@@ -271,6 +271,20 @@ class PropertyCreateForm(PropertyBaseForm):
                     prefixed_name
                 )
 
+        for required_owner_field in [
+            "owner_email",
+            "owner_ghana_card_number",
+        ]:
+            if (
+                required_owner_field in self.fields
+                and required_owner_field
+                not in self.owner_required_field_names
+            ):
+                self.owner_required_field_names.append(
+                    required_owner_field
+                )
+
+
         if "community_area" in self.fields:
             self.fields[
                 "community_area"

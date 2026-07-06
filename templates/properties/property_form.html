@@ -8,7 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
 
-```
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -597,7 +596,6 @@
         }
     }
 </style>
-```
 
 </head>
 <body>
@@ -610,7 +608,6 @@
             <p>MMDA Management</p>
         </div>
 
-```
     <nav class="nav">
         {% if portal_access.dashboard %}
             <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
@@ -933,7 +930,6 @@
         </section>
     </div>
 </main>
-```
 
 </div>
 
@@ -971,14 +967,46 @@
         };
     }
 
-    function buildLocationQuery() {
-        const address = document.getElementById("id_address_line")?.value?.trim() || "";
-        const areaTown = document.getElementById("id_area_town")?.value?.trim() || "";
-        const suburb = document.getElementById("id_suburb")?.value?.trim() || "";
-        const landmark = document.getElementById("id_landmark")?.value?.trim() || "";
-        const digitalAddress = document.getElementById("id_digital_address")?.value?.trim() || "";
+    function getInputValue(fieldId) {
+        const field = document.getElementById(fieldId);
+        return field?.value?.trim() || "";
+    }
 
-        return [address, suburb, areaTown, landmark, digitalAddress, "Accra", "Ghana"]
+    function setInputValue(fieldId, value, force = false) {
+        const field = document.getElementById(fieldId);
+        const safeValue = (value || "").trim();
+
+        if (!field || !safeValue) {
+            return;
+        }
+
+        if (force || !field.value.trim()) {
+            field.value = safeValue;
+            field.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    }
+
+    function isSyntheticGpsAddress(value) {
+        return /^GPS:\s*-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?$/i.test((value || "").trim());
+    }
+
+    function getDigitalAddressQueryValue() {
+        const digitalAddress = getInputValue("id_digital_address");
+        return isSyntheticGpsAddress(digitalAddress) ? "" : digitalAddress;
+    }
+
+    function buildLocationQuery() {
+        const address = getInputValue("id_address_line");
+        const digitalAddress = getDigitalAddressQueryValue();
+        const areaTown = getInputValue("id_area_town");
+        const landmark = getInputValue("id_landmark");
+
+        return [
+            address,
+            digitalAddress,
+            areaTown,
+            landmark,
+        ]
             .filter(Boolean)
             .join(", ");
     }
@@ -987,6 +1015,96 @@
         const status = document.getElementById("locationStatus");
         if (status) {
             status.textContent = message;
+        }
+    }
+
+    function cleanAddressPart(value) {
+        return (value || "").toString().trim();
+    }
+
+    function fillLocationFieldsFromReverseResult(result, lat, lng, force = false) {
+        if (!result) {
+            return;
+        }
+
+        const address = result.address || {};
+
+        const roadLine = [
+            cleanAddressPart(address.house_number),
+            cleanAddressPart(address.road),
+        ]
+            .filter(Boolean)
+            .join(" ");
+
+        const displayNameParts = (result.display_name || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+        const addressLine = (
+            roadLine
+            || displayNameParts.slice(0, 2).join(", ")
+        );
+
+        const areaTown = (
+            cleanAddressPart(address.city)
+            || cleanAddressPart(address.town)
+            || cleanAddressPart(address.village)
+            || cleanAddressPart(address.suburb)
+            || cleanAddressPart(address.county)
+            || cleanAddressPart(address.state_district)
+            || cleanAddressPart(address.state)
+        );
+
+        const landmark = (
+            cleanAddressPart(address.amenity)
+            || cleanAddressPart(address.building)
+            || cleanAddressPart(address.neighbourhood)
+            || cleanAddressPart(address.quarter)
+            || cleanAddressPart(address.road)
+            || displayNameParts[0]
+        );
+
+        const digitalAddress = cleanAddressPart(address.postcode);
+
+        setInputValue("id_address_line", addressLine, force);
+        if (digitalAddress) {
+            setInputValue("id_digital_address", digitalAddress, force);
+        } else if (force) {
+            const digitalAddressField = document.getElementById("id_digital_address");
+
+            if (digitalAddressField && digitalAddressField.value.trim()) {
+                digitalAddressField.value = "";
+                digitalAddressField.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        }
+        setInputValue("id_area_town", areaTown, force);
+        setInputValue("id_landmark", landmark, force);
+    }
+
+    async function reverseGeocodeCoordinates(lat, lng, forceFill = false) {
+        try {
+            setLocationStatus("Capturing location details from your current position...");
+
+            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+            const response = await fetch(url, {
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed.`);
+                return;
+            }
+
+            const result = await response.json();
+            fillLocationFieldsFromReverseResult(result, lat, lng, forceFill);
+
+            setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address fields updated automatically.`);
+        } catch (error) {
+            console.error("Reverse geocoding failed:", error);
+            setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed.`);
         }
     }
 
@@ -1036,6 +1154,7 @@
 
         map.on("locationfound", function (e) {
             setCoordinates(e.latitude, e.longitude, 17);
+            reverseGeocodeCoordinates(e.latitude, e.longitude, true);
         });
 
         map.on("locationerror", function () {
@@ -1060,7 +1179,7 @@
         try {
             setLocationStatus("Finding the typed location on the map...");
 
-            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(query)}`;
             const response = await fetch(url, {
                 headers: {
                     "Accept": "application/json"
@@ -1085,7 +1204,8 @@
 
             if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
                 mapApi.setCoordinates(lat, lng, 16);
-                setLocationStatus(`Location matched from typed address: ${match.display_name}`);
+                fillLocationFieldsFromReverseResult(match, lat, lng, false);
+                setLocationStatus(`Location matched from typed address. Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`);
             }
         } catch (error) {
             console.error("Geocoding failed:", error);
@@ -1129,10 +1249,9 @@
 
         [
             "id_address_line",
+            "id_digital_address",
             "id_area_town",
-            "id_suburb",
-            "id_landmark",
-            "id_digital_address"
+            "id_landmark"
         ].forEach(function (fieldId) {
             const field = document.getElementById(fieldId);
             if (field) {
