@@ -182,7 +182,7 @@ class PortalLoginView(LoginView):
         else:
             self.request.session.set_expiry(0)
 
-        messages.success(self.request, "Login successful.")
+        # messages.success(self.request, "Login successful.")
         return super().form_valid(form)
 
     def get_success_url(self):

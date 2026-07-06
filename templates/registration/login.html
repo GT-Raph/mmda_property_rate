@@ -387,9 +387,41 @@
         }
 
         .message-box {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 5000;
+            max-width: 280px;
             background: #fff8e7;
             border: 1px solid #f1ddb0;
             color: #8a6300;
+            border-radius: 10px;
+            padding: 9px 12px;
+            font-size: 12px;
+            line-height: 1.35;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            animation: hideToast 1s forwards;
+        }
+
+        @keyframes hideToast {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+                visibility: visible;
+            }
+
+            75% {
+                opacity: 1;
+                transform: translateY(0);
+                visibility: visible;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-8px);
+                visibility: hidden;
+                pointer-events: none;
+            }
         }
 
         .field-error {
