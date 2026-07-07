@@ -1,7 +1,10 @@
+from urllib import request
+
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
+from django.db.models import Prefetch
 from django.urls import path, reverse
 
 from .models import (
@@ -905,10 +908,18 @@ class RatePolicyAdmin(admin.ModelAdmin):
             or ""
         ).strip()
 
+        property_use = (
+            request.GET.get(
+                "property_use"
+            )
+            or ""
+        ).strip()
+
         queryset = (
             PropertyClass.objects.filter(
                 is_active=True
             )
+            .select_related("assembly")
             .order_by("name")
         )
 
@@ -916,16 +927,30 @@ class RatePolicyAdmin(admin.ModelAdmin):
             queryset = queryset.filter(
                 assembly_id=assembly_id
             )
-
         else:
             queryset = queryset.none()
+
+        property_class_fields = {
+            field.name
+            for field in PropertyClass._meta.fields
+        }
+
+        if (
+            property_use
+            and "property_use" in property_class_fields
+        ):
+            queryset = queryset.filter(
+                property_use=property_use
+            )
 
         results = [
             {
                 "id": str(
                     property_class.pk
                 ),
-                "text": property_class,
+                "text": (
+                    property_class.name
+                ),
             }
             for property_class in queryset
         ]
@@ -950,13 +975,27 @@ class RatePolicyAdmin(admin.ModelAdmin):
         if not property_class_id:
             return JsonResponse(
                 {
+                    "property_class": None,
                     "results": [],
+                    "areas": [],
                 }
             )
 
         try:
             property_class = (
-                PropertyClass.objects.get(
+                PropertyClass.objects
+                .prefetch_related(
+                    Prefetch(
+                        "covered_areas",
+                        queryset=CommunityArea.objects.filter(
+                            is_active=True,
+                        ).order_by(
+                            "sub_metro",
+                            "name",
+                        ),
+                    )
+                )
+                .get(
                     pk=property_class_id,
                     is_active=True,
                 )
@@ -969,26 +1008,23 @@ class RatePolicyAdmin(admin.ModelAdmin):
         ):
             return JsonResponse(
                 {
+                    "property_class": None,
                     "results": [],
+                    "areas": [],
                 },
                 status=404,
             )
 
         areas = (
             property_class.covered_areas
-            .filter(
-                is_active=True
-            )
-            .order_by(
-                "sub_metro",
-                "name",
-            )
+            .all()
         )
 
         results = [
             {
                 "id": str(area.pk),
                 "text": str(area),
+                "name": area.name,
             }
             for area in areas
         ]
@@ -999,9 +1035,12 @@ class RatePolicyAdmin(admin.ModelAdmin):
                     "id": str(
                         property_class.pk
                     ),
-                    "name": property_class,
+                    "name": (
+                        property_class.name
+                    ),
                 },
                 "results": results,
+                "areas": results,
             }
         )
 
