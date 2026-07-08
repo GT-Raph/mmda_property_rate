@@ -622,7 +622,7 @@
             transition: 0.18s ease;
         }
 
-        .icon-btn:hover:not(:disabled) {
+        .icon-btn:hover {
             background: #f7f7f7;
             border-color: #ececec;
         }
@@ -983,7 +983,7 @@
                         <tbody>
                             {% for property in properties %}
                                 <tr>
-                                    <td><a href="#" class="ref-link">{{ property.reference }}</a></td>
+                                    <td><a href="{% url 'properties:property-detail' property.id %}" class="ref-link">{{ property.reference }}</a></td>
                                     <td>{{ property.owner_name }}</td>
                                     <td class="location-text">{{ property.location }}</td>
                                     <td>
@@ -995,43 +995,42 @@
                                     </td>
                                     <td>
                                         <div class="actions">
-                                            <button
-                                                type="button"
+                                            <a
+                                                href="{% url 'properties:property-detail' property.id %}"
                                                 class="icon-btn"
-                                                title="View feature coming soon"
-                                                aria-label="View feature coming soon"
-                                                disabled
+                                                title="View property"
+                                                aria-label="View property"
                                             >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M2 12C3.8 8.5 7.2 6 12 6C16.8 6 20.2 8.5 22 12C20.2 15.5 16.8 18 12 18C7.2 18 3.8 15.5 2 12Z" stroke="currentColor" stroke-width="1.8"></path>
                                                     <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
                                                 </svg>
-                                            </button>
+                                            </a>
 
-                                            <button
-                                                type="button"
+                                            <a
+                                                href="{% url 'properties:property-edit' property.id %}"
                                                 class="icon-btn"
-                                                title="Edit feature coming soon"
-                                                aria-label="Edit feature coming soon"
-                                                disabled
+                                                title="Edit property"
+                                                aria-label="Edit property"
                                             >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M4 20H8L18 10C18.6 9.4 18.6 8.4 18 7.8L16.2 6C15.6 5.4 14.6 5.4 14 6L4 16V20Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
                                                 </svg>
-                                            </button>
+                                            </a>
 
-                                            <button
-                                                type="button"
+                                            <a
+                                                href="{% url 'properties:property-document' property.id %}"
                                                 class="icon-btn"
-                                                title="Document feature coming soon"
-                                                aria-label="Document feature coming soon"
-                                                disabled
+                                                title="Property document"
+                                                aria-label="Property document"
+                                                target="_blank"
+                                                rel="noopener"
                                             >
                                                 <svg viewBox="0 0 24 24" fill="none">
                                                     <path d="M8 3H14L19 8V20C19 20.6 18.6 21 18 21H8C7.4 21 7 20.6 7 20V4C7 3.4 7.4 3 8 3Z" stroke="currentColor" stroke-width="1.8"></path>
                                                     <path d="M14 3V8H19" stroke="currentColor" stroke-width="1.8"></path>
                                                 </svg>
-                                            </button>
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>
