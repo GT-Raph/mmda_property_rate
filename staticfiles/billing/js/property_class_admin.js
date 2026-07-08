@@ -5,103 +5,9 @@
         return document.getElementById(id);
     }
 
-    function buildUrl(baseUrl, params) {
-        const url = new URL(
-            baseUrl,
-            window.location.origin
-        );
+    function getSelectedAreaIds() {
+        const selectedIds = new Set();
 
-        Object.keys(params).forEach(function (key) {
-            const value = params[key];
-
-            if (
-                value !== null
-                && value !== undefined
-                && value !== ""
-            ) {
-                url.searchParams.set(
-                    key,
-                    value
-                );
-            }
-        });
-
-        return url.toString();
-    }
-
-    async function getJson(url) {
-        const response = await fetch(
-            url,
-            {
-                method: "GET",
-                credentials: "same-origin",
-                headers: {
-                    "X-Requested-With":
-                        "XMLHttpRequest"
-                }
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                "Unable to load community areas."
-            );
-        }
-
-        return response.json();
-    }
-
-    function clearSelect(selectElement) {
-        if (!selectElement) {
-            return;
-        }
-
-        while (selectElement.options.length) {
-            selectElement.remove(0);
-        }
-    }
-
-    function clearSelectBoxCache(selectId) {
-        if (
-            window.SelectBox
-            && window.SelectBox.cache
-        ) {
-            window.SelectBox.cache[selectId] = [];
-        }
-    }
-
-    function initialiseSelectBox(selectId) {
-        if (!window.SelectBox) {
-            return;
-        }
-
-        const selectElement = byId(selectId);
-
-        if (!selectElement) {
-            return;
-        }
-
-        clearSelectBoxCache(selectId);
-        window.SelectBox.init(selectId);
-        window.SelectBox.redisplay(selectId);
-    }
-
-    function clearSearchInputs() {
-        [
-            "id_covered_areas_input",
-            "id_covered_areas_selected_input"
-        ].forEach(function (id) {
-            const input = byId(id);
-
-            if (!input) {
-                return;
-            }
-
-            input.value = "";
-        });
-    }
-
-    function getChosenAreaIds() {
         const chosenSelect = byId(
             "id_covered_areas_to"
         );
@@ -109,8 +15,6 @@
         const originalSelect = byId(
             "id_covered_areas"
         );
-
-        const selectedIds = new Set();
 
         if (chosenSelect) {
             Array.from(
@@ -142,28 +46,77 @@
         return selectedIds;
     }
 
-    function addOption(
-        selectElement,
-        area,
-        selected
+    function clearSelect(selectElement) {
+        if (!selectElement) {
+            return;
+        }
+
+        while (
+            selectElement.options.length
+        ) {
+            selectElement.remove(0);
+        }
+    }
+
+    function resetSelectBox(
+        selectElement
+    ) {
+        if (
+            !selectElement
+            || !window.SelectBox
+        ) {
+            return;
+        }
+
+        if (!window.SelectBox.cache) {
+            window.SelectBox.cache = {};
+        }
+
+        window.SelectBox.cache[
+            selectElement.id
+        ] = [];
+
+        window.SelectBox.init(
+            selectElement.id
+        );
+
+        window.SelectBox.redisplay(
+            selectElement.id
+        );
+    }
+
+    function dispatchSelectChange(
+        selectElement
     ) {
         if (!selectElement) {
             return;
         }
 
-        selectElement.add(
-            new Option(
-                area.text,
-                String(area.id),
-                selected,
-                selected
+        selectElement.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true
+                }
             )
         );
     }
 
-    function populateCoveredAreas(
+    function createAreaOption(
+        area,
+        selected
+    ) {
+        return new Option(
+            area.text,
+            String(area.id),
+            selected,
+            selected
+        );
+    }
+
+    function renderAreas(
         areas,
-        chosenIds
+        selectedIds
     ) {
         const availableSelect = byId(
             "id_covered_areas_from"
@@ -177,66 +130,103 @@
             "id_covered_areas"
         );
 
-        const selectedIds = (
-            chosenIds
+        const preservedIds = (
+            selectedIds
             || new Set()
         );
 
-        clearSearchInputs();
+        if (
+            availableSelect
+            && chosenSelect
+        ) {
+            clearSelect(
+                availableSelect
+            );
 
-        if (availableSelect && chosenSelect) {
-            clearSelect(availableSelect);
-            clearSelect(chosenSelect);
+            clearSelect(
+                chosenSelect
+            );
 
-            areas.forEach(function (area) {
-                const areaId = String(area.id);
-
-                if (selectedIds.has(areaId)) {
-                    addOption(
-                        chosenSelect,
-                        area,
-                        true
+            areas.forEach(
+                function (area) {
+                    const areaId = String(
+                        area.id
                     );
-                } else {
-                    addOption(
-                        availableSelect,
-                        area,
-                        false
+
+                    if (
+                        preservedIds.has(
+                            areaId
+                        )
+                    ) {
+                        chosenSelect.add(
+                            createAreaOption(
+                                area,
+                                true
+                            )
+                        );
+                    } else {
+                        availableSelect.add(
+                            createAreaOption(
+                                area,
+                                false
+                            )
+                        );
+                    }
+                }
+            );
+
+            resetSelectBox(
+                availableSelect
+            );
+
+            resetSelectBox(
+                chosenSelect
+            );
+
+            dispatchSelectChange(
+                availableSelect
+            );
+
+            dispatchSelectChange(
+                chosenSelect
+            );
+
+            return;
+        }
+
+        if (originalSelect) {
+            clearSelect(
+                originalSelect
+            );
+
+            areas.forEach(
+                function (area) {
+                    const areaId = String(
+                        area.id
+                    );
+
+                    const isSelected = (
+                        preservedIds.has(
+                            areaId
+                        )
+                    );
+
+                    originalSelect.add(
+                        createAreaOption(
+                            area,
+                            isSelected
+                        )
                     );
                 }
-            });
-
-            initialiseSelectBox(
-                availableSelect.id
             );
 
-            initialiseSelectBox(
-                chosenSelect.id
+            dispatchSelectChange(
+                originalSelect
             );
-
-            return;
-        }
-
-        if (originalSelect) {
-            clearSelect(originalSelect);
-
-            areas.forEach(function (area) {
-                const isSelected = (
-                    selectedIds.has(
-                        String(area.id)
-                    )
-                );
-
-                addOption(
-                    originalSelect,
-                    area,
-                    isSelected
-                );
-            });
         }
     }
 
-    function setLoadingState() {
+    function renderMessage(message) {
         const availableSelect = byId(
             "id_covered_areas_from"
         );
@@ -249,90 +239,99 @@
             "id_covered_areas"
         );
 
-        if (availableSelect && chosenSelect) {
-            clearSelect(availableSelect);
-            clearSelect(chosenSelect);
+        const messageOption = new Option(
+            message,
+            ""
+        );
+
+        messageOption.disabled = true;
+
+        if (
+            availableSelect
+            && chosenSelect
+        ) {
+            clearSelect(
+                availableSelect
+            );
+
+            clearSelect(
+                chosenSelect
+            );
 
             availableSelect.add(
-                new Option(
-                    "Loading areas...",
-                    ""
-                )
+                messageOption
             );
 
-            initialiseSelectBox(
-                availableSelect.id
+            resetSelectBox(
+                availableSelect
             );
 
-            initialiseSelectBox(
-                chosenSelect.id
+            resetSelectBox(
+                chosenSelect
             );
 
             return;
         }
 
         if (originalSelect) {
-            clearSelect(originalSelect);
+            clearSelect(
+                originalSelect
+            );
 
             originalSelect.add(
-                new Option(
-                    "Loading areas...",
-                    ""
-                )
+                messageOption
             );
         }
     }
 
-    function showLoadFailure() {
-        const availableSelect = byId(
-            "id_covered_areas_from"
+    function buildAreasUrl(
+        baseUrl,
+        assemblyId
+    ) {
+        const url = new URL(
+            baseUrl,
+            window.location.origin
         );
 
-        const chosenSelect = byId(
-            "id_covered_areas_to"
+        url.searchParams.set(
+            "assembly",
+            assemblyId
         );
 
-        const originalSelect = byId(
-            "id_covered_areas"
-        );
-
-        if (availableSelect && chosenSelect) {
-            clearSelect(availableSelect);
-            clearSelect(chosenSelect);
-
-            availableSelect.add(
-                new Option(
-                    "Areas could not be loaded",
-                    ""
-                )
-            );
-
-            initialiseSelectBox(
-                availableSelect.id
-            );
-
-            initialiseSelectBox(
-                chosenSelect.id
-            );
-
-            return;
-        }
-
-        if (originalSelect) {
-            clearSelect(originalSelect);
-
-            originalSelect.add(
-                new Option(
-                    "Areas could not be loaded",
-                    ""
-                )
-            );
-        }
+        return url.toString();
     }
 
-    function selectAllChosenAreasBeforeSubmit() {
-        const form = document.querySelector(
-            "form#propertyclass_form"
+    async function fetchAreas(
+        baseUrl,
+        assemblyId
+    ) {
+        const response = await fetch(
+            buildAreasUrl(
+                baseUrl,
+                assemblyId
+            ),
+            {
+                method: "GET",
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With":
+                        "XMLHttpRequest"
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Unable to load covered areas."
+            );
+        }
+
+        return response.json();
+    }
+
+    function selectChosenAreasBeforeSubmit() {
+        const form = byId(
+            "propertyclass_form"
         );
 
         if (!form) {
@@ -361,14 +360,18 @@
 
                 Array.from(
                     targetSelect.options
-                ).forEach(function (option) {
-                    option.selected = true;
-                });
+                ).forEach(
+                    function (option) {
+                        if (option.value) {
+                            option.selected = true;
+                        }
+                    }
+                );
             }
         );
     }
 
-    function initialiseAssemblyAreaFilter() {
+    function initialiseAreaFiltering() {
         const assemblySelect = byId(
             "id_assembly"
         );
@@ -385,14 +388,20 @@
 
         if (!areasUrl) {
             window.console.error(
-                "Community area URL is missing from the Assembly field."
+                "The community areas URL "
+                + "is missing from the "
+                + "Assembly field."
+            );
+
+            renderMessage(
+                "Areas could not be loaded"
             );
 
             return;
         }
 
+        let isInitialLoad = true;
         let requestSequence = 0;
-        let firstLoad = true;
 
         async function loadAreas() {
             const assemblyId = (
@@ -400,23 +409,20 @@
                 || ""
             );
 
-            const currentSequence = (
+            const currentRequest = (
                 ++requestSequence
             );
 
-            /*
-             * Preserve already-selected areas only on the initial page load.
-             * If the user changes the assembly, old selections must be cleared
-             * because they belong to a different assembly.
-             */
-            const chosenIds = firstLoad
-                ? getChosenAreaIds()
-                : new Set();
+            const selectedIds = (
+                isInitialLoad
+                ? getSelectedAreaIds()
+                : new Set()
+            );
 
-            firstLoad = false;
+            isInitialLoad = false;
 
             if (!assemblyId) {
-                populateCoveredAreas(
+                renderAreas(
                     [],
                     new Set()
                 );
@@ -424,40 +430,42 @@
                 return;
             }
 
-            setLoadingState();
+            renderMessage(
+                "Loading areas..."
+            );
 
             try {
-                const data = await getJson(
-                    buildUrl(
-                        areasUrl,
-                        {
-                            assembly:
-                                assemblyId
-                        }
-                    )
+                const data = await fetchAreas(
+                    areasUrl,
+                    assemblyId
                 );
 
                 if (
-                    currentSequence
+                    currentRequest
                     !== requestSequence
                 ) {
                     return;
                 }
 
-                populateCoveredAreas(
+                renderAreas(
                     data.results || [],
-                    chosenIds
+                    selectedIds
                 );
             } catch (error) {
                 if (
-                    currentSequence
+                    currentRequest
                     !== requestSequence
                 ) {
                     return;
                 }
 
-                showLoadFailure();
-                window.console.error(error);
+                renderMessage(
+                    "Areas could not be loaded"
+                );
+
+                window.console.error(
+                    error
+                );
             }
         }
 
@@ -466,19 +474,42 @@
             loadAreas
         );
 
-        /*
-         * Important: Django can display the first Assembly as selected when
-         * the add form opens. A change event has not happened yet, so the
-         * areas must also be loaded immediately on page load.
-         */
+        selectChosenAreasBeforeSubmit();
+
         loadAreas();
     }
 
-    function start() {
-        selectAllChosenAreasBeforeSubmit();
+    function waitForDjangoAdminWidget() {
+        let attempts = 0;
 
-        window.setTimeout(
-            initialiseAssemblyAreaFilter,
+        const timer = window.setInterval(
+            function () {
+                attempts += 1;
+
+                const filteredWidgetReady = Boolean(
+                    byId(
+                        "id_covered_areas_from"
+                    )
+                );
+
+                const plainSelectReady = Boolean(
+                    byId(
+                        "id_covered_areas"
+                    )
+                ) && attempts >= 5;
+
+                if (
+                    filteredWidgetReady
+                    || plainSelectReady
+                    || attempts >= 40
+                ) {
+                    window.clearInterval(
+                        timer
+                    );
+
+                    initialiseAreaFiltering();
+                }
+            },
             100
         );
     }
@@ -489,9 +520,9 @@
     ) {
         document.addEventListener(
             "DOMContentLoaded",
-            start
+            waitForDjangoAdminWidget
         );
     } else {
-        start();
+        waitForDjangoAdminWidget();
     }
 })();

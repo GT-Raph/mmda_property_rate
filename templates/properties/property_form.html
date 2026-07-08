@@ -517,6 +517,170 @@
         border: 1px solid #d8d8d8;
     }
 
+
+
+    .preview-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        z-index: 3000;
+    }
+
+    .preview-overlay[hidden] {
+        display: none;
+    }
+
+    .preview-modal {
+        width: min(880px, 100%);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: #ffffff;
+        border-radius: 18px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--line);
+    }
+
+    .preview-head {
+        padding: 20px 22px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .preview-head h3 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 800;
+    }
+
+    .preview-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .preview-close {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 20px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .preview-body {
+        padding: 22px;
+    }
+
+    .preview-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .preview-section {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        background: #fff;
+    }
+
+    .preview-section.full {
+        grid-column: 1 / -1;
+    }
+
+    .preview-section h4 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        font-weight: 800;
+    }
+
+    .preview-list {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .preview-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 1px dashed #eeeeee;
+        padding-bottom: 8px;
+    }
+
+    .preview-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .preview-label {
+        color: var(--muted);
+        font-size: 13px;
+    }
+
+    .preview-value {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 700;
+        color: #222;
+        word-break: break-word;
+    }
+
+    .rate-preview-card {
+        background: #faf6e6;
+        border-color: #e9d28d;
+    }
+
+    .rate-preview-card .preview-value.annual-rate {
+        color: #0f7a32;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .preview-error {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: var(--red-soft);
+        color: var(--red);
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .preview-actions {
+        padding: 16px 22px 22px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        border-top: 1px solid var(--line);
+    }
+
+    .btn-danger-outline {
+        background: #fff;
+        color: var(--red);
+        border: 1px solid #f2b8b5;
+    }
+
+    @media (max-width: 680px) {
+        .preview-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .preview-actions {
+            flex-direction: column;
+        }
+    }
+
     .mobile-overlay { display: none; }
 
     @media (max-width: 860px) {
@@ -744,7 +908,7 @@
         {% endif %}
 
         <section class="card">
-            <form method="post">
+            <form method="post" id="propertyCreateForm" data-rate-preview-url="{% url 'properties:property-rate-preview' %}">
                 {% csrf_token %}
 
                 <h2 class="section-title">
@@ -918,13 +1082,55 @@
                 </div>
 
                 <div class="actions">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" id="previewPropertyBtn">
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M5 12.5L9.2 16.7L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
                         </svg>
-                        Save Property
+                        Preview Property Details
                     </button>
                     <a href="{% url 'properties:property-registry' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+
+                <div class="preview-overlay" id="propertyPreviewOverlay" hidden>
+                    <div class="preview-modal" role="dialog" aria-modal="true" aria-labelledby="propertyPreviewTitle">
+                        <div class="preview-head">
+                            <div>
+                                <h3 id="propertyPreviewTitle">Preview Property Details</h3>
+                                <p>Review the owner, property details and rate imposed before saving this property.</p>
+                            </div>
+                            <button type="button" class="preview-close" id="closePropertyPreview" aria-label="Close preview">×</button>
+                        </div>
+
+                        <div class="preview-body">
+                            <div class="preview-grid">
+                                <div class="preview-section">
+                                    <h4>Owner Information</h4>
+                                    <div class="preview-list" id="previewOwnerDetails"></div>
+                                </div>
+
+                                <div class="preview-section">
+                                    <h4>Location Information</h4>
+                                    <div class="preview-list" id="previewLocationDetails"></div>
+                                </div>
+
+                                <div class="preview-section full">
+                                    <h4>Property Information</h4>
+                                    <div class="preview-list" id="previewPropertyDetails"></div>
+                                </div>
+
+                                <div class="preview-section full rate-preview-card">
+                                    <h4>Rate Preview</h4>
+                                    <div class="preview-list" id="previewRateDetails"></div>
+                                    <div class="preview-error" id="previewRateError" hidden></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="preview-actions">
+                            <button type="button" class="btn btn-danger-outline" id="editPropertyPreview">Go Back and Edit</button>
+                            <button type="button" class="btn btn-primary" id="confirmPropertySave">Confirm and Save Property</button>
+                        </div>
+                    </div>
                 </div>
             </form>
         </section>
@@ -1011,6 +1217,73 @@
             .join(", ");
     }
 
+    function buildLocationQueries() {
+        const address = getInputValue("id_address_line");
+        const digitalAddress = getDigitalAddressQueryValue();
+        const areaTown = getInputValue("id_area_town");
+        const landmark = getInputValue("id_landmark");
+
+        const queries = [
+            [address, digitalAddress, areaTown, landmark],
+            [address, areaTown, landmark],
+            [address, areaTown],
+            [address, landmark],
+            [digitalAddress, areaTown],
+            [landmark, areaTown],
+            [address],
+            [areaTown],
+            [landmark],
+        ]
+            .map(function (parts) {
+                return parts
+                    .filter(Boolean)
+                    .join(", ")
+                    .trim();
+            })
+            .filter(function (query, index, allQueries) {
+                return query.length >= 3 && allQueries.indexOf(query) === index;
+            });
+
+        return queries;
+    }
+
+    function looksLikeGhanaPostDigitalAddress(value) {
+        return /^[A-Z]{2}-?\d{3,4}-?\d{3,4}$/i.test((value || "").trim());
+    }
+
+    function onlyDigitalAddressWasEntered() {
+        const digitalAddress = getDigitalAddressQueryValue();
+        const address = getInputValue("id_address_line");
+        const areaTown = getInputValue("id_area_town");
+        const landmark = getInputValue("id_landmark");
+
+        return Boolean(digitalAddress) && !address && !areaTown && !landmark;
+    }
+
+    function buildNominatimSearchUrl(query) {
+        const params = new URLSearchParams({
+            format: "jsonv2",
+            addressdetails: "1",
+            limit: "5",
+            dedupe: "1",
+            countrycodes: "gh",
+            q: query,
+        });
+
+        return `https://nominatim.openstreetmap.org/search?${params.toString()}`;
+    }
+
+    function buildNominatimReverseUrl(lat, lng) {
+        const params = new URLSearchParams({
+            format: "jsonv2",
+            addressdetails: "1",
+            lat: String(lat),
+            lon: String(lng),
+        });
+
+        return `https://nominatim.openstreetmap.org/reverse?${params.toString()}`;
+    }
+
     function setLocationStatus(message) {
         const status = document.getElementById("locationStatus");
         if (status) {
@@ -1084,17 +1357,16 @@
 
     async function reverseGeocodeCoordinates(lat, lng, forceFill = false) {
         try {
-            setLocationStatus("Capturing location details from your current position...");
+            setLocationStatus("Capturing address details from your current position...");
 
-            const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
-            const response = await fetch(url, {
+            const response = await fetch(buildNominatimReverseUrl(lat, lng), {
                 headers: {
                     "Accept": "application/json"
                 }
             });
 
             if (!response.ok) {
-                setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed.`);
+                setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed, but coordinates were kept.`);
                 return;
             }
 
@@ -1104,7 +1376,7 @@
             setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address fields updated automatically.`);
         } catch (error) {
             console.error("Reverse geocoding failed:", error);
-            setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed.`);
+            setLocationStatus(`Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}. Address lookup failed, but coordinates were kept.`);
         }
     }
 
@@ -1168,33 +1440,55 @@
         return { map, marker, setCoordinates };
     }
 
-    async function geocodeTypedLocation(mapApi) {
-        if (!mapApi) return;
+    async function fetchLocationMatches(query) {
+        const response = await fetch(buildNominatimSearchUrl(query), {
+            headers: {
+                "Accept": "application/json"
+            }
+        });
 
-        const query = buildLocationQuery();
-        if (!query || query.length < 6) {
+        if (!response.ok) {
+            throw new Error(`Search failed with status ${response.status}`);
+        }
+
+        return await response.json();
+    }
+
+    async function geocodeTypedLocation(mapApi) {
+        if (!mapApi) {
+            setLocationStatus("The map has not loaded yet. Refresh the page and try again.");
+            return;
+        }
+
+        const queries = buildLocationQueries();
+        const digitalAddress = getDigitalAddressQueryValue();
+
+        if (!queries.length) {
+            setLocationStatus("Enter Address, Digital Address, Area/Town, or Landmark before searching.");
+            return;
+        }
+
+        if (onlyDigitalAddressWasEntered() && looksLikeGhanaPostDigitalAddress(digitalAddress)) {
+            setLocationStatus("GhanaPost GPS digital addresses are not always recognised by the map service. Add Address, Area/Town, or Landmark, or use Current Location.");
             return;
         }
 
         try {
-            setLocationStatus("Finding the typed location on the map...");
+            setLocationStatus("Searching for the typed location in Ghana...");
 
-            const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(query)}`;
-            const response = await fetch(url, {
-                headers: {
-                    "Accept": "application/json"
+            let results = [];
+            let usedQuery = "";
+
+            for (const query of queries) {
+                results = await fetchLocationMatches(query);
+                if (Array.isArray(results) && results.length) {
+                    usedQuery = query;
+                    break;
                 }
-            });
-
-            if (!response.ok) {
-                setLocationStatus("Could not search for the typed location.");
-                return;
             }
 
-            const results = await response.json();
-
-            if (!results.length) {
-                setLocationStatus("No matching map result found for the typed location.");
+            if (!Array.isArray(results) || !results.length) {
+                setLocationStatus("No matching Ghana map result found. Add Area/Town or a nearby Landmark, then click Find Typed Location again.");
                 return;
             }
 
@@ -1202,14 +1496,388 @@
             const lat = parseFloat(match.lat);
             const lng = parseFloat(match.lon);
 
-            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-                mapApi.setCoordinates(lat, lng, 16);
-                fillLocationFieldsFromReverseResult(match, lat, lng, false);
-                setLocationStatus(`Location matched from typed address. Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                setLocationStatus("A map result was found, but the coordinates were invalid. Try a more specific location.");
+                return;
             }
+
+            mapApi.setCoordinates(lat, lng, 16);
+            fillLocationFieldsFromReverseResult(match, lat, lng, false);
+            setLocationStatus(`Location matched from: ${usedQuery}. Coordinates captured: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`);
         } catch (error) {
             console.error("Geocoding failed:", error);
-            setLocationStatus("Location lookup failed. You can still click the map manually.");
+            setLocationStatus("Location lookup failed. Check your internet connection, then try Find Typed Location again. You can still click the map manually.");
+        }
+    }
+
+
+
+    function formatPreviewValue(value) {
+        const safeValue = (value || "").toString().trim();
+        return safeValue || "—";
+    }
+
+    function getField(fieldId) {
+        return document.getElementById(fieldId);
+    }
+
+    function getFieldDisplayValue(fieldId) {
+        const field = getField(fieldId);
+        if (!field) {
+            return "";
+        }
+
+        if (field.tagName === "SELECT") {
+            const selectedOption = field.options[field.selectedIndex];
+            return selectedOption ? selectedOption.text.trim() : "";
+        }
+
+        if (field.type === "checkbox") {
+            return field.checked ? "Yes" : "No";
+        }
+
+        return field.value || "";
+    }
+
+    function getFirstFieldValue(fieldIds) {
+        for (const fieldId of fieldIds) {
+            const value = getFieldDisplayValue(fieldId);
+            if ((value || "").trim()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    function setPreviewRows(containerId, rows) {
+        const container = getField(containerId);
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = "";
+
+        rows.forEach(function (row) {
+            const rowEl = document.createElement("div");
+            rowEl.className = "preview-row";
+
+            const labelEl = document.createElement("div");
+            labelEl.className = "preview-label";
+            labelEl.textContent = row.label;
+
+            const valueEl = document.createElement("div");
+            valueEl.className = "preview-value";
+            if (row.className) {
+                valueEl.classList.add(row.className);
+            }
+            valueEl.textContent = formatPreviewValue(row.value);
+
+            rowEl.appendChild(labelEl);
+            rowEl.appendChild(valueEl);
+            container.appendChild(rowEl);
+        });
+    }
+
+    function getOwnerPreviewRows() {
+        const existingOwnerField = getField("id_existing_owner");
+        const createNewOwnerField = getField("id_create_new_owner");
+        const usingExistingOwner = (
+            existingOwnerField
+            && existingOwnerField.value
+            && !(createNewOwnerField && createNewOwnerField.checked)
+        );
+
+        if (usingExistingOwner) {
+            return [
+                {
+                    label: "Owner Source",
+                    value: "Existing Owner",
+                },
+                {
+                    label: "Owner",
+                    value: getFieldDisplayValue("id_existing_owner"),
+                },
+            ];
+        }
+
+        return [
+            {
+                label: "Owner Source",
+                value: "New Owner",
+            },
+            {
+                label: "Full Name",
+                value: getFirstFieldValue([
+                    "id_owner_full_name",
+                    "id_owner_name",
+                    "id_owner_owner_name",
+                    "id_full_name",
+                    "id_name",
+                ]),
+            },
+            {
+                label: "Primary Phone",
+                value: getFirstFieldValue([
+                    "id_owner_primary_phone",
+                    "id_owner_phone_number",
+                    "id_owner_phone",
+                    "id_primary_phone",
+                ]),
+            },
+            {
+                label: "Email",
+                value: getFirstFieldValue([
+                    "id_owner_email",
+                    "id_owner_email_address",
+                    "id_email",
+                ]),
+            },
+            {
+                label: "Ghana Card Number",
+                value: getFirstFieldValue([
+                    "id_owner_ghana_card_number",
+                    "id_owner_ghana_card",
+                    "id_ghana_card_number",
+                ]),
+            },
+        ];
+    }
+
+    function getPropertyPreviewRows() {
+        return [
+            {
+                label: "Property Use",
+                value: getFieldDisplayValue("id_property_use"),
+            },
+            {
+                label: "Building Type",
+                value: getFieldDisplayValue("id_building_type"),
+            },
+            {
+                label: "Community / Area",
+                value: getFieldDisplayValue("id_community_area"),
+            },
+            {
+                label: "Occupancy Status",
+                value: getFieldDisplayValue("id_occupancy_status"),
+            },
+            {
+                label: "Number of Floors",
+                value: getFieldDisplayValue("id_number_of_floors"),
+            },
+            {
+                label: "Number of Units",
+                value: getFieldDisplayValue("id_number_of_units"),
+            },
+            {
+                label: "Year Built",
+                value: getFieldDisplayValue("id_year_built"),
+            },
+            {
+                label: "Rateable Value",
+                value: getFieldDisplayValue("id_rateable_value"),
+            },
+            {
+                label: "Exempt",
+                value: getFieldDisplayValue("id_is_exempt"),
+            },
+        ];
+    }
+
+    function getLocationPreviewRows() {
+        return [
+            {
+                label: "Address",
+                value: getFieldDisplayValue("id_address_line"),
+            },
+            {
+                label: "Digital Address",
+                value: getFieldDisplayValue("id_digital_address"),
+            },
+            {
+                label: "Area / Town",
+                value: getFieldDisplayValue("id_area_town"),
+            },
+            {
+                label: "Landmark",
+                value: getFieldDisplayValue("id_landmark"),
+            },
+            {
+                label: "Latitude",
+                value: getFieldDisplayValue("id_latitude"),
+            },
+            {
+                label: "Longitude",
+                value: getFieldDisplayValue("id_longitude"),
+            },
+        ];
+    }
+
+    async function fetchRatePreview() {
+        const form = getField("propertyCreateForm");
+        const previewUrl = form?.dataset?.ratePreviewUrl || "";
+
+        const isExemptField = getField("id_is_exempt");
+        if (isExemptField && isExemptField.checked) {
+            return {
+                exempt: true,
+                rows: [
+                    {
+                        label: "Rate Status",
+                        value: "Property marked as exempt",
+                    },
+                    {
+                        label: "Rate Imposed",
+                        value: "GH₵ 0.00",
+                    },
+                    {
+                        label: "Annual Property Rate",
+                        value: "GH₵ 0.00",
+                        className: "annual-rate",
+                    },
+                ],
+            };
+        }
+
+        if (!previewUrl) {
+            throw new Error("Rate preview URL is not configured.");
+        }
+
+        const params = new URLSearchParams({
+            property_use: getInputValue("id_property_use"),
+            building_type: getInputValue("id_building_type"),
+            community_area: getInputValue("id_community_area"),
+            rateable_value: getInputValue("id_rateable_value"),
+        });
+
+        const response = await fetch(`${previewUrl}?${params.toString()}`, {
+            headers: {
+                "Accept": "application/json",
+            },
+        });
+
+        const data = await response.json().catch(function () {
+            return {};
+        });
+
+        if (!response.ok) {
+            throw new Error(data.error || "Could not load rate preview.");
+        }
+
+        return {
+            exempt: false,
+            data,
+            rows: [
+                {
+                    label: "Policy Name",
+                    value: data.policy_name,
+                },
+                {
+                    label: "Policy Year",
+                    value: data.policy_year,
+                },
+                {
+                    label: "Property Class",
+                    value: data.property_class,
+                },
+                {
+                    label: "Community / Area",
+                    value: data.community_area,
+                },
+                {
+                    label: "Sub-Metro",
+                    value: data.sub_metro,
+                },
+                {
+                    label: "Rate Imposed",
+                    value: data.rate_impost,
+                },
+                {
+                    label: "Minimum Charge",
+                    value: data.minimum_charge,
+                },
+                {
+                    label: "Annual Property Rate",
+                    value: data.annual_rate_display,
+                    className: "annual-rate",
+                },
+            ],
+        };
+    }
+
+    function openPropertyPreview() {
+        const overlay = getField("propertyPreviewOverlay");
+        if (overlay) {
+            overlay.hidden = false;
+        }
+    }
+
+    function closePropertyPreview() {
+        const overlay = getField("propertyPreviewOverlay");
+        if (overlay) {
+            overlay.hidden = true;
+        }
+    }
+
+    let propertyPreviewConfirmed = false;
+
+    async function showPropertyPreview() {
+        const form = getField("propertyCreateForm");
+        const confirmButton = getField("confirmPropertySave");
+        const rateError = getField("previewRateError");
+
+        if (!form) {
+            return;
+        }
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        if (confirmButton) {
+            confirmButton.disabled = true;
+            confirmButton.textContent = "Loading rate preview...";
+        }
+
+        if (rateError) {
+            rateError.hidden = true;
+            rateError.textContent = "";
+        }
+
+        setPreviewRows("previewOwnerDetails", getOwnerPreviewRows());
+        setPreviewRows("previewPropertyDetails", getPropertyPreviewRows());
+        setPreviewRows("previewLocationDetails", getLocationPreviewRows());
+        setPreviewRows("previewRateDetails", [
+            {
+                label: "Rate Preview",
+                value: "Loading...",
+            },
+        ]);
+
+        openPropertyPreview();
+
+        try {
+            const ratePreview = await fetchRatePreview();
+            setPreviewRows("previewRateDetails", ratePreview.rows);
+
+            if (confirmButton) {
+                confirmButton.disabled = false;
+                confirmButton.textContent = "Confirm and Save Property";
+            }
+        } catch (error) {
+            console.error("Rate preview failed:", error);
+            setPreviewRows("previewRateDetails", []);
+
+            if (rateError) {
+                rateError.textContent = error.message || "Could not load rate preview.";
+                rateError.hidden = false;
+            }
+
+            if (confirmButton) {
+                confirmButton.disabled = true;
+                confirmButton.textContent = "Resolve Rate Policy First";
+            }
         }
     }
 
@@ -1218,6 +1886,11 @@
         const createNewOwner = document.getElementById("id_create_new_owner");
         const useCurrentLocationBtn = document.getElementById("useCurrentLocation");
         const searchTypedLocationBtn = document.getElementById("searchTypedLocation");
+        const propertyCreateForm = document.getElementById("propertyCreateForm");
+        const previewPropertyBtn = document.getElementById("previewPropertyBtn");
+        const closePropertyPreviewBtn = document.getElementById("closePropertyPreview");
+        const editPropertyPreviewBtn = document.getElementById("editPropertyPreview");
+        const confirmPropertySaveBtn = document.getElementById("confirmPropertySave");
 
         if (existingOwner) {
             existingOwner.addEventListener("change", toggleOwnerFields);
@@ -1228,6 +1901,35 @@
         }
 
         toggleOwnerFields();
+
+        if (previewPropertyBtn) {
+            previewPropertyBtn.addEventListener("click", showPropertyPreview);
+        }
+
+        if (closePropertyPreviewBtn) {
+            closePropertyPreviewBtn.addEventListener("click", closePropertyPreview);
+        }
+
+        if (editPropertyPreviewBtn) {
+            editPropertyPreviewBtn.addEventListener("click", closePropertyPreview);
+        }
+
+        if (confirmPropertySaveBtn && propertyCreateForm) {
+            confirmPropertySaveBtn.addEventListener("click", function () {
+                propertyPreviewConfirmed = true;
+                closePropertyPreview();
+                propertyCreateForm.requestSubmit();
+            });
+        }
+
+        if (propertyCreateForm) {
+            propertyCreateForm.addEventListener("submit", function (event) {
+                if (!propertyPreviewConfirmed) {
+                    event.preventDefault();
+                    showPropertyPreview();
+                }
+            });
+        }
 
         const mapApi = initPropertyMap();
         const debouncedGeocode = debounce(function () {
@@ -1255,7 +1957,6 @@
         ].forEach(function (fieldId) {
             const field = document.getElementById(fieldId);
             if (field) {
-                field.addEventListener("input", debouncedGeocode);
                 field.addEventListener("change", debouncedGeocode);
                 field.addEventListener("blur", debouncedGeocode);
             }

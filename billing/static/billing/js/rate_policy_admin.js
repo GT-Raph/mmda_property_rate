@@ -1,375 +1,371 @@
 (function () {
-    "use strict";
+    let coveredAreasRequestToken = 0;
+    let propertyClassesRequestToken = 0;
+    let coveredAreasLoading = false;
+    let propertyClassesLoading = false;
 
-    const LEGACY_PREFIX = "__legacy_property_class__:";
+    function onReady(callback) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", callback);
+        } else {
+            callback();
+        }
+    }
 
-    function byId(id) {
+    function getField(id) {
         return document.getElementById(id);
     }
 
-    function buildUrl(baseUrl, params) {
-        const url = new URL(baseUrl, window.location.origin);
-
-        Object.keys(params).forEach(function (key) {
-            const value = params[key];
-
-            if (value !== null && value !== undefined && value !== "") {
-                url.searchParams.set(key, value);
-            }
-        });
-
-        return url.toString();
+    function getValue(id) {
+        const field = getField(id);
+        return field ? field.value : "";
     }
 
-    async function getJson(url) {
-        const response = await fetch(url, {
-            method: "GET",
-            credentials: "same-origin",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error("Unable to load the requested admin data.");
+    function clearSelect(select) {
+        if (!select) {
+            return;
         }
 
-        return response.json();
+        while (select.options.length) {
+            select.remove(0);
+        }
     }
 
-    function setClassLoading(classSelect) {
-        classSelect.innerHTML = "";
+    function addOption(select, value, text, selected) {
+        if (!select) {
+            return;
+        }
 
         const option = new Option(
-            "Loading property classes...",
-            "",
-            true,
-            true
+            text,
+            value,
+            selected || false,
+            selected || false
         );
 
-        classSelect.add(option);
-        classSelect.disabled = true;
+        select.add(option);
     }
 
-    function setClassPlaceholder(classSelect, text) {
-        classSelect.innerHTML = "";
-        classSelect.add(new Option(text, "", true, true));
-        classSelect.disabled = false;
+    function getAreaResults(data) {
+        if (!data) {
+            return [];
+        }
+
+        if (Array.isArray(data.results)) {
+            return data.results;
+        }
+
+        if (Array.isArray(data.areas)) {
+            return data.areas;
+        }
+
+        return [];
     }
 
-    function populateClassSelect(classSelect, classes, selectedValue) {
-        classSelect.innerHTML = "";
-        classSelect.add(new Option("---------", ""));
+    function clearCoveredAreas() {
+        const originalSelect = getField("id_covered_areas");
+        const availableSelect = getField("id_covered_areas_from");
+        const chosenSelect = getField("id_covered_areas_to");
 
-        classes.forEach(function (item) {
-            const option = new Option(
-                item.text,
-                String(item.id)
-            );
-
-            if (String(item.id) === String(selectedValue || "")) {
-                option.selected = true;
-            }
-
-            classSelect.add(option);
-        });
-
-        classSelect.disabled = false;
-
-        if (!classes.length) {
-            setClassPlaceholder(
-                classSelect,
-                "No property classes configured"
-            );
-        }
+        clearSelect(originalSelect);
+        clearSelect(availableSelect);
+        clearSelect(chosenSelect);
     }
 
-    function clearSelectBoxCache(selectId) {
-        if (
-            window.SelectBox &&
-            Object.prototype.hasOwnProperty.call(
-                window.SelectBox.cache,
-                selectId
-            )
-        ) {
-            window.SelectBox.cache[selectId] = [];
-        }
-    }
+    function setCoveredAreas(areas) {
+        const originalSelect = getField("id_covered_areas");
+        const availableSelect = getField("id_covered_areas_from");
+        const chosenSelect = getField("id_covered_areas_to");
 
-    function clearSelectElement(selectElement) {
-        if (!selectElement) {
-            return;
-        }
-
-        while (selectElement.options.length) {
-            selectElement.remove(0);
-        }
-    }
-
-    function addAreaOptions(selectElement, areas, selected) {
-        if (!selectElement) {
-            return;
-        }
+        clearSelect(originalSelect);
+        clearSelect(availableSelect);
+        clearSelect(chosenSelect);
 
         areas.forEach(function (area) {
-            const option = new Option(
-                area.text,
-                String(area.id),
-                selected,
-                selected
+            const value = String(area.id);
+            const text = area.text || area.name || value;
+
+            addOption(
+                originalSelect,
+                value,
+                text,
+                true
             );
 
-            selectElement.add(option);
+            addOption(
+                chosenSelect,
+                value,
+                text,
+                false
+            );
         });
-    }
 
-    function refreshDjangoSelectBox(selectId) {
-        if (!window.SelectBox) {
-            return;
-        }
-
-        const selectElement = byId(selectId);
-
-        if (!selectElement) {
-            return;
-        }
-
-        window.SelectBox.init(selectId);
-        window.SelectBox.redisplay(selectId);
-    }
-
-    function clearAreaSearchInputs() {
-        const possibleIds = [
-            "id_covered_areas_input",
-            "id_covered_areas_selected_input"
-        ];
-
-        possibleIds.forEach(function (id) {
-            const input = byId(id);
-
-            if (input) {
-                input.value = "";
-                input.dispatchEvent(
-                    new Event("input", { bubbles: true })
-                );
-            }
-        });
-    }
-
-    function populateCoveredAreas(areas) {
-        const availableSelect = byId("id_covered_areas_from");
-        const chosenSelect = byId("id_covered_areas_to");
-        const originalSelect = byId("id_covered_areas");
-
-        clearAreaSearchInputs();
-
-        if (availableSelect && chosenSelect) {
-            clearSelectElement(availableSelect);
-            clearSelectElement(chosenSelect);
-
-            clearSelectBoxCache(availableSelect.id);
-            clearSelectBoxCache(chosenSelect.id);
-
-            addAreaOptions(chosenSelect, areas, true);
-
-            refreshDjangoSelectBox(availableSelect.id);
-            refreshDjangoSelectBox(chosenSelect.id);
-
-            chosenSelect.dispatchEvent(
-                new Event("change", { bubbles: true })
-            );
-
-            return;
-        }
-
-        if (originalSelect) {
-            clearSelectElement(originalSelect);
-            addAreaOptions(originalSelect, areas, true);
-
-            originalSelect.dispatchEvent(
-                new Event("change", { bubbles: true })
-            );
-        }
-    }
-
-    function selectAllChosenAreasBeforeSubmit() {
-        const form = document.querySelector(
-            "form#ratepolicy_form, form[method='post']"
+        const helpText = document.querySelector(
+            ".field-covered_areas .help, .form-row.field-covered_areas .help"
         );
 
-        if (!form) {
+        if (helpText) {
+            if (areas.length) {
+                helpText.textContent = (
+                    areas.length +
+                    " covered area" +
+                    (areas.length === 1 ? "" : "s") +
+                    " loaded automatically from the selected Property class."
+                );
+            } else {
+                helpText.textContent = (
+                    "No covered areas are assigned to the selected Property class."
+                );
+            }
+        }
+    }
+
+    async function loadCoveredAreas() {
+        const propertyClassField = getField("id_property_class");
+
+        if (!propertyClassField) {
             return;
         }
 
-        form.addEventListener("submit", function () {
-            const chosenSelect = byId("id_covered_areas_to");
-            const originalSelect = byId("id_covered_areas");
-            const targetSelect = chosenSelect || originalSelect;
+        const requestToken = ++coveredAreasRequestToken;
+        coveredAreasLoading = true;
 
-            if (!targetSelect) {
+        const propertyClassId = propertyClassField.value;
+        const url = propertyClassField.dataset.propertyClassAreasUrl;
+
+        if (!propertyClassId || !url) {
+            clearCoveredAreas();
+            coveredAreasLoading = false;
+            return;
+        }
+
+        const requestUrl = (
+            url +
+            "?property_class=" +
+            encodeURIComponent(propertyClassId)
+        );
+
+        try {
+            const response = await fetch(
+                requestUrl,
+                {
+                    headers: {
+                        "Accept": "application/json",
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                if (requestToken === coveredAreasRequestToken) {
+                    coveredAreasLoading = false;
+                }
+
+                console.error(
+                    "Could not load covered areas:",
+                    response.status
+                );
                 return;
             }
 
-            Array.from(targetSelect.options).forEach(function (option) {
+            const data = await response.json();
+
+            if (requestToken !== coveredAreasRequestToken) {
+                return;
+            }
+
+            const areas = getAreaResults(data);
+
+            setCoveredAreas(areas);
+            coveredAreasLoading = false;
+
+        } catch (error) {
+            if (requestToken !== coveredAreasRequestToken) {
+                return;
+            }
+
+            coveredAreasLoading = false;
+            console.error(
+                "Covered areas AJAX failed:",
+                error
+            );
+        }
+    }
+
+    async function loadPropertyClasses() {
+        const assemblyField = getField("id_assembly");
+        const propertyUseField = getField("id_property_use");
+        const propertyClassField = getField("id_property_class");
+
+        if (!assemblyField || !propertyClassField) {
+            return;
+        }
+
+        const url = (
+            assemblyField.dataset.propertyClassesUrl ||
+            propertyUseField?.dataset.propertyClassesUrl ||
+            ""
+        );
+
+        if (!url) {
+            return;
+        }
+
+        const requestToken = ++propertyClassesRequestToken;
+        propertyClassesLoading = true;
+
+        const assemblyId = getValue("id_assembly");
+        const propertyUse = getValue("id_property_use");
+
+        clearSelect(propertyClassField);
+        addOption(
+            propertyClassField,
+            "",
+            "---------",
+            false
+        );
+
+        if (!assemblyId) {
+            clearCoveredAreas();
+            propertyClassesLoading = false;
+            return;
+        }
+
+        const requestUrl = (
+            url +
+            "?assembly=" +
+            encodeURIComponent(assemblyId) +
+            "&property_use=" +
+            encodeURIComponent(propertyUse || "")
+        );
+
+        try {
+            const response = await fetch(
+                requestUrl,
+                {
+                    headers: {
+                        "Accept": "application/json",
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                if (requestToken === propertyClassesRequestToken) {
+                    propertyClassesLoading = false;
+                }
+
+                console.error(
+                    "Could not load property classes:",
+                    response.status
+                );
+                return;
+            }
+
+            const data = await response.json();
+
+            if (requestToken !== propertyClassesRequestToken) {
+                return;
+            }
+
+            const results = Array.isArray(data.results)
+                ? data.results
+                : [];
+
+            results.forEach(function (item) {
+                addOption(
+                    propertyClassField,
+                    String(item.id),
+                    item.text || item.name || String(item.id),
+                    false
+                );
+            });
+
+            propertyClassesLoading = false;
+
+            if (results.length === 1) {
+                propertyClassField.value = String(
+                    results[0].id
+                );
+
+                await loadCoveredAreas();
+            } else {
+                clearCoveredAreas();
+            }
+
+        } catch (error) {
+            if (requestToken !== propertyClassesRequestToken) {
+                return;
+            }
+
+            propertyClassesLoading = false;
+            console.error(
+                "Property class AJAX failed:",
+                error
+            );
+        }
+    }
+
+    function prepareCoveredAreasForSubmit(event) {
+        if (coveredAreasLoading || propertyClassesLoading) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            return;
+        }
+
+        const originalSelect = getField("id_covered_areas");
+        const chosenSelect = getField("id_covered_areas_to");
+
+        if (originalSelect) {
+            Array.from(originalSelect.options).forEach(function (option) {
                 option.selected = true;
             });
-        });
+        }
+
+        if (chosenSelect) {
+            Array.from(chosenSelect.options).forEach(function (option) {
+                option.selected = true;
+            });
+        }
     }
 
-    function initialiseRatePolicyDependencies() {
-        const assemblySelect = byId("id_assembly");
-        const propertyUseSelect = byId("id_property_use");
-        const propertyClassSelect = byId("id_property_class");
+    onReady(function () {
+        const assemblyField = getField("id_assembly");
+        const propertyUseField = getField("id_property_use");
+        const propertyClassField = getField("id_property_class");
+        const form = document.querySelector("form");
 
-        if (
-            !assemblySelect ||
-            !propertyUseSelect ||
-            !propertyClassSelect
-        ) {
-            return;
+        if (assemblyField) {
+            assemblyField.addEventListener(
+                "change",
+                loadPropertyClasses
+            );
         }
 
-        const classesUrl =
-            propertyUseSelect.dataset.propertyClassesUrl || "";
-
-        const areasUrl =
-            propertyClassSelect.dataset.propertyClassAreasUrl || "";
-
-        if (!classesUrl || !areasUrl) {
-            return;
+        if (propertyUseField) {
+            propertyUseField.addEventListener(
+                "change",
+                loadPropertyClasses
+            );
         }
 
-        let requestSequence = 0;
+        if (propertyClassField) {
+            propertyClassField.addEventListener(
+                "change",
+                loadCoveredAreas
+            );
 
-        async function loadAreas(propertyClassId) {
-            if (
-                !propertyClassId ||
-                String(propertyClassId).startsWith(LEGACY_PREFIX)
-            ) {
-                return;
-            }
-
-            const currentSequence = ++requestSequence;
-
-            try {
-                const data = await getJson(
-                    buildUrl(areasUrl, {
-                        property_class: propertyClassId
-                    })
-                );
-
-                if (currentSequence !== requestSequence) {
-                    return;
-                }
-
-                populateCoveredAreas(data.results || []);
-            } catch (error) {
-                if (currentSequence !== requestSequence) {
-                    return;
-                }
-
-                populateCoveredAreas([]);
-                window.console.error(error);
+            if (propertyClassField.value) {
+                loadCoveredAreas();
             }
         }
 
-        async function loadClasses(selectedValue, loadSelectedAreas) {
-            const assemblyId = assemblySelect.value;
-            const propertyUse = propertyUseSelect.value;
-
-            if (!assemblyId || !propertyUse) {
-                setClassPlaceholder(
-                    propertyClassSelect,
-                    "Select assembly and property use first"
-                );
-                populateCoveredAreas([]);
-                return;
-            }
-
-            const currentSequence = ++requestSequence;
-            setClassLoading(propertyClassSelect);
-
-            try {
-                const data = await getJson(
-                    buildUrl(classesUrl, {
-                        assembly: assemblyId,
-                        property_use: propertyUse
-                    })
-                );
-
-                if (currentSequence !== requestSequence) {
-                    return;
-                }
-
-                populateClassSelect(
-                    propertyClassSelect,
-                    data.results || [],
-                    selectedValue
-                );
-
-                const activeValue = propertyClassSelect.value;
-
-                if (loadSelectedAreas && activeValue) {
-                    await loadAreas(activeValue);
-                } else if (!activeValue) {
-                    populateCoveredAreas([]);
-                }
-            } catch (error) {
-                if (currentSequence !== requestSequence) {
-                    return;
-                }
-
-                setClassPlaceholder(
-                    propertyClassSelect,
-                    "Unable to load property classes"
-                );
-                populateCoveredAreas([]);
-                window.console.error(error);
-            }
+        if (form) {
+            form.addEventListener(
+                "submit",
+                prepareCoveredAreasForSubmit
+            );
         }
-
-        assemblySelect.addEventListener("change", function () {
-            loadClasses("", false);
-        });
-
-        propertyUseSelect.addEventListener("change", function () {
-            loadClasses("", false);
-        });
-
-        propertyClassSelect.addEventListener("change", function () {
-            const selectedValue = propertyClassSelect.value;
-
-            if (!selectedValue) {
-                populateCoveredAreas([]);
-                return;
-            }
-
-            loadAreas(selectedValue);
-        });
-
-        const initialClassValue = propertyClassSelect.value;
-
-        if (
-            initialClassValue &&
-            String(initialClassValue).startsWith(LEGACY_PREFIX)
-        ) {
-            return;
-        }
-
-        loadClasses(initialClassValue, true);
-    }
-
-    function start() {
-        selectAllChosenAreasBeforeSubmit();
-
-        window.setTimeout(function () {
-            initialiseRatePolicyDependencies();
-        }, 80);
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", start);
-    } else {
-        start();
-    }
+    });
 })();

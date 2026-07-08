@@ -486,17 +486,21 @@
             function () {
                 attempts += 1;
 
-                const widgetExists = Boolean(
+                const filteredWidgetReady = Boolean(
                     byId(
                         "id_covered_areas_from"
                     )
-                    || byId(
-                        "id_covered_areas"
-                    )
                 );
 
+                const plainSelectReady = Boolean(
+                    byId(
+                        "id_covered_areas"
+                    )
+                ) && attempts >= 5;
+
                 if (
-                    widgetExists
+                    filteredWidgetReady
+                    || plainSelectReady
                     || attempts >= 40
                 ) {
                     window.clearInterval(
