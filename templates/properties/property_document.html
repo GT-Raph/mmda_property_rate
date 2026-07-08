@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Property Document - {{ property_obj.property_reference }}</title>
+    {% include 'properties/_action_common.css' %}
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>Property Document</h1>
+            <div class="subtitle">{{ property_obj.property_reference }}{% if context_assembly %} • {{ context_assembly.name }}{% endif %}</div>
+        </div>
+        <div class="actions no-print">
+            <a href="{% url 'properties:property-detail' property_obj.id %}" class="btn btn-secondary">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
+        </div>
+    </div>
+
+    <section class="card">
+        <h2 class="section-title">Property Record</h2>
+        <div class="row"><span>Property Reference</span><strong>{{ property_obj.property_reference }}</strong></div>
+        <div class="row"><span>Assembly</span><strong>{{ property_obj.assembly.name }}</strong></div>
+        <div class="row"><span>Generated</span><strong>{{ generated_at|date:"Y-m-d H:i" }}</strong></div>
+    </section>
+
+    <div class="grid">
+        <section class="card">
+            <h2 class="section-title">Owner</h2>
+            <div class="row"><span>Name</span><strong>{{ owner.full_name }}</strong></div>
+            <div class="row"><span>Phone</span><strong>{{ owner.primary_phone }}</strong></div>
+            <div class="row"><span>Email</span><strong>{{ owner.email|default:"—" }}</strong></div>
+            <div class="row"><span>Ghana Card</span><strong>{{ owner.ghana_card_number|default:"—" }}</strong></div>
+        </section>
+        <section class="card">
+            <h2 class="section-title">Property</h2>
+            <div class="row"><span>Type</span><strong>{{ property_type_label }}</strong></div>
+            <div class="row"><span>Class</span><strong>{{ property_obj.property_class|default:"—" }}</strong></div>
+            <div class="row"><span>Building Type</span><strong>{{ property_obj.get_building_type_display }}</strong></div>
+            <div class="row"><span>Location</span><strong>{{ property_location }}</strong></div>
+        </section>
+    </div>
+
+    <section class="card">
+        <h2 class="section-title">Billing Details</h2>
+        <div class="row"><span>Rateable Value</span><strong>GH₵ {{ property_obj.rateable_value|floatformat:2 }}</strong></div>
+        <div class="row"><span>Rate Policy</span><strong>{{ rate_policy.policy_name|default:"—" }}</strong></div>
+        <div class="row"><span>Rate Impost</span><strong>{% if rate_policy %}{{ rate_policy.rate_impost }}{% else %}—{% endif %}</strong></div>
+        <div class="row"><span>Bill Number</span><strong>{% if latest_bill %}{{ latest_bill.bill_number }}{% else %}—{% endif %}</strong></div>
+        <div class="row"><span>Annual Rate</span><strong>{{ annual_rate }}</strong></div>
+        <div class="row"><span>Payment Status</span><strong>{% if latest_bill %}{{ latest_bill.get_status_display|default:latest_bill.status }}{% else %}No bill generated{% endif %}</strong></div>
+    </section>
+</div>
+</body>
+</html>

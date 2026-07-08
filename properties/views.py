@@ -6,15 +6,15 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
-from billing.models import CommunityArea, RatePolicy
-from properties.forms import PropertyCreateForm
+from billing.models import Bill, CommunityArea, RatePolicy
+from properties.forms import PropertyCreateForm, PropertyUpdateForm, OwnerUpdateForm
 from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
 import logging
@@ -491,3 +491,159 @@ def add_property(request):
         "properties/property_form.html",
         context,
     )
+
+
+def _property_access_queryset(request):
+    context_assembly = _get_current_assembly(request)
+    user_role = get_user_role(request.user)
+
+    queryset = (
+        Property.objects
+        .select_related(
+            "owner",
+            "assembly",
+            "community_area",
+            "applied_rate_policy",
+            "registered_by",
+        )
+        .order_by("-created_at")
+    )
+
+    if context_assembly:
+        queryset = queryset.filter(assembly=context_assembly)
+
+    if user_role == "field_officer":
+        queryset = queryset.filter(registered_by=request.user)
+
+    return queryset
+
+
+def _latest_bill_for_property(property_obj):
+    return (
+        Bill.objects
+        .filter(property_record=property_obj)
+        .select_related("rate_policy", "assembly")
+        .order_by("-billing_year", "-created_at")
+        .first()
+    )
+
+
+def _money_full(value):
+    return f"GH₵ {Decimal(value or 0):,.2f}"
+
+
+@module_required("properties")
+def property_detail(request, property_id):
+    property_obj = get_object_or_404(
+        _property_access_queryset(request),
+        pk=property_id,
+    )
+
+    latest_bill = _latest_bill_for_property(property_obj)
+    portal_access = get_allowed_modules(request.user)
+
+    context = {
+        "page_title": "Property Details",
+        "page_subtitle": property_obj.property_reference,
+        "context_assembly": _get_current_assembly(request),
+        "portal_access": portal_access,
+        "property_obj": property_obj,
+        "owner": property_obj.owner,
+        "latest_bill": latest_bill,
+        "rate_policy": property_obj.applied_rate_policy,
+        "property_location": _property_location(property_obj),
+        "property_type_label": _property_type_label(property_obj),
+        "status_label": _property_status(property_obj)[0],
+        "status_css_class": _property_status(property_obj)[1],
+        "annual_rate": _money_full(getattr(latest_bill, "amount_due", 0)) if latest_bill else "GH₵ 0.00",
+    }
+
+    return render(request, "properties/property_detail.html", context)
+
+
+@module_required("properties")
+def edit_property(request, property_id):
+    property_obj = get_object_or_404(
+        _property_access_queryset(request),
+        pk=property_id,
+    )
+
+    portal_access = get_allowed_modules(request.user)
+
+    if request.method == "POST":
+        owner_form = OwnerUpdateForm(
+            request.POST,
+            instance=property_obj.owner,
+            prefix="owner",
+        )
+        property_form = PropertyUpdateForm(
+            request.POST,
+            instance=property_obj,
+            assembly=property_obj.assembly,
+            prefix="property",
+        )
+
+        if owner_form.is_valid() and property_form.is_valid():
+            with transaction.atomic():
+                owner_form.save()
+                property_form.save()
+
+            messages.success(
+                request,
+                f"Property {property_obj.property_reference} was updated successfully.",
+            )
+            return redirect("properties:property-detail", property_id=property_obj.id)
+
+        messages.error(request, "Please correct the highlighted errors and try again.")
+
+    else:
+        owner_form = OwnerUpdateForm(
+            instance=property_obj.owner,
+            prefix="owner",
+        )
+        property_form = PropertyUpdateForm(
+            instance=property_obj,
+            assembly=property_obj.assembly,
+            prefix="property",
+        )
+
+    context = {
+        "page_title": "Edit Property",
+        "page_subtitle": property_obj.property_reference,
+        "context_assembly": _get_current_assembly(request),
+        "portal_access": portal_access,
+        "property_obj": property_obj,
+        "owner_form": owner_form,
+        "property_form": property_form,
+    }
+
+    return render(request, "properties/property_edit.html", context)
+
+
+@module_required("properties")
+def property_document(request, property_id):
+    property_obj = get_object_or_404(
+        _property_access_queryset(request),
+        pk=property_id,
+    )
+
+    latest_bill = _latest_bill_for_property(property_obj)
+    portal_access = get_allowed_modules(request.user)
+
+    context = {
+        "page_title": "Property Document",
+        "page_subtitle": property_obj.property_reference,
+        "context_assembly": _get_current_assembly(request),
+        "portal_access": portal_access,
+        "property_obj": property_obj,
+        "owner": property_obj.owner,
+        "latest_bill": latest_bill,
+        "rate_policy": property_obj.applied_rate_policy,
+        "property_location": _property_location(property_obj),
+        "property_type_label": _property_type_label(property_obj),
+        "status_label": _property_status(property_obj)[0],
+        "annual_rate": _money_full(getattr(latest_bill, "amount_due", 0)) if latest_bill else "GH₵ 0.00",
+        "generated_at": timezone.now(),
+    }
+
+    return render(request, "properties/property_document.html", context)

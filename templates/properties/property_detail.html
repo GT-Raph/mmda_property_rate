@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title }} - {{ property_obj.property_reference }}</title>
+    {% include 'properties/_action_common.css' %}
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>{{ page_title }}</h1>
+            <div class="subtitle">{{ property_obj.property_reference }}{% if context_assembly %} • {{ context_assembly.name }}{% endif %}</div>
+        </div>
+        <div class="actions">
+            <a href="{% url 'properties:property-registry' %}" class="btn btn-secondary">Back</a>
+            <a href="{% url 'properties:property-edit' property_obj.id %}" class="btn btn-primary">Edit Property</a>
+            <a href="{% url 'properties:property-document' property_obj.id %}" class="btn btn-secondary">Document</a>
+        </div>
+    </div>
+
+    {% if messages %}{% for message in messages %}<div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">{{ message }}</div>{% endfor %}{% endif %}
+
+    <div class="grid">
+        <section class="card">
+            <h2 class="section-title">Owner Information</h2>
+            <div class="row"><span>Name</span><strong>{{ owner.full_name }}</strong></div>
+            <div class="row"><span>Primary Phone</span><strong>{{ owner.primary_phone }}</strong></div>
+            <div class="row"><span>Alternate Phone</span><strong>{{ owner.alternate_phone|default:"—" }}</strong></div>
+            <div class="row"><span>Email</span><strong>{{ owner.email|default:"—" }}</strong></div>
+            <div class="row"><span>Ghana Card</span><strong>{{ owner.ghana_card_number|default:"—" }}</strong></div>
+        </section>
+        <section class="card">
+            <h2 class="section-title">Property Summary</h2>
+            <div class="row"><span>Reference</span><strong>{{ property_obj.property_reference }}</strong></div>
+            <div class="row"><span>Type</span><strong>{{ property_type_label }}</strong></div>
+            <div class="row"><span>Class</span><strong>{{ property_obj.property_class|default:"—" }}</strong></div>
+            <div class="row"><span>Building Type</span><strong>{{ property_obj.get_building_type_display }}</strong></div>
+            <div class="row"><span>Status</span><strong><span class="status-pill {{ status_css_class }}">{{ status_label }}</span></strong></div>
+        </section>
+    </div>
+
+    <div class="grid">
+        <section class="card">
+            <h2 class="section-title">Location</h2>
+            <div class="row"><span>Address</span><strong>{{ property_obj.address_line }}</strong></div>
+            <div class="row"><span>Digital Address</span><strong>{{ property_obj.digital_address|default:"—" }}</strong></div>
+            <div class="row"><span>Area / Town</span><strong>{{ property_obj.area_town }}</strong></div>
+            <div class="row"><span>Suburb</span><strong>{{ property_obj.suburb|default:"—" }}</strong></div>
+            <div class="row"><span>Landmark</span><strong>{{ property_obj.landmark|default:"—" }}</strong></div>
+            <div class="row"><span>Coordinates</span><strong>{{ property_obj.latitude|default:"—" }}, {{ property_obj.longitude|default:"—" }}</strong></div>
+        </section>
+        <section class="card">
+            <h2 class="section-title">Billing</h2>
+            <div class="row"><span>Rateable Value</span><strong>GH₵ {{ property_obj.rateable_value|floatformat:2 }}</strong></div>
+            <div class="row"><span>Rate Policy</span><strong>{{ rate_policy.policy_name|default:"—" }}</strong></div>
+            <div class="row"><span>Rate Impost</span><strong>{% if rate_policy %}{{ rate_policy.rate_impost }}{% else %}—{% endif %}</strong></div>
+            <div class="row"><span>Current Bill</span><strong>{% if latest_bill %}{{ latest_bill.bill_number }}{% else %}—{% endif %}</strong></div>
+            <div class="row"><span>Annual Rate</span><strong>{{ annual_rate }}</strong></div>
+            <div class="row"><span>Bill Status</span><strong>{% if latest_bill %}{{ latest_bill.get_status_display|default:latest_bill.status }}{% else %}No bill yet{% endif %}</strong></div>
+        </section>
+    </div>
+</div>
+</body>
+</html>

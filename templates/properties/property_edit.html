@@ -1,0 +1,62 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ page_title }} - {{ property_obj.property_reference }}</title>
+    {% include 'properties/_action_common.css' %}
+</head>
+<body>
+<div class="page">
+    <div class="page-head">
+        <div>
+            <h1>{{ page_title }}</h1>
+            <div class="subtitle">{{ property_obj.property_reference }}{% if context_assembly %} • {{ context_assembly.name }}{% endif %}</div>
+        </div>
+        <div class="actions">
+            <a href="{% url 'properties:property-detail' property_obj.id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+
+    {% if messages %}{% for message in messages %}<div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">{{ message }}</div>{% endfor %}{% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% if owner_form.non_field_errors %}<div class="message error">{{ owner_form.non_field_errors }}</div>{% endif %}
+        {% if property_form.non_field_errors %}<div class="message error">{{ property_form.non_field_errors }}</div>{% endif %}
+
+        <section class="card">
+            <h2 class="section-title">Owner Information</h2>
+            <div class="form-grid">
+                {% for field in owner_form %}
+                    <div class="field-group {% if field.name == 'residential_address' %}full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="error-text">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="section-title">Property Information</h2>
+            <div class="form-grid">
+                {% for field in property_form %}
+                    <div class="field-group {% if field.name == 'exemption_reason' %}full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="error-text">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'properties:property-detail' property_obj.id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

@@ -12,7 +12,7 @@ from billing.models import (
     PropertyClass,
     RatePolicy,
 )
-from properties.models import Property
+from properties.models import Owner, Property
 
 
 def _model_field_map(model):
@@ -1230,6 +1230,174 @@ class PropertyCreateForm(PropertyBaseForm):
                     instance.property_class = None
                 else:
                     instance.property_class = ""
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+
+        return instance
+    
+class OwnerUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Owner
+        fields = [
+            "full_name",
+            "primary_phone",
+            "alternate_phone",
+            "email",
+            "ghana_card_number",
+            "postal_address",
+            "residential_address",
+        ]
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "form-input"}),
+            "primary_phone": forms.TextInput(attrs={"class": "form-input"}),
+            "alternate_phone": forms.TextInput(attrs={"class": "form-input"}),
+            "email": forms.EmailInput(attrs={"class": "form-input"}),
+            "ghana_card_number": forms.TextInput(attrs={"class": "form-input"}),
+            "postal_address": forms.TextInput(attrs={"class": "form-input"}),
+            "residential_address": forms.Textarea(attrs={"class": "form-input", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["full_name"].required = True
+        self.fields["primary_phone"].required = True
+        self.fields["email"].required = True
+        self.fields["ghana_card_number"].required = True
+
+
+class PropertyUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Property
+        fields = [
+            "digital_address",
+            "address_line",
+            "area_town",
+            "suburb",
+            "landmark",
+            "community_area",
+            "latitude",
+            "longitude",
+            "property_use",
+            "building_type",
+            "number_of_floors",
+            "number_of_units",
+            "year_built",
+            "occupancy_status",
+            "rateable_value",
+            "is_exempt",
+            "exemption_reason",
+            "verification_status",
+            "is_active",
+        ]
+        widgets = {
+            "digital_address": forms.TextInput(attrs={"class": "form-input"}),
+            "address_line": forms.TextInput(attrs={"class": "form-input"}),
+            "area_town": forms.TextInput(attrs={"class": "form-input"}),
+            "suburb": forms.TextInput(attrs={"class": "form-input"}),
+            "landmark": forms.TextInput(attrs={"class": "form-input"}),
+            "community_area": forms.Select(attrs={"class": "form-input"}),
+            "latitude": forms.NumberInput(attrs={"class": "form-input", "step": "0.000001"}),
+            "longitude": forms.NumberInput(attrs={"class": "form-input", "step": "0.000001"}),
+            "property_use": forms.Select(attrs={"class": "form-input"}),
+            "building_type": forms.Select(attrs={"class": "form-input"}),
+            "number_of_floors": forms.NumberInput(attrs={"class": "form-input"}),
+            "number_of_units": forms.NumberInput(attrs={"class": "form-input"}),
+            "year_built": forms.NumberInput(attrs={"class": "form-input"}),
+            "occupancy_status": forms.Select(attrs={"class": "form-input"}),
+            "rateable_value": forms.NumberInput(attrs={"class": "form-input", "step": "0.01"}),
+            "exemption_reason": forms.Textarea(attrs={"class": "form-input", "rows": 3}),
+            "verification_status": forms.Select(attrs={"class": "form-input"}),
+        }
+
+    def __init__(self, *args, assembly=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.assembly = assembly or getattr(self.instance, "assembly", None)
+        self._matched_policy = None
+
+        if self.assembly:
+            self.fields["community_area"].queryset = CommunityArea.objects.filter(
+                assembly=self.assembly,
+                is_active=True,
+            ).order_by("sub_metro", "name")
+        else:
+            self.fields["community_area"].queryset = CommunityArea.objects.none()
+
+        for field_name in [
+            "address_line",
+            "area_town",
+            "community_area",
+            "property_use",
+            "building_type",
+            "rateable_value",
+        ]:
+            self.fields[field_name].required = True
+
+    def clean_rateable_value(self):
+        if "rateable_value" not in self.cleaned_data:
+            return None
+
+        value = self.cleaned_data.get("rateable_value")
+
+        if value is None:
+            return value
+
+        if Decimal(value) < 0:
+            raise forms.ValidationError("Rateable value cannot be negative.")
+
+        return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        is_exempt = cleaned_data.get("is_exempt")
+        property_use = cleaned_data.get("property_use")
+        community_area = cleaned_data.get("community_area")
+        building_type = cleaned_data.get("building_type")
+        rateable_value = cleaned_data.get("rateable_value")
+
+        if not self.assembly:
+            raise ValidationError("No active assembly was found for this property.")
+
+        if community_area and community_area.assembly_id != self.assembly.id:
+            raise ValidationError("The selected community / area does not belong to this assembly.")
+
+        if is_exempt:
+            self._matched_policy = None
+            return cleaned_data
+
+        if property_use and community_area and building_type and rateable_value is not None:
+            today = timezone.localdate()
+            policy = RatePolicy.get_applicable_policy(
+                assembly=self.assembly,
+                property_use=property_use,
+                community_area=community_area,
+                building_type=building_type,
+                on_date=today,
+                year=today.year,
+            )
+
+            if not policy:
+                raise ValidationError(
+                    "No active rate policy matches this property use, building type and community / area."
+                )
+
+            self._matched_policy = policy
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        if self.cleaned_data.get("is_exempt"):
+            instance.applied_rate_policy = None
+            instance.property_class = ""
+        else:
+            policy = self._matched_policy
+            instance.applied_rate_policy = policy
+            instance.property_class = policy.property_class if policy else ""
 
         if commit:
             instance.save()
