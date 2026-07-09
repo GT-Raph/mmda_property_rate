@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.db.models import Count, IntegerField, Max, OuterRef, Q, Subquery
+from django.db.models import Count, Max, Q
 from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -1584,33 +1584,37 @@ def field_officer_stats(request):
             | Q(assembly__isnull=True)
         )
 
-    completed_property_ids = FieldVisit.objects.filter(
-        officer_id=OuterRef("user_id"),
-    ).values("property_id")
+    completed_totals_by_user = {}
 
-    completed_count_subquery = (
-        completed_properties
-        .filter(
-            Q(registered_by=OuterRef("user_id"))
-            | Q(id__in=Subquery(completed_property_ids))
-        )
-        .order_by()
-        .values()
-        .annotate(total=Count("id", distinct=True))
-        .values("total")[:1]
-    )
+    for property_id, registered_by_id in completed_properties.values_list(
+        "id",
+        "registered_by_id",
+    ):
+        if registered_by_id:
+            completed_totals_by_user.setdefault(
+                registered_by_id,
+                set(),
+            ).add(property_id)
 
-    officer_profiles = officer_profiles.annotate(
-        completed_total=Subquery(
-            completed_count_subquery,
-            output_field=IntegerField(),
-        )
-    )
+    for property_id, officer_id in completed_properties.values_list(
+        "id",
+        "field_visits__officer_id",
+    ).distinct():
+        if officer_id:
+            completed_totals_by_user.setdefault(
+                officer_id,
+                set(),
+            ).add(property_id)
 
     ranking_rows = [
         {
             "user_id": profile.user_id,
-            "completed": profile.completed_total or 0,
+            "completed": len(
+                completed_totals_by_user.get(
+                    profile.user_id,
+                    set(),
+                )
+            ),
             "name": _officer_name(profile.user),
         }
         for profile in officer_profiles
@@ -1624,6 +1628,7 @@ def field_officer_stats(request):
         reverse=True,
     )
 
+    rank_total = len(ranking_rows)
     rank = rank_total + 1
 
     for index, row in enumerate(
@@ -1633,8 +1638,6 @@ def field_officer_stats(request):
         if row["user_id"] == request.user.id:
             rank = index
             break
-
-    rank_total = len(ranking_rows)
 
     officer_name = _officer_name(request.user)
 
