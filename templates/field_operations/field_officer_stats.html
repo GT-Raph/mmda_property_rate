@@ -766,18 +766,28 @@
             }
 
             .progress-card {
-                grid-template-columns: 1fr;
+                grid-template-columns: minmax(0, 1fr) 80px;
                 padding: 22px;
             }
 
             .progress-icon {
-                justify-self: start;
-                width: 78px;
-                height: 78px;
+                justify-self: end;
+                width: 72px;
+                height: 72px;
             }
 
             .metric-grid { grid-template-columns: 1fr; }
             .content-card { padding: 18px; }
+        }
+
+        @media (max-width: 430px) {
+            .progress-card {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-icon {
+                justify-self: start;
+            }
         }
     </style>
 </head>
@@ -816,7 +826,7 @@
             {% if portal_access.field_operations %}
                 <a href="{% url 'field_operations:field-operations' %}">
                     <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
-                    <span>Dashboard</span>
+                    <span>Field Officers</span>
                 </a>
 
                 <a href="{% url 'field_operations:field-officer-stats' %}" class="active">

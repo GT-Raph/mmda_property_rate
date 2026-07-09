@@ -1262,13 +1262,41 @@ def field_officer_stats(request):
                 month=1,
                 day=1,
             )
-
         else:
             end = start.replace(
                 month=month + 1,
             )
 
         return start, end
+
+    def in_date_range(field_name, start, end):
+        return Q(**{
+            f"{field_name}__date__gte": start,
+            f"{field_name}__date__lt": end,
+        })
+
+    def completed_in_range(queryset, start, end):
+        """
+        Count completed work inside a month.
+
+        Prefer last_verified_at when it exists. If older records are already
+        marked verified but last_verified_at was never saved, fall back to
+        updated_at, then created_at. This prevents a verified property from
+        showing as 0% just because last_verified_at is blank.
+        """
+
+        return queryset.filter(
+            in_date_range("last_verified_at", start, end)
+            | (
+                Q(last_verified_at__isnull=True)
+                & in_date_range("updated_at", start, end)
+            )
+            | (
+                Q(last_verified_at__isnull=True)
+                & Q(updated_at__isnull=True)
+                & in_date_range("created_at", start, end)
+            )
+        ).distinct()
 
     def average_response_label(durations):
         if not durations:
@@ -1350,19 +1378,18 @@ def field_officer_stats(request):
     month_start, next_month_start = month_bounds(0)
 
     current_month_properties = properties_queryset.filter(
-        Q(created_at__date__gte=month_start)
-        & Q(created_at__date__lt=next_month_start)
+        in_date_range("created_at", month_start, next_month_start)
     )
 
-    current_month_completed = completed_properties.filter(
-        Q(last_verified_at__date__gte=month_start)
-        & Q(last_verified_at__date__lt=next_month_start)
+    current_month_assigned = current_month_properties.count()
+
+    current_month_completed = completed_in_range(
+        completed_properties,
+        month_start,
+        next_month_start,
     ).count()
 
-    current_month_target = current_month_properties.count()
-
-    if current_month_target == 0:
-        current_month_target = current_month_completed
+    current_month_target = current_month_assigned or current_month_completed
 
     month_progress_percent = percent(
         current_month_completed,
@@ -1398,13 +1425,13 @@ def field_officer_stats(request):
         start, end = month_bounds(months_back)
 
         month_assigned = properties_queryset.filter(
-            Q(created_at__date__gte=start)
-            & Q(created_at__date__lt=end)
+            in_date_range("created_at", start, end)
         ).count()
 
-        month_completed = completed_properties.filter(
-            Q(last_verified_at__date__gte=start)
-            & Q(last_verified_at__date__lt=end)
+        month_completed = completed_in_range(
+            completed_properties,
+            start,
+            end,
         ).count()
 
         month_target = month_assigned or month_completed
@@ -1584,9 +1611,27 @@ def field_officer_stats(request):
             | Q(assembly__isnull=True)
         )
 
+    all_completed_properties = Property.objects.filter(
+        verification_status__in=completed_statuses
+    )
+
+    if assembly:
+        all_completed_properties = all_completed_properties.filter(
+            assembly=assembly
+        )
+
+    all_completed_visit_property_ids = FieldVisit.objects.filter(
+        property__verification_status__in=completed_statuses
+    )
+
+    if assembly:
+        all_completed_visit_property_ids = all_completed_visit_property_ids.filter(
+            property__assembly=assembly
+        )
+
     completed_totals_by_user = {}
 
-    for property_id, registered_by_id in completed_properties.values_list(
+    for property_id, registered_by_id in all_completed_properties.values_list(
         "id",
         "registered_by_id",
     ):
@@ -1596,9 +1641,9 @@ def field_officer_stats(request):
                 set(),
             ).add(property_id)
 
-    for property_id, officer_id in completed_properties.values_list(
-        "id",
-        "field_visits__officer_id",
+    for property_id, officer_id in all_completed_visit_property_ids.values_list(
+        "property_id",
+        "officer_id",
     ).distinct():
         if officer_id:
             completed_totals_by_user.setdefault(
@@ -1692,3 +1737,4 @@ def field_officer_stats(request):
         "field_operations/field_officer_stats.html",
         context,
     )
+
