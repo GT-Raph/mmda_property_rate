@@ -1350,7 +1350,7 @@
             {% if portal_access.field_operations %}
                 <a
                     href="{% url 'field_operations:field-operations' %}"
-                    class="active"
+                    class="{% if request.resolver_match.url_name == 'field-operations' %}active{% endif %}"
                 >
                     <span class="nav-icon">
                         <svg
@@ -1376,12 +1376,54 @@
 
                     <span>
                         {% if is_field_officer %}
-                            Field Dashboard
+                            Dashboard
                         {% else %}
                             Field Officers
                         {% endif %}
                     </span>
                 </a>
+
+                {% if is_field_officer %}
+                    <a
+                        href="{% url 'field_operations:field-officer-stats' %}"
+                        class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}"
+                    >
+                        <span class="nav-icon">
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    d="M5 19V12"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                ></path>
+                                <path
+                                    d="M12 19V5"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                ></path>
+                                <path
+                                    d="M19 19V9"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                ></path>
+                                <path
+                                    d="M4 19H20"
+                                    stroke="currentColor"
+                                    stroke-width="1.8"
+                                    stroke-linecap="round"
+                                ></path>
+                            </svg>
+                        </span>
+
+                        <span>Stats</span>
+                    </a>
+                {% endif %}
             {% endif %}
 
             {% if portal_access.reports %}

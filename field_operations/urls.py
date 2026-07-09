@@ -12,4 +12,9 @@ urlpatterns = [
         views.field_operations_dashboard,
         name="field-operations",
     ),
+    path(
+    "stats/",
+    views.field_officer_stats,
+    name="field-officer-stats",
+    ),
 ]

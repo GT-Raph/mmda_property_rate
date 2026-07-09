@@ -1,9 +1,11 @@
 from datetime import timedelta
 
 from django.db.models import Count, Max, Q
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+
+from django.contrib.auth.decorators import login_required
 
 from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
@@ -1203,5 +1205,492 @@ def field_operations_dashboard(request):
     return render(
         request,
         "field_operations/field_operations.html",
+        context,
+    )
+
+
+@login_required
+def field_officer_stats(request):
+    if get_user_role(request.user) != "field_officer":
+        return redirect("portal-login")
+
+    assembly = _get_current_assembly(request)
+    portal_access = get_allowed_modules(request.user)
+    today = timezone.localdate()
+
+    completed_statuses = [
+        "verified",
+        "approved",
+        "completed",
+    ]
+
+    reviewed_statuses = completed_statuses + [
+        "flagged",
+        "possible_duplicate",
+        "rejected",
+        "disputed",
+    ]
+
+    def percent(part, total):
+        if not total:
+            return 0
+
+        return min(
+            100,
+            round((part / total) * 100),
+        )
+
+    def month_bounds(months_back=0):
+        month = today.month - months_back
+        year = today.year
+
+        while month <= 0:
+            month += 12
+            year -= 1
+
+        start = today.replace(
+            year=year,
+            month=month,
+            day=1,
+        )
+
+        if month == 12:
+            end = start.replace(
+                year=year + 1,
+                month=1,
+                day=1,
+            )
+
+        else:
+            end = start.replace(
+                month=month + 1,
+            )
+
+        return start, end
+
+    def average_response_label(durations):
+        if not durations:
+            return "—"
+
+        average_duration = (
+            sum(durations, timedelta())
+            / len(durations)
+        )
+
+        total_seconds = max(
+            0,
+            int(average_duration.total_seconds()),
+        )
+
+        if total_seconds < 60:
+            return f"{total_seconds}s"
+
+        if total_seconds < 3600:
+            return f"{round(total_seconds / 60)}m"
+
+        return f"{total_seconds / 3600:.1f}h"
+
+    officer_visits = (
+        FieldVisit.objects
+        .select_related(
+            "property",
+            "property__owner",
+            "property__assembly",
+            "officer",
+        )
+        .filter(officer=request.user)
+        .order_by(
+            "-visited_at",
+            "-created_at",
+        )
+    )
+
+    if assembly:
+        officer_visits = officer_visits.filter(
+            property__assembly=assembly
+        )
+
+    visit_property_ids = officer_visits.values_list(
+        "property_id",
+        flat=True,
+    )
+
+    properties_queryset = (
+        Property.objects
+        .select_related(
+            "owner",
+            "assembly",
+            "community_area",
+            "registered_by",
+            "applied_rate_policy",
+        )
+        .filter(
+            Q(registered_by=request.user)
+            | Q(id__in=visit_property_ids)
+        )
+        .distinct()
+        .order_by("-created_at")
+    )
+
+    if assembly:
+        properties_queryset = properties_queryset.filter(
+            assembly=assembly
+        )
+
+    completed_properties = properties_queryset.filter(
+        verification_status__in=completed_statuses
+    )
+
+    reviewed_properties = properties_queryset.filter(
+        verification_status__in=reviewed_statuses
+    )
+
+    month_start, next_month_start = month_bounds(0)
+
+    current_month_properties = properties_queryset.filter(
+        Q(created_at__date__gte=month_start)
+        & Q(created_at__date__lt=next_month_start)
+    )
+
+    current_month_completed = completed_properties.filter(
+        Q(last_verified_at__date__gte=month_start)
+        & Q(last_verified_at__date__lt=next_month_start)
+    ).count()
+
+    current_month_target = current_month_properties.count()
+
+    if current_month_target == 0:
+        current_month_target = current_month_completed
+
+    month_progress_percent = percent(
+        current_month_completed,
+        current_month_target,
+    )
+
+    total_completed = completed_properties.count()
+    total_reviewed = reviewed_properties.count()
+
+    accuracy = percent(
+        completed_properties.count(),
+        total_reviewed,
+    )
+
+    response_durations = []
+
+    for property_obj in completed_properties.filter(
+        last_verified_at__isnull=False
+    ):
+        if property_obj.created_at:
+            response_durations.append(
+                property_obj.last_verified_at
+                - property_obj.created_at
+            )
+
+    avg_response = average_response_label(
+        response_durations
+    )
+
+    monthly_breakdown = []
+
+    for months_back in [3, 2, 1, 0]:
+        start, end = month_bounds(months_back)
+
+        month_assigned = properties_queryset.filter(
+            Q(created_at__date__gte=start)
+            & Q(created_at__date__lt=end)
+        ).count()
+
+        month_completed = completed_properties.filter(
+            Q(last_verified_at__date__gte=start)
+            & Q(last_verified_at__date__lt=end)
+        ).count()
+
+        month_target = month_assigned or month_completed
+
+        monthly_breakdown.append(
+            {
+                "month": start.strftime("%b %Y"),
+                "completed": month_completed,
+                "target": month_target,
+                "percent": percent(
+                    month_completed,
+                    month_target,
+                ),
+            }
+        )
+
+    achievements = []
+
+    for month_item in monthly_breakdown:
+        if (
+            month_item["target"] > 0
+            and month_item["percent"] >= 100
+        ):
+            achievements.append(
+                {
+                    "title": "Perfect Month",
+                    "description": (
+                        "100% completion rate in "
+                        f"{month_item['month']}"
+                    ),
+                    "date": month_item["month"],
+                }
+            )
+            break
+
+    if response_durations:
+        average_duration = (
+            sum(response_durations, timedelta())
+            / len(response_durations)
+        )
+
+        if average_duration <= timedelta(hours=2):
+            achievements.append(
+                {
+                    "title": "Fast Responder",
+                    "description": (
+                        "Average response time under "
+                        "2 hours"
+                    ),
+                    "date": today.strftime("%b %Y"),
+                }
+            )
+
+    if total_reviewed and accuracy >= 98:
+        achievements.append(
+            {
+                "title": "Accuracy Expert",
+                "description": (
+                    f"{accuracy}% verification accuracy"
+                ),
+                "date": today.strftime("%b %Y"),
+            }
+        )
+
+    recent_activity_map = {}
+
+    for visit in officer_visits[:80]:
+        property_record = getattr(
+            visit,
+            "property",
+            None,
+        )
+
+        if not property_record:
+            continue
+
+        visit_status = _visit_status(visit)
+
+        if visit_status["label"] == "Pending":
+            continue
+
+        activity_datetime = (
+            visit.visited_at
+            or visit.created_at
+        )
+
+        if not activity_datetime:
+            continue
+
+        activity_date = timezone.localtime(
+            activity_datetime
+        ).date()
+
+        recent_activity_map.setdefault(
+            activity_date,
+            [],
+        ).append(
+            property_record.property_reference
+        )
+
+    if not recent_activity_map:
+        for property_record in completed_properties.order_by(
+            "-last_verified_at",
+            "-updated_at",
+            "-created_at",
+        )[:80]:
+            activity_datetime = (
+                getattr(
+                    property_record,
+                    "last_verified_at",
+                    None,
+                )
+                or getattr(
+                    property_record,
+                    "updated_at",
+                    None,
+                )
+                or property_record.created_at
+            )
+
+            if not activity_datetime:
+                continue
+
+            activity_date = timezone.localtime(
+                activity_datetime
+            ).date()
+
+            recent_activity_map.setdefault(
+                activity_date,
+                [],
+            ).append(
+                property_record.property_reference
+            )
+
+    recent_activity = []
+
+    for activity_date in sorted(
+        recent_activity_map.keys(),
+        reverse=True,
+    )[:5]:
+        references = recent_activity_map[
+            activity_date
+        ]
+
+        recent_activity.append(
+            {
+                "date": activity_date.strftime(
+                    "%Y-%m-%d"
+                ),
+                "completed_count": len(references),
+                "references": references[:8],
+            }
+        )
+
+    officer_profiles = (
+        UserProfile.objects
+        .filter(
+            role="field_officer",
+            user__is_active=True,
+        )
+        .select_related(
+            "user",
+            "assembly",
+        )
+    )
+
+    if assembly:
+        officer_profiles = officer_profiles.filter(
+            Q(assembly=assembly)
+            | Q(assembly__isnull=True)
+        )
+
+    ranking_rows = []
+
+    for profile in officer_profiles:
+        profile_visits = FieldVisit.objects.filter(
+            officer=profile.user
+        )
+
+        if assembly:
+            profile_visits = profile_visits.filter(
+                property__assembly=assembly
+            )
+
+        profile_visit_property_ids = (
+            profile_visits.values_list(
+                "property_id",
+                flat=True,
+            )
+        )
+
+        profile_properties = Property.objects.filter(
+            Q(registered_by=profile.user)
+            | Q(id__in=profile_visit_property_ids)
+        )
+
+        if assembly:
+            profile_properties = profile_properties.filter(
+                assembly=assembly
+            )
+
+        profile_completed = (
+            profile_properties
+            .filter(
+                verification_status__in=completed_statuses
+            )
+            .distinct()
+            .count()
+        )
+
+        ranking_rows.append(
+            {
+                "user_id": profile.user_id,
+                "completed": profile_completed,
+                "name": _officer_name(profile.user),
+            }
+        )
+
+    ranking_rows.sort(
+        key=lambda row: (
+            row["completed"],
+            row["name"],
+        ),
+        reverse=True,
+    )
+
+    rank = 1
+
+    for index, row in enumerate(
+        ranking_rows,
+        start=1,
+    ):
+        if row["user_id"] == request.user.id:
+            rank = index
+            break
+
+    rank_total = len(ranking_rows)
+
+    officer_name = _officer_name(request.user)
+
+    context = {
+        "is_field_officer": True,
+        "page_title": "My Performance",
+        "page_subtitle": (
+            "Track your verification stats "
+            "and achievements"
+        ),
+        "portal_access": portal_access,
+        "context_assembly": assembly,
+        "officer_name": officer_name,
+        "officer_initial": (
+            officer_name[0].upper()
+            if officer_name
+            else "F"
+        ),
+        "officer_email": (
+            request.user.email
+            or "No email added"
+        ),
+        "officer_zone": (
+            assembly.name
+            if assembly
+            else "Assigned Assembly"
+        ),
+
+        "month_progress_percent": month_progress_percent,
+        "month_completed": current_month_completed,
+        "month_target": current_month_target,
+        "total_completed": total_completed,
+        "accuracy": accuracy,
+        "avg_response": avg_response,
+        "achievements_count": len(achievements),
+
+        "monthly_breakdown": monthly_breakdown,
+        "achievements": achievements,
+        "recent_activity": recent_activity,
+
+        "rank": rank,
+        "rank_total": rank_total,
+        "district_name": (
+            assembly.name
+            if assembly
+            else "Assigned Assembly"
+        ),
+    }
+
+    return render(
+        request,
+        "field_operations/field_officer_stats.html",
         context,
     )

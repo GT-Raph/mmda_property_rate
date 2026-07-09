@@ -1,0 +1,1159 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default:"Field Officer Stats" }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e8e8e8;
+            --text: #171717;
+            --muted: #7d7d7d;
+            --sidebar: #050505;
+            --sidebar-line: rgba(255,255,255,0.08);
+            --gold: #d1ac4c;
+            --gold-bg: #ead79f;
+            --blue: #2563eb;
+            --blue-deep: #2442a8;
+            --blue-soft: #dbeafe;
+            --green: #16a34a;
+            --green-soft: #d9f7df;
+            --purple: #9333ea;
+            --purple-soft: #f1e4ff;
+            --yellow: #d79a00;
+            --yellow-soft: #fff3bf;
+            --gray-soft: #eef0f3;
+            --red-soft: #fff1f1;
+            --red: #b42318;
+            --shadow: 0 4px 18px rgba(0,0,0,0.04);
+            --radius: 18px;
+            --sidebar-width: 230px;
+            --topbar-height: 78px;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body { min-height: 100vh; }
+        a { color: inherit; text-decoration: none; }
+        .layout { min-height: 100vh; }
+
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: var(--sidebar-width);
+            background: var(--sidebar);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .brand {
+            padding: 22px 24px 18px;
+            border-bottom: 1px solid var(--sidebar-line);
+            flex-shrink: 0;
+        }
+
+        .brand h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .brand p {
+            margin: 0;
+            font-size: 13px;
+            color: rgba(255,255,255,0.68);
+        }
+
+        .nav {
+            padding: 18px 14px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.9);
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            margin-bottom: 8px;
+            transition: 0.18s ease;
+        }
+
+        .nav a:hover { background: rgba(255,255,255,0.08); }
+
+        .nav a.active {
+            background: var(--gold-bg);
+            color: #1f1f1f;
+            font-weight: 700;
+        }
+
+        .nav-icon {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-icon svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .nav a.active .nav-icon { color: #1f1f1f; }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--sidebar-line);
+            padding: 16px 14px 18px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: rgba(255,255,255,0.62);
+            flex-shrink: 0;
+        }
+
+        .content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 500;
+            height: var(--topbar-height);
+            background: #fff;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 22px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .menu-toggle {
+            display: none;
+            width: 42px;
+            height: 42px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .menu-bars {
+            width: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .menu-bars span {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: #333;
+            border-radius: 999px;
+        }
+
+        .search-wrap {
+            width: 100%;
+            max-width: 580px;
+            position: relative;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            height: 44px;
+            border: 1px solid transparent;
+            background: #f4f4f4;
+            border-radius: 10px;
+            padding: 0 16px 0 44px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-wrap input:focus {
+            background: #fff;
+            border-color: #ddd;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            width: 18px;
+            height: 18px;
+            color: #8b8b8b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-icon svg {
+            width: 18px;
+            height: 18px;
+            display: block;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-shrink: 0;
+        }
+
+        .notification-btn {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .notification-btn svg {
+            width: 18px;
+            height: 18px;
+            color: #333;
+            display: block;
+        }
+
+        .notification-btn::after {
+            content: "";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .user-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            position: relative;
+        }
+
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            min-width: 0;
+        }
+
+        .user-trigger:focus-visible {
+            outline: 2px solid rgba(209, 172, 76, 0.35);
+            outline-offset: 4px;
+            border-radius: 14px;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            padding: 8px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+            z-index: 1200;
+        }
+
+        .user-dropdown[hidden] { display: none; }
+
+        .dropdown-action {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: 0;
+            background: #fff5f5;
+            color: #c62828;
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.18s ease;
+            white-space: nowrap;
+        }
+
+        .dropdown-action:hover { background: #ffe8e8; }
+
+        .dropdown-action svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--gold);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 13px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .user-meta {
+            min-width: 0;
+            line-height: 1.15;
+        }
+
+        .user-meta strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: #222;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-meta small {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-caret {
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #9a9a9a;
+            border-bottom: 2px solid #9a9a9a;
+            transform: rotate(45deg);
+            flex-shrink: 0;
+            margin-top: -3px;
+        }
+
+        .page {
+            padding: 20px 22px 46px;
+            max-width: 1120px;
+        }
+
+        .page-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .page h1 {
+            margin: 0;
+            font-size: 30px;
+            font-weight: 800;
+            color: #111;
+        }
+
+        .page-subtitle {
+            margin: 6px 0 0;
+            font-size: 14px;
+            color: #7c8188;
+        }
+
+        .assembly-caption {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #9a9a9a;
+        }
+
+        .stats-shell {
+            display: grid;
+            gap: 18px;
+        }
+
+        .progress-card {
+            background: linear-gradient(135deg, #284bc0 0%, #243f9a 100%);
+            color: #fff;
+            border-radius: 14px;
+            padding: 24px 28px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 110px;
+            align-items: center;
+            gap: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .progress-label {
+            color: rgba(255,255,255,0.78);
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .progress-value {
+            font-size: 34px;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .progress-note {
+            color: rgba(255,255,255,0.86);
+            font-size: 14px;
+            margin-bottom: 18px;
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.22);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: #fff;
+            width: var(--progress-width, 93%);
+        }
+
+        .progress-icon {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            border: 8px solid rgba(255,255,255,0.25);
+            display: grid;
+            place-items: center;
+            justify-self: end;
+        }
+
+        .progress-icon svg {
+            width: 42px;
+            height: 42px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .metric-card,
+        .content-card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .metric-card {
+            padding: 18px;
+            min-height: 112px;
+        }
+
+        .metric-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        .metric-icon svg {
+            width: 19px;
+            height: 19px;
+            display: block;
+        }
+
+        .metric-green { background: var(--green-soft); color: var(--green); }
+        .metric-blue { background: var(--blue-soft); color: var(--blue); }
+        .metric-purple { background: var(--purple-soft); color: var(--purple); }
+        .metric-yellow { background: var(--yellow-soft); color: var(--yellow); }
+
+        .metric-label {
+            color: #8a8f99;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 900;
+            color: #080808;
+        }
+
+        .content-card {
+            padding: 22px 24px;
+        }
+
+        .content-card h2 {
+            margin: 0 0 18px;
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .month-row {
+            margin-bottom: 15px;
+        }
+
+        .month-row:last-child { margin-bottom: 0; }
+
+        .month-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .month-name {
+            font-weight: 800;
+        }
+
+        .month-count {
+            color: #8b919d;
+            font-weight: 800;
+        }
+
+        .month-track {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: #e9edf3;
+            overflow: hidden;
+        }
+
+        .month-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: var(--blue);
+            width: var(--month-width, 0%);
+        }
+
+        .month-fill.green { background: var(--green); }
+
+        .achievement-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .achievement-item {
+            display: grid;
+            grid-template-columns: 48px minmax(0, 1fr);
+            gap: 14px;
+            background: #fbfbfb;
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .achievement-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 9px;
+            display: grid;
+            place-items: center;
+        }
+
+        .achievement-icon svg {
+            width: 21px;
+            height: 21px;
+        }
+
+        .achievement-title {
+            font-size: 15px;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .achievement-desc {
+            color: #7f8590;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .achievement-date {
+            color: #8f96a3;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .activity-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .activity-item {
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 14px;
+        }
+
+        .activity-item:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .activity-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 9px;
+        }
+
+        .activity-date {
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .activity-badge {
+            background: var(--green-soft);
+            color: var(--green);
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .property-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .property-tag {
+            background: #f1f1f1;
+            color: #5f6670;
+            border-radius: 5px;
+            padding: 5px 8px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .top-performer-card {
+            background: linear-gradient(135deg, #f5b800 0%, #ffc20a 100%);
+            color: #805300;
+            border-radius: 14px;
+            padding: 30px 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .top-performer-card svg {
+            width: 52px;
+            height: 52px;
+            margin-bottom: 12px;
+        }
+
+        .top-performer-card h2 {
+            color: #6d4900;
+            margin: 0 0 5px;
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .top-performer-card p {
+            margin: 0;
+            color: rgba(109, 73, 0, 0.78);
+            font-size: 14px;
+        }
+
+        .mobile-overlay { display: none; }
+
+        @media (max-width: 980px) {
+            .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 860px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+                width: 250px;
+            }
+
+            .sidebar.open { transform: translateX(0); }
+
+            .mobile-overlay {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.35);
+                z-index: 900;
+                opacity: 0;
+                visibility: hidden;
+                transition: 0.2s ease;
+            }
+
+            .mobile-overlay.show {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .content { margin-left: 0; }
+            .menu-toggle { display: inline-flex; }
+            .topbar { padding: 0 14px; }
+        }
+
+        @media (max-width: 680px) {
+            .topbar {
+                height: auto;
+                padding: 12px 14px;
+                flex-wrap: wrap;
+                align-items: stretch;
+            }
+
+            .topbar-left,
+            .topbar-right { width: 100%; }
+
+            .topbar-right { justify-content: space-between; }
+
+            .page { padding: 16px 14px 32px; }
+
+            .page h1 { font-size: 24px; }
+
+            .page-head {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .progress-card {
+                grid-template-columns: 1fr;
+                padding: 22px;
+            }
+
+            .progress-icon {
+                justify-self: start;
+                width: 78px;
+                height: 78px;
+            }
+
+            .metric-grid { grid-template-columns: 1fr; }
+            .content-card { padding: 18px; }
+        }
+    </style>
+</head>
+<body>
+<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <h2>Admin Portal</h2>
+            <p>MMDA Management</p>
+        </div>
+
+        <nav class="nav">
+            {% if portal_access.dashboard %}
+                <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='dashboard' %}</span>
+                    <span>Dashboard</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.properties %}
+                <a href="{% url 'properties:property-registry' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='property' %}</span>
+                    <span>Properties</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.billing %}
+                <a href="{% url 'billing:billing-management' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
+                    <span>Billing & Payments</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.field_operations %}
+                <a href="{% url 'field_operations:field-operations' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="{% url 'field_operations:field-officer-stats' %}" class="active">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 19H20" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            <path d="M7 16V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            <path d="M12 16V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            <path d="M17 16V9" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                        </svg>
+                    </span>
+                    <span>Stats</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.reports %}
+                <a href="{% url 'admins:reports-analytics' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
+                    <span>Reports</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.assembly %}
+                <a href="{% url 'admins:assembly-management' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='assembly' %}</span>
+                    <span>Assembly</span>
+                </a>
+            {% endif %}
+
+            {% if portal_access.settings %}
+                <a href="{% url 'admins:settings' %}">
+                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='settings' %}</span>
+                    <span>Settings</span>
+                </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-footer">
+            Ghana MMDA System<br>
+            Admin Access
+        </div>
+    </aside>
+
+    <main class="content">
+        <div class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" type="button" onclick="openSidebar()" aria-label="Open menu">
+                    <span class="menu-bars">
+                        <span></span><span></span><span></span>
+                    </span>
+                </button>
+
+                <div class="search-wrap">
+                    <span class="search-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+                            <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                        </svg>
+                    </span>
+                    <input type="text" placeholder="Search properties, bills, payments...">
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <button class="notification-btn" type="button" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"></path>
+                        <path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                    </svg>
+                </button>
+
+                <div class="user-box" id="userMenu">
+                    <button class="user-trigger" type="button" id="userMenuButton" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+                        <div class="avatar">
+                            {% if request.user.first_name or request.user.last_name %}
+                                {{ request.user.get_full_name|slice:":1"|upper }}
+                            {% else %}
+                                {{ request.user.username|slice:":1"|upper }}
+                            {% endif %}
+                        </div>
+
+                        <div class="user-meta">
+                            <strong>
+                                {% if request.user.first_name or request.user.last_name %}
+                                    {{ request.user.get_full_name }}
+                                {% else %}
+                                    {{ request.user.username }}
+                                {% endif %}
+                            </strong>
+
+                            {% if request.user.email %}
+                                <small>{{ request.user.email }}</small>
+                            {% else %}
+                                <small>No email added</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="user-caret"></div>
+                    </button>
+
+                    <div class="user-dropdown" id="userDropdown" hidden>
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-action">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M10 6H6C4.9 6 4 6.9 4 8V16C4 17.1 4.9 18 6 18H10" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                    <path d="M13 8L17 12L13 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                    <path d="M8 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                                </svg>
+                                <span>Logout</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="page">
+            <div class="page-head">
+                <div>
+                    <h1>{{ page_title|default:"My Performance" }}</h1>
+                    <div class="page-subtitle">{{ page_subtitle|default:"Track your verification stats and achievements" }}</div>
+                    {% if context_assembly %}
+                        <div class="assembly-caption">{{ context_assembly.name }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <section class="stats-shell">
+                <div class="progress-card" style="--progress-width: {{ month_progress_percent }}%;">
+                    <div>
+                        <div class="progress-label">This Month Progress</div>
+                        <div class="progress-value">{{ month_progress_percent }}%</div>
+                        <div class="progress-note">{{ month_completed }} of {{ month_target }} completed</div>
+                        <div class="progress-track">
+                            <div class="progress-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="progress-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon metric-green">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </div>
+                        <div class="metric-label">Total Completed</div>
+                        <div class="metric-value">{{ total_completed }}</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon metric-blue">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"></circle>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"></circle>
+                            </svg>
+                        </div>
+                        <div class="metric-label">Accuracy</div>
+                        <div class="metric-value">{{ accuracy }}%</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon metric-purple">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M4 16L9 11L13 14L20 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path d="M15 7H20V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </div>
+                        <div class="metric-label">Avg Response</div>
+                        <div class="metric-value">{{ avg_response }}</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon metric-yellow">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle>
+                                <path d="M9 12L8 21L12 18L16 21L15 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+                            </svg>
+                        </div>
+                        <div class="metric-label">Achievements</div>
+                        <div class="metric-value">{{ achievements_count }}</div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <h2>Monthly Breakdown</h2>
+
+                    {% if monthly_breakdown %}
+                        {% for item in monthly_breakdown %}
+                            <div class="month-row">
+                                <div class="month-meta">
+                                    <span class="month-name">{{ item.month }}</span>
+                                    <span class="month-count">{{ item.completed }}/{{ item.target }} ({{ item.percent }}%)</span>
+                                </div>
+                                <div class="month-track">
+                                    <div class="month-fill {% if item.percent >= 100 %}green{% endif %}" style="--month-width: {{ item.percent }}%;"></div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="month-row">
+                            <div class="month-meta"><span class="month-name">Jan 2024</span><span class="month-count">38/40 (95%)</span></div>
+                            <div class="month-track"><div class="month-fill" style="--month-width: 95%;"></div></div>
+                        </div>
+                        <div class="month-row">
+                            <div class="month-meta"><span class="month-name">Feb 2024</span><span class="month-count">42/40 (105%)</span></div>
+                            <div class="month-track"><div class="month-fill green" style="--month-width: 100%;"></div></div>
+                        </div>
+                        <div class="month-row">
+                            <div class="month-meta"><span class="month-name">Mar 2024</span><span class="month-count">45/45 (100%)</span></div>
+                            <div class="month-track"><div class="month-fill green" style="--month-width: 100%;"></div></div>
+                        </div>
+                        <div class="month-row">
+                            <div class="month-meta"><span class="month-name">Apr 2024</span><span class="month-count">42/45 (93%)</span></div>
+                            <div class="month-track"><div class="month-fill" style="--month-width: 93%;"></div></div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="content-card">
+                    <h2>Achievements</h2>
+
+                    <div class="achievement-list">
+                        {% if achievements %}
+                            {% for achievement in achievements %}
+                                <div class="achievement-item">
+                                    <div class="achievement-icon metric-yellow">
+                                        <svg viewBox="0 0 24 24" fill="none">
+                                            <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle>
+                                            <path d="M9 12L8 21L12 18L16 21L15 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div class="achievement-title">{{ achievement.title }}</div>
+                                        <div class="achievement-desc">{{ achievement.description }}</div>
+                                        <div class="achievement-date">{{ achievement.date }}</div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="activity-item">
+                                <div class="achievement-title">No achievements yet</div>
+                                <div class="achievement-desc">Achievements will appear here after the officer reaches performance milestones.</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <h2>Recent Activity</h2>
+
+                    <div class="activity-list">
+                        {% if recent_activity %}
+                            {% for day in recent_activity %}
+                                <div class="activity-item">
+                                    <div class="activity-head">
+                                        <span class="activity-date">{{ day.date }}</span>
+                                        <span class="activity-badge">{{ day.completed_count }} completed</span>
+                                    </div>
+                                    <div class="property-tags">
+                                        {% for reference in day.references %}
+                                            <span class="property-tag">{{ reference }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="activity-item">
+                                <div class="activity-head">
+                                    <span class="activity-date">No recent completed activity</span>
+                                    <span class="activity-badge">0 completed</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="top-performer-card">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"></circle>
+                        <path d="M9 12L8 21L12 18L16 21L15 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+                    </svg>
+                    <h2>Top Performer</h2>
+                    <p>You’re ranked #{{ rank }} out of {{ rank_total }} officers in {{ district_name }} district</p>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<script>
+    const userMenu = document.getElementById("userMenu");
+    const userMenuButton = document.getElementById("userMenuButton");
+    const userDropdown = document.getElementById("userDropdown");
+
+    function closeUserMenu() {
+        if (!userDropdown.hidden) {
+            userDropdown.hidden = true;
+            userMenuButton.setAttribute("aria-expanded", "false");
+        }
+    }
+
+    function toggleUserMenu(event) {
+        event.stopPropagation();
+        const willOpen = userDropdown.hidden;
+        userDropdown.hidden = !willOpen;
+        userMenuButton.setAttribute("aria-expanded", String(willOpen));
+    }
+
+    document.addEventListener("click", function(event) {
+        if (!userMenu.contains(event.target)) {
+            closeUserMenu();
+        }
+    });
+
+    document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+            closeUserMenu();
+        }
+    });
+
+    function openSidebar() {
+        document.getElementById("sidebar").classList.add("open");
+        document.getElementById("mobileOverlay").classList.add("show");
+    }
+
+    function closeSidebar() {
+        document.getElementById("sidebar").classList.remove("open");
+        document.getElementById("mobileOverlay").classList.remove("show");
+    }
+</script>
+</body>
+</html>
