@@ -1,13 +1,13 @@
 from datetime import timedelta
 
-from django.db.models import Count, Max, Q
+from django.db.models import Count, IntegerField, Max, OuterRef, Q, Subquery
 from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
 
 from django.contrib.auth.decorators import login_required
 
-from admins.access import get_allowed_modules, get_user_role
+from admins.access import get_allowed_modules, get_user_role, landing_url_for_user
 from admins.decorators import module_required
 from admins.models import Assembly, UserProfile
 from field_operations.models import FieldVisit
@@ -1211,8 +1211,10 @@ def field_operations_dashboard(request):
 
 @login_required
 def field_officer_stats(request):
-    if get_user_role(request.user) != "field_officer":
-        return redirect("portal-login")
+    user_role = get_user_role(request.user)
+
+    if user_role != "field_officer":
+        return redirect(landing_url_for_user(request.user))
 
     assembly = _get_current_assembly(request)
     portal_access = get_allowed_modules(request.user)
@@ -1371,7 +1373,7 @@ def field_officer_stats(request):
     total_reviewed = reviewed_properties.count()
 
     accuracy = percent(
-        completed_properties.count(),
+        total_completed,
         total_reviewed,
     )
 
@@ -1421,22 +1423,29 @@ def field_officer_stats(request):
 
     achievements = []
 
-    for month_item in monthly_breakdown:
-        if (
-            month_item["target"] > 0
-            and month_item["percent"] >= 100
-        ):
-            achievements.append(
-                {
-                    "title": "Perfect Month",
-                    "description": (
-                        "100% completion rate in "
-                        f"{month_item['month']}"
-                    ),
-                    "date": month_item["month"],
-                }
+    perfect_month = next(
+        (
+            month_item
+            for month_item in reversed(monthly_breakdown)
+            if (
+                month_item["target"] > 0
+                and month_item["percent"] >= 100
             )
-            break
+        ),
+        None,
+    )
+
+    if perfect_month:
+        achievements.append(
+            {
+                "title": "Perfect Month",
+                "description": (
+                    "100% completion rate in "
+                    f"{perfect_month['month']}"
+                ),
+                "date": perfect_month["month"],
+            }
+        )
 
     if response_durations:
         average_duration = (
@@ -1575,51 +1584,37 @@ def field_officer_stats(request):
             | Q(assembly__isnull=True)
         )
 
-    ranking_rows = []
+    completed_property_ids = FieldVisit.objects.filter(
+        officer_id=OuterRef("user_id"),
+    ).values("property_id")
 
-    for profile in officer_profiles:
-        profile_visits = FieldVisit.objects.filter(
-            officer=profile.user
+    completed_count_subquery = (
+        completed_properties
+        .filter(
+            Q(registered_by=OuterRef("user_id"))
+            | Q(id__in=Subquery(completed_property_ids))
         )
+        .order_by()
+        .values()
+        .annotate(total=Count("id", distinct=True))
+        .values("total")[:1]
+    )
 
-        if assembly:
-            profile_visits = profile_visits.filter(
-                property__assembly=assembly
-            )
-
-        profile_visit_property_ids = (
-            profile_visits.values_list(
-                "property_id",
-                flat=True,
-            )
+    officer_profiles = officer_profiles.annotate(
+        completed_total=Subquery(
+            completed_count_subquery,
+            output_field=IntegerField(),
         )
+    )
 
-        profile_properties = Property.objects.filter(
-            Q(registered_by=profile.user)
-            | Q(id__in=profile_visit_property_ids)
-        )
-
-        if assembly:
-            profile_properties = profile_properties.filter(
-                assembly=assembly
-            )
-
-        profile_completed = (
-            profile_properties
-            .filter(
-                verification_status__in=completed_statuses
-            )
-            .distinct()
-            .count()
-        )
-
-        ranking_rows.append(
-            {
-                "user_id": profile.user_id,
-                "completed": profile_completed,
-                "name": _officer_name(profile.user),
-            }
-        )
+    ranking_rows = [
+        {
+            "user_id": profile.user_id,
+            "completed": profile.completed_total or 0,
+            "name": _officer_name(profile.user),
+        }
+        for profile in officer_profiles
+    ]
 
     ranking_rows.sort(
         key=lambda row: (
@@ -1629,7 +1624,7 @@ def field_officer_stats(request):
         reverse=True,
     )
 
-    rank = 1
+    rank = rank_total + 1
 
     for index, row in enumerate(
         ranking_rows,

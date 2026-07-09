@@ -1375,7 +1375,7 @@
                     </span>
 
                     <span>
-                        {% if is_field_officer %}
+                        {% if is_field_officer or request.user.profile.role == 'field_officer' %}
                             Dashboard
                         {% else %}
                             Field Officers
@@ -1383,7 +1383,7 @@
                     </span>
                 </a>
 
-                {% if is_field_officer %}
+                {% if is_field_officer or request.user.profile.role == 'field_officer' %}
                     <a
                         href="{% url 'field_operations:field-officer-stats' %}"
                         class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}"
