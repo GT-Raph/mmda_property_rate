@@ -781,30 +781,90 @@
         {% endif %}
 
         {% if portal_access.properties %}
-            <a href="{% url 'properties:property-registry' %}" class="active">
+            <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
                 <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='property' %}</span>
                 <span>Properties</span>
             </a>
         {% endif %}
 
-        {% if portal_access.billing %}
-            <a href="{% url 'billing:billing-management' %}">
+        {% if portal_access.field_operations %}
+            <a
+                href="{% url 'field_operations:field-operations' %}"
+                class="{% if request.resolver_match.url_name == 'field-operations' %}active{% endif %}"
+            >
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
+                <span>
+                    {% if is_field_officer or request.user.profile.role == 'field_officer' %}
+                        Field Dashboard
+                    {% else %}
+                        Field Officers
+                    {% endif %}
+                </span>
+            </a>
+
+            {% if is_field_officer or request.user.profile.role == 'field_officer' %}
+                <a
+                    href="{% url 'field_operations:field-officer-verify' %}"
+                    class="{% if request.resolver_match.url_name == 'field-officer-verify' or request.resolver_match.url_name == 'field-officer-verify-property' %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"></circle>
+                            <path d="M8.5 12.2L10.8 14.5L15.8 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </span>
+                    <span>Verify</span>
+                </a>
+
+                <a
+                    href="{% url 'field_operations:field-officer-stats' %}"
+                    class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}"
+                >
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M5 19V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                            <path d="M12 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                            <path d="M19 19V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                            <path d="M4 19H20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                        </svg>
+                    </span>
+                    <span>Stats</span>
+                </a>
+            {% endif %}
+        {% endif %}
+        
+        {% if portal_access.bills %}
+            <a href="{% url 'billing:bill-registry' %}">
                 <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
-                <span>Billing & Payments</span>
+                <span>Bills</span>
             </a>
         {% endif %}
 
-        {% if portal_access.field_operations %}
-            <a href="{% url 'field_operations:field-operations' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
-                <span>Field Officers</span>
+        {% if portal_access.payments %}
+            <a href="{% url 'payments:payment-registry' %}">
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='payment' %}</span>
+                <span>Payments</span>
+            </a>
+        {% endif %}
+
+        {% if portal_access.users %}
+            <a href="{% url 'admins:user-management' %}">
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='users' %}</span>
+                <span>Users</span>
             </a>
         {% endif %}
 
         {% if portal_access.reports %}
-            <a href="{% url 'admins:reports-analytics' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
+            <a href="{% url 'admins:report-management' %}">
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='reports' %}</span>
                 <span>Reports</span>
+            </a>
+        {% endif %}
+
+        {% if portal_access.notifications %}
+            <a href="{% url 'admins:notification-management' %}">
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='notifications' %}</span>
+                <span>Notifications</span>
             </a>
         {% endif %}
 

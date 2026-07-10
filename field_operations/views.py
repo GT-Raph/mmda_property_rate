@@ -4,6 +4,7 @@ from django.db.models import Count, Max, Q
 from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
+from django.contrib import messages
 
 from django.contrib.auth.decorators import login_required
 
@@ -641,6 +642,11 @@ def _build_field_officer_context(
         fallback="#",
     )
 
+    verify_property_url = _safe_reverse(
+        "field_operations:field-officer-verify",
+        fallback=property_registry_url,
+    )
+
     add_property_url = _safe_reverse(
         "properties:add-property",
         fallback=property_registry_url,
@@ -684,7 +690,7 @@ def _build_field_officer_context(
     quick_actions = [
         {
             "label": "Submit Verification",
-            "url": property_registry_url,
+            "url": verify_property_url,
             "icon_name": "check",
         },
         {
@@ -1738,3 +1744,408 @@ def field_officer_stats(request):
         context,
     )
 
+def _model_has_field(model, field_name):
+    return field_name in {
+        field.name
+        for field in model._meta.get_fields()
+    }
+
+
+def _get_field_officer_property_queryset(request, assembly):
+    officer_visits = FieldVisit.objects.filter(
+        officer=request.user,
+    )
+
+    if assembly:
+        officer_visits = officer_visits.filter(
+            property__assembly=assembly,
+        )
+
+    visit_property_ids = officer_visits.values_list(
+        "property_id",
+        flat=True,
+    )
+
+    properties_queryset = (
+        Property.objects
+        .select_related(
+            "owner",
+            "assembly",
+            "community_area",
+            "registered_by",
+        )
+        .filter(
+            Q(registered_by=request.user)
+            | Q(id__in=visit_property_ids)
+        )
+        .distinct()
+    )
+
+    if assembly:
+        properties_queryset = properties_queryset.filter(
+            assembly=assembly,
+        )
+
+    return properties_queryset
+
+
+def _save_property_photos(request, property_obj):
+    if PropertyPhoto is None:
+        return 0
+
+    photos = request.FILES.getlist("photos")
+
+    if not photos:
+        return 0
+
+    field_names = {
+        field.name
+        for field in PropertyPhoto._meta.get_fields()
+    }
+
+    file_field_name = None
+
+    for candidate in [
+        "image",
+        "photo",
+        "file",
+        "photo_file",
+        "property_photo",
+    ]:
+        if candidate in field_names:
+            file_field_name = candidate
+            break
+
+    if not file_field_name:
+        return 0
+
+    saved_count = 0
+
+    for uploaded_file in photos:
+        photo_kwargs = {
+            file_field_name: uploaded_file,
+        }
+
+        if "property" in field_names:
+            photo_kwargs["property"] = property_obj
+
+        if "uploaded_by" in field_names:
+            photo_kwargs["uploaded_by"] = request.user
+
+        if "caption" in field_names:
+            photo_kwargs["caption"] = "Field verification photo"
+
+        if "description" in field_names:
+            photo_kwargs["description"] = "Uploaded during field verification"
+
+        try:
+            PropertyPhoto.objects.create(**photo_kwargs)
+            saved_count += 1
+        except Exception:
+            continue
+
+    return saved_count
+
+
+def _create_field_visit_record(
+    request,
+    property_obj,
+    verification_type,
+    verification_status,
+    owner_present,
+    notes,
+    latitude,
+    longitude,
+):
+    field_names = {
+        field.name
+        for field in FieldVisit._meta.get_fields()
+    }
+
+    visit_kwargs = {}
+
+    if "property" in field_names:
+        visit_kwargs["property"] = property_obj
+
+    if "officer" in field_names:
+        visit_kwargs["officer"] = request.user
+
+    if "visited_at" in field_names:
+        visit_kwargs["visited_at"] = timezone.now()
+
+    if "visit_type" in field_names:
+        visit_kwargs["visit_type"] = verification_type
+
+    if "outcome" in field_names:
+        visit_kwargs["outcome"] = verification_status
+
+    if "notes" in field_names:
+        owner_label = "Yes" if owner_present == "yes" else "No"
+        visit_kwargs["notes"] = (
+            f"Owner present: {owner_label}\n\n"
+            f"{notes}"
+        ).strip()
+
+    if latitude and "latitude" in field_names:
+        visit_kwargs["latitude"] = latitude
+
+    if longitude and "longitude" in field_names:
+        visit_kwargs["longitude"] = longitude
+
+    if "gps_latitude" in field_names and latitude:
+        visit_kwargs["gps_latitude"] = latitude
+
+    if "gps_longitude" in field_names and longitude:
+        visit_kwargs["gps_longitude"] = longitude
+
+    if visit_kwargs:
+        try:
+            return FieldVisit.objects.create(
+                **visit_kwargs,
+            )
+        except Exception:
+            return None
+
+    return None
+
+
+@login_required
+def field_officer_verify_property(request, property_id=None):
+    user_role = get_user_role(request.user)
+
+    if user_role != "field_officer":
+        return redirect(landing_url_for_user(request.user))
+
+    assembly = _get_current_assembly(request)
+    portal_access = get_allowed_modules(request.user)
+
+    officer_name = _officer_name(request.user)
+    officer_initial = officer_name[0].upper() if officer_name else "F"
+    officer_zone = assembly.name if assembly else "Assigned Assembly"
+
+    property_queryset = _get_field_officer_property_queryset(
+        request=request,
+        assembly=assembly,
+    )
+
+    property_obj = None
+
+    if property_id:
+        property_obj = property_queryset.filter(
+            pk=property_id,
+        ).first()
+
+        if not property_obj:
+            messages.error(
+                request,
+                "You do not have access to verify this property.",
+            )
+            return redirect("field_operations:field-operations")
+
+    verification_type_choices = [
+        ("property_verification", "Property Verification"),
+        ("site_assessment", "Site Assessment"),
+        ("payment_verification", "Payment Verification"),
+        ("dispute_investigation", "Dispute Investigation"),
+        ("follow_up", "Follow-up Visit"),
+    ]
+
+    verification_status_choices = [
+        ("verified", "Verified"),
+        ("pending", "Pending"),
+        ("under_review", "Under Review"),
+        ("flagged", "Flagged"),
+        ("possible_duplicate", "Possible Duplicate"),
+        ("rejected", "Rejected"),
+    ]
+
+    form_error = ""
+
+    form_values = {
+        "property_reference": (
+            property_obj.property_reference
+            if property_obj
+            else ""
+        ),
+        "verification_type": "property_verification",
+        "verification_status": (
+            property_obj.verification_status
+            if property_obj
+            else ""
+        ),
+        "owner_present": "yes",
+        "notes": "",
+        "latitude": (
+            str(property_obj.latitude)
+            if property_obj and property_obj.latitude is not None
+            else ""
+        ),
+        "longitude": (
+            str(property_obj.longitude)
+            if property_obj and property_obj.longitude is not None
+            else ""
+        ),
+    }
+
+    if request.method == "POST":
+        form_values.update(
+            {
+                "property_reference": request.POST.get(
+                    "property_reference",
+                    "",
+                ).strip(),
+                "verification_type": request.POST.get(
+                    "verification_type",
+                    "",
+                ).strip(),
+                "verification_status": request.POST.get(
+                    "verification_status",
+                    "",
+                ).strip(),
+                "owner_present": request.POST.get(
+                    "owner_present",
+                    "yes",
+                ).strip(),
+                "notes": request.POST.get(
+                    "notes",
+                    "",
+                ).strip(),
+                "latitude": request.POST.get(
+                    "latitude",
+                    "",
+                ).strip(),
+                "longitude": request.POST.get(
+                    "longitude",
+                    "",
+                ).strip(),
+            }
+        )
+
+        if not property_obj:
+            property_obj = property_queryset.filter(
+                property_reference__iexact=form_values["property_reference"],
+            ).first()
+
+        if not property_obj:
+            form_error = "Property ID not found or not assigned to you."
+
+        elif not form_values["verification_type"]:
+            form_error = "Select a verification type."
+
+        elif not form_values["verification_status"]:
+            form_error = "Select a verification status."
+
+        elif not form_values["notes"]:
+            form_error = "Enter verification notes."
+
+        else:
+            property_obj.verification_status = form_values[
+                "verification_status"
+            ]
+
+            update_fields = [
+                "verification_status",
+            ]
+
+            completed_statuses = {
+                "verified",
+                "approved",
+                "completed",
+            }
+
+            if (
+                form_values["verification_status"]
+                in completed_statuses
+            ):
+                property_obj.last_verified_at = timezone.now()
+                update_fields.append("last_verified_at")
+
+            if form_values["latitude"]:
+                property_obj.latitude = form_values["latitude"]
+                update_fields.append("latitude")
+
+            if form_values["longitude"]:
+                property_obj.longitude = form_values["longitude"]
+                update_fields.append("longitude")
+
+            property_obj.save(
+                update_fields=list(set(update_fields)),
+            )
+
+            _create_field_visit_record(
+                request=request,
+                property_obj=property_obj,
+                verification_type=form_values["verification_type"],
+                verification_status=form_values["verification_status"],
+                owner_present=form_values["owner_present"],
+                notes=form_values["notes"],
+                latitude=form_values["latitude"],
+                longitude=form_values["longitude"],
+            )
+
+            photo_count = _save_property_photos(
+                request=request,
+                property_obj=property_obj,
+            )
+
+            if photo_count:
+                messages.success(
+                    request,
+                    f"Verification submitted successfully. {photo_count} photo(s) uploaded.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Verification submitted successfully.",
+                )
+
+            return redirect(
+                "field_operations:field-officer-stats"
+            )
+
+    dashboard_url = _safe_reverse(
+        "field_operations:field-operations",
+    )
+
+    verify_url = _safe_reverse(
+        "field_operations:field-officer-verify",
+        fallback=dashboard_url,
+    )
+
+    stats_url = _safe_reverse(
+        "field_operations:field-officer-stats",
+        fallback=dashboard_url,
+    )
+
+    profile_url = _safe_reverse(
+        "admins:settings",
+        fallback=dashboard_url,
+    )
+
+    context = {
+        "is_field_officer": True,
+        "page_title": "Submit Verification",
+        "page_subtitle": "Complete field verification report",
+        "portal_access": portal_access,
+        "context_assembly": assembly,
+        "officer_name": officer_name,
+        "officer_initial": officer_initial,
+        "officer_zone": officer_zone,
+        "property_obj": property_obj,
+        "verification_type_choices": verification_type_choices,
+        "verification_status_choices": verification_status_choices,
+        "form_error": form_error,
+        "cancel_url": dashboard_url,
+        "dashboard_url": dashboard_url,
+        "tasks_url": dashboard_url,
+        "verify_url": verify_url,
+        "stats_url": stats_url,
+        "profile_url": profile_url,
+        **form_values,
+    }
+
+    return render(
+        request,
+        "field_operations/field_officer_verify.html",
+        context,
+    )

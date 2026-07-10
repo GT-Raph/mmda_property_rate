@@ -17,4 +17,14 @@ urlpatterns = [
     views.field_officer_stats,
     name="field-officer-stats",
     ),
+    path(
+    "verify/",
+    views.field_officer_verify_property,
+    name="field-officer-verify",
+    ),
+    path(
+        "verify/<int:property_id>/",
+        views.field_officer_verify_property,
+        name="field-officer-verify-property",
+    ),
 ]

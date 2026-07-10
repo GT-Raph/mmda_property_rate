@@ -1,0 +1,665 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title|default:"Submit Verification" }}</title>
+    <style>
+        :root {
+            --bg: #f5f5f5;
+            --panel: #ffffff;
+            --line: #e4e4e4;
+            --text: #111111;
+            --muted: #7c8188;
+            --gold: #d1ac4c;
+            --gold-bg: #ead79f;
+            --blue: #2949b8;
+            --blue-soft: #eef5ff;
+            --blue-border: #9bc5ff;
+            --red: #ef4444;
+            --red-soft: #fff1f1;
+            --yellow-soft: #fffbe8;
+            --yellow-border: #efd766;
+            --shadow: 0 4px 18px rgba(0,0,0,0.04);
+            --radius: 16px;
+            --topbar-height: 56px;
+        }
+
+        * { box-sizing: border-box; }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body {
+            min-height: 100vh;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        .topbar {
+            height: var(--topbar-height);
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .officer-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #2b2b2b;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-size: 13px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .officer-meta {
+            min-width: 0;
+            line-height: 1.15;
+        }
+
+        .officer-meta strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 800;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .officer-meta small {
+            display: block;
+            color: rgba(255,255,255,0.65);
+            font-size: 12px;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .menu-btn {
+            width: 36px;
+            height: 36px;
+            border: 0;
+            background: transparent;
+            color: #fff;
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .menu-btn svg {
+            width: 22px;
+            height: 22px;
+            display: block;
+        }
+
+        .page {
+            width: min(100%, 760px);
+            margin: 0 auto;
+            padding: 28px 18px 36px;
+        }
+
+        .page h1 {
+            margin: 0;
+            font-size: 30px;
+            line-height: 1.1;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        .page-subtitle {
+            margin: 8px 0 28px;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        .message-stack {
+            margin-bottom: 16px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .message.success {
+            background: #ebfaef;
+            color: #166534;
+            border: 1px solid #b9e4c2;
+        }
+
+        .message.error {
+            background: var(--red-soft);
+            color: #b42318;
+            border: 1px solid #f3b1b1;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 22px;
+            margin-bottom: 22px;
+        }
+
+        .card h2 {
+            margin: 0 0 20px;
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .field-group {
+            margin-bottom: 18px;
+        }
+
+        .field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .required {
+            color: var(--red);
+        }
+
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            background: #fff;
+            color: #111;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        input[type="text"],
+        select {
+            height: 48px;
+            padding: 0 14px;
+        }
+
+        textarea {
+            min-height: 116px;
+            padding: 14px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #cfcfcf;
+            box-shadow: 0 0 0 3px rgba(209,172,76,0.1);
+        }
+
+        .readonly-input {
+            background: #f7f7f7 !important;
+            color: #6f7680 !important;
+        }
+
+        .radio-row {
+            display: flex;
+            align-items: center;
+            gap: 26px;
+            margin-top: 5px;
+        }
+
+        .radio-row label {
+            margin: 0;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .radio-row input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .gps-btn {
+            width: 100%;
+            min-height: 48px;
+            border-radius: 10px;
+            border: 1px solid var(--blue-border);
+            background: var(--blue-soft);
+            color: #1d4ed8;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .gps-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .gps-status {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .upload-box {
+            border: 1px dashed #cfcfcf;
+            border-radius: 12px;
+            min-height: 180px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 24px;
+            background: #fff;
+        }
+
+        .upload-box svg {
+            width: 58px;
+            height: 58px;
+            color: #6b7280;
+            margin-bottom: 14px;
+        }
+
+        .upload-box p {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .upload-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 20px;
+            border-radius: 9px;
+            background: var(--gold-bg);
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            gap: 8px;
+            margin: 0;
+        }
+
+        .upload-label input {
+            display: none;
+        }
+
+        .photo-help {
+            margin: 12px 0 0;
+            color: #7c8188;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .selected-files {
+            margin-top: 10px;
+            color: #4b5563;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .warning-box {
+            border: 1px solid var(--yellow-border);
+            background: var(--yellow-soft);
+            color: #9a5f00;
+            border-radius: 12px;
+            padding: 15px 18px;
+            margin-bottom: 22px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .warning-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+
+        .warning-title svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .warning-box ul {
+            margin: 4px 0 0 26px;
+            padding: 0;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            height: 48px;
+            border: 0;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            border: 1px solid var(--line);
+            color: #111;
+        }
+
+        .btn-primary {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        @media (max-width: 520px) {
+            .page {
+                padding: 22px 14px 30px;
+            }
+
+            .page h1 {
+                font-size: 26px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar">
+    <div class="officer-box">
+        <button class="menu-btn" type="button" aria-label="Go back" onclick="goBack()">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+        </button>
+
+        <div class="avatar">{{ officer_initial|default:"F" }}</div>
+        <div class="officer-meta">
+            <strong>{{ officer_name|default:"Field Officer" }}</strong>
+            <small>{{ officer_zone|default:"Assigned Zone" }}</small>
+        </div>
+    </div>
+
+    <button class="menu-btn" type="button" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 7H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M5 17H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+    </button>
+</header>
+
+<main class="page">
+    <h1>{{ page_title|default:"Submit Verification" }}</h1>
+    <div class="page-subtitle">{{ page_subtitle|default:"Complete field verification report" }}</div>
+
+    {% if messages %}
+        <div class="message-stack">
+            {% for message in messages %}
+                <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if form_error %}
+        <div class="message-stack">
+            <div class="message error">{{ form_error }}</div>
+        </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="verificationForm">
+        {% csrf_token %}
+
+        <section class="card">
+            <h2>Property Information</h2>
+
+            <div class="field-group">
+                <label for="property_reference">Property ID <span class="required">*</span></label>
+                <input
+                    type="text"
+                    id="property_reference"
+                    name="property_reference"
+                    value="{{ property_reference }}"
+                    placeholder="PROP-2024-XXXXX"
+                    {% if property_obj %}class="readonly-input" readonly{% endif %}
+                    required
+                >
+            </div>
+
+            <div class="field-group">
+                <label for="verification_type">Verification Type <span class="required">*</span></label>
+                <select id="verification_type" name="verification_type" required>
+                    {% for value, label in verification_type_choices %}
+                        <option value="{{ value }}" {% if verification_type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Verification Details</h2>
+
+            <div class="field-group">
+                <label>Owner Present?</label>
+                <div class="radio-row">
+                    <label>
+                        <input type="radio" name="owner_present" value="yes" {% if owner_present != 'no' %}checked{% endif %}>
+                        Yes
+                    </label>
+                    <label>
+                        <input type="radio" name="owner_present" value="no" {% if owner_present == 'no' %}checked{% endif %}>
+                        No
+                    </label>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label for="verification_status">Verification Status <span class="required">*</span></label>
+                <select id="verification_status" name="verification_status" required>
+                    <option value="">Select verification status</option>
+                    {% for value, label in verification_status_choices %}
+                        <option value="{{ value }}" {% if verification_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <input type="hidden" id="latitude" name="latitude" value="{{ latitude }}">
+            <input type="hidden" id="longitude" name="longitude" value="{{ longitude }}">
+
+            <button type="button" class="gps-btn" onclick="captureLocation()">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 21C12 21 18.5 14.7 18.5 10C18.5 6.41 15.59 3.5 12 3.5C8.41 3.5 5.5 6.41 5.5 10C5.5 14.7 12 21 12 21Z" stroke="currentColor" stroke-width="1.8"></path>
+                    <circle cx="12" cy="10" r="2.4" stroke="currentColor" stroke-width="1.8"></circle>
+                </svg>
+                <span>Capture GPS Location</span>
+            </button>
+            <div class="gps-status" id="gpsStatus">
+                {% if latitude and longitude %}
+                    GPS captured: {{ latitude }}, {{ longitude }}
+                {% else %}
+                    GPS location not captured yet.
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Photo Evidence</h2>
+
+            <div class="upload-box">
+                <div>
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 8.5C4 7.7 4.7 7 5.5 7H8L9.5 5H14.5L16 7H18.5C19.3 7 20 7.7 20 8.5V18C20 18.8 19.3 19.5 18.5 19.5H5.5C4.7 19.5 4 18.8 4 18V8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                        <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+                    </svg>
+                    <p>Upload property photos</p>
+                    <label class="upload-label">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:16px;height:16px;margin:0;">
+                            <path d="M12 16V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                            <path d="M8 9L12 5L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path d="M5 19H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                        </svg>
+                        <span>Take/Upload Photo</span>
+                        <input type="file" id="photos" name="photos" accept="image/*" capture="environment" multiple onchange="showSelectedFiles()">
+                    </label>
+                    <div class="selected-files" id="selectedFiles"></div>
+                </div>
+            </div>
+
+            <p class="photo-help">Recommended: Front view, side view, digital address plate if available.</p>
+        </section>
+
+        <section class="card">
+            <h2>Additional Information</h2>
+
+            <div class="field-group">
+                <label for="notes">Verification Notes <span class="required">*</span></label>
+                <textarea id="notes" name="notes" placeholder="Document your findings, observations, and any relevant details..." required>{{ notes }}</textarea>
+            </div>
+        </section>
+
+        <div class="warning-box">
+            <div class="warning-title">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"></circle>
+                    <path d="M12 8V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+                    <circle cx="12" cy="16" r="1" fill="currentColor"></circle>
+                </svg>
+                <span>Before Submitting</span>
+            </div>
+            <ul>
+                <li>Ensure all required photos are uploaded</li>
+                <li>GPS location has been captured</li>
+                <li>All discrepancies are documented</li>
+            </ul>
+        </div>
+
+        <div class="actions">
+            <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Submit Verification Report</button>
+        </div>
+    </form>
+</main>
+
+<script>
+    function goBack() {
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+
+        window.location.href = "{{ dashboard_url }}";
+    }
+
+    function captureLocation() {
+        const status = document.getElementById("gpsStatus");
+        const latInput = document.getElementById("latitude");
+        const lngInput = document.getElementById("longitude");
+
+        if (!navigator.geolocation) {
+            status.textContent = "GPS is not supported on this device.";
+            return;
+        }
+
+        status.textContent = "Capturing GPS location...";
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const latitude = position.coords.latitude.toFixed(7);
+                const longitude = position.coords.longitude.toFixed(7);
+
+                latInput.value = latitude;
+                lngInput.value = longitude;
+                status.textContent = `GPS captured: ${latitude}, ${longitude}`;
+            },
+            function(error) {
+                status.textContent = "Unable to capture GPS. Please allow location permission and try again.";
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            }
+        );
+    }
+
+    function showSelectedFiles() {
+        const input = document.getElementById("photos");
+        const output = document.getElementById("selectedFiles");
+
+        if (!input.files.length) {
+            output.textContent = "";
+            return;
+        }
+
+        const names = Array.from(input.files).map(file => file.name);
+        output.textContent = names.join(", ");
+    }
+</script>
+</body>
+</html>

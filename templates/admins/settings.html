@@ -907,6 +907,18 @@
                 </a>
 
                 {% if is_field_officer or request.user.profile.role == 'field_officer' %}
+                    <a href="{% url 'field_operations:field-officer-verify' %}" class="{% if request.resolver_match.url_name == 'field-officer-verify' or request.resolver_match.url_name == 'field-officer-verify-property' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"></circle>
+                                <path d="M8.5 12.2L10.8 14.5L15.8 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </span>
+                        <span>Verify</span>
+                    </a>
+                {% endif %}
+
+                {% if is_field_officer or request.user.profile.role == 'field_officer' %}
                     <a href="{% url 'field_operations:field-officer-stats' %}" class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}">
                         <span class="nav-icon">
                             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">

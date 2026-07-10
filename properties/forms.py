@@ -77,12 +77,17 @@ OWNER_AUTO_SET_FIELDS = {
     "updated_at",
 }
 
+OWNER_FORM_EXCLUDED_FIELDS = {
+    "linked_user",
+}
+
 
 OWNER_FORM_FIELDS = [
     field_name
     for field_name, field
     in OWNER_MODEL_FIELDS.items()
     if field_name not in OWNER_AUTO_SET_FIELDS
+    and field_name not in OWNER_FORM_EXCLUDED_FIELDS
     and getattr(field, "editable", True)
 ]
 
@@ -148,6 +153,38 @@ def _normalize_phone(value):
         return f"233{digits[1:]}"
 
     return digits
+
+
+GHANA_CARD_NUMBER_PATTERN = re.compile(
+    r"^GHA-\d{10}-\d$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_ghana_card_number(value):
+    return (
+        (value or "")
+        .strip()
+        .upper()
+    )
+
+
+def _validate_ghana_card_number(value):
+    normalized_value = _normalize_ghana_card_number(
+        value
+    )
+
+    if not normalized_value:
+        return normalized_value
+
+    if not GHANA_CARD_NUMBER_PATTERN.match(
+        normalized_value
+    ):
+        raise ValidationError(
+            "Enter a valid Ghana Card number in the format GHA-XXXXXXXXXX-X."
+        )
+
+    return normalized_value
 
 
 class PropertyCreateForm(PropertyBaseForm):
@@ -422,6 +459,24 @@ class PropertyCreateForm(PropertyBaseForm):
                     }
                 )
 
+            if field_name == "owner_ghana_card_number":
+                field.widget.attrs.update(
+                    {
+                        "autocomplete": "off",
+                        "inputmode": "text",
+                        "pattern": "GHA-\\d{10}-\\d",
+                        "title": (
+                            "Use the format GHA-XXXXXXXXXX-X"
+                        ),
+                        "placeholder": (
+                            "GHA-XXXXXXXXXX-X"
+                        ),
+                        "style": (
+                            "text-transform: uppercase;"
+                        ),
+                    }
+                )
+
         labels = {
             "address_line": "Address",
             "number_of_floors": (
@@ -531,6 +586,13 @@ class PropertyCreateForm(PropertyBaseForm):
             )
 
         return value
+
+    def clean_owner_ghana_card_number(self):
+        return _validate_ghana_card_number(
+            self.cleaned_data.get(
+                "owner_ghana_card_number"
+            )
+        )
 
     def clean_community_area(self):
         community_area = (
@@ -1265,6 +1327,24 @@ class OwnerUpdateForm(forms.ModelForm):
         self.fields["primary_phone"].required = True
         self.fields["email"].required = True
         self.fields["ghana_card_number"].required = True
+
+        self.fields["ghana_card_number"].widget.attrs.update(
+            {
+                "autocomplete": "off",
+                "inputmode": "text",
+                "pattern": "GHA-\\d{10}-\\d",
+                "title": "Use the format GHA-XXXXXXXXXX-X",
+                "placeholder": "GHA-XXXXXXXXXX-X",
+                "style": "text-transform: uppercase;",
+            }
+        )
+
+    def clean_ghana_card_number(self):
+        return _validate_ghana_card_number(
+            self.cleaned_data.get(
+                "ghana_card_number"
+            )
+        )
 
 
 class PropertyUpdateForm(forms.ModelForm):
