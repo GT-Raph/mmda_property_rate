@@ -258,3 +258,8 @@ else:
     # Safer local dev defaults
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+
+SITE_PUBLIC_URL = os.environ.get(
+    "SITE_PUBLIC_URL",
+    "http://127.0.0.1:8000",
+)
