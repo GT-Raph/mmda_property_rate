@@ -233,8 +233,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # SITE URL
 # =========================================================
 
-SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "http://127.0.0.1:8000")
+# SITE_PUBLIC_URL = os.getenv("SITE_PUBLIC_URL", "http://127.0.0.1:8000")
 
+SITE_PUBLIC_URL = os.environ.get(
+    "SITE_PUBLIC_URL",
+    "https://mmda-property-rate.onrender.com",
+)
 
 # =========================================================
 # PRODUCTION SECURITY
