@@ -833,38 +833,10 @@
             {% endif %}
         {% endif %}
         
-        {% if portal_access.bills %}
-            <a href="{% url 'billing:bill-registry' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
-                <span>Bills</span>
-            </a>
-        {% endif %}
-
-        {% if portal_access.payments %}
-            <a href="{% url 'payments:payment-registry' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='payment' %}</span>
-                <span>Payments</span>
-            </a>
-        {% endif %}
-
-        {% if portal_access.users %}
-            <a href="{% url 'admins:user-management' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='users' %}</span>
-                <span>Users</span>
-            </a>
-        {% endif %}
-
         {% if portal_access.reports %}
-            <a href="{% url 'admins:report-management' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='reports' %}</span>
+            <a href="{% url 'admins:reports-analytics' %}">
+                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
                 <span>Reports</span>
-            </a>
-        {% endif %}
-
-        {% if portal_access.notifications %}
-            <a href="{% url 'admins:notification-management' %}">
-                <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='notifications' %}</span>
-                <span>Notifications</span>
             </a>
         {% endif %}
 
