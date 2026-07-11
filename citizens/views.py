@@ -540,14 +540,11 @@ def _certificate_verify_absolute_url(request, certificate):
     return request.build_absolute_uri(relative_url)
 
 
-def _certificate_qr_absolute_url(request, certificate):
-    relative_url = reverse("citizens:certificate-qr", args=[certificate.certificate_uuid])
-
-    site_public_url = getattr(settings, "SITE_PUBLIC_URL", "").strip()
-    if site_public_url:
-        return f"{site_public_url.rstrip('/')}{relative_url}"
-
-    return request.build_absolute_uri(relative_url)
+def _certificate_qr_url(certificate):
+    return reverse(
+        "citizens:certificate-qr",
+        args=[certificate.certificate_uuid],
+    )
 
 
 def _certificate_number(certificate):
@@ -1634,7 +1631,7 @@ def citizen_certificates(request):
                     "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
                     "registered_date": _property_registered_date(prop),
                     "owner_name": owner_name,
-                    "qr_url": _certificate_qr_absolute_url(request, certificate),
+                    "qr_url": _certificate_qr_url(certificate),
                     "download_url": reverse("citizens:certificate-download", args=[certificate.certificate_uuid]),
                     "verify_url": _certificate_verify_absolute_url(request, certificate),
                     "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
@@ -1678,7 +1675,7 @@ def citizen_certificate_download(request, certificate_uuid):
     context = {
         "certificate": certificate,
         "certificate_number": _certificate_number(certificate),
-        "qr_url": _certificate_qr_absolute_url(request, certificate),
+        "qr_url": _certificate_qr_url(certificate),
         "verify_url": _certificate_verify_absolute_url(request, certificate),
         "assembly_name": context_assembly.name if context_assembly else "Ghana MMDA",
         "property_reference": prop.property_reference,
@@ -1693,42 +1690,40 @@ def citizen_certificate_download(request, certificate_uuid):
     return render(request, "citizens/certificate_download.html", context)
 
 
-@login_required
 def citizen_certificate_qr(request, certificate_uuid):
-    if get_user_role(request.user) != "citizen":
-        return redirect("portal-login")
-
-    owner = _citizen_owner_or_none(request)
-    if not owner:
-        raise Http404("No owner record is linked to this user.")
-
-    context_assembly = _get_current_assembly(request)
-
-    prop_filter = f"{_certificate_property_field_name()}__owner"
-    assembly_filter = f"{_certificate_property_field_name()}__assembly"
-
-    certificate_qs = _certificate_queryset().filter(
-        _owner_q(owner, prop_filter)
+    certificate = get_object_or_404(
+        _certificate_queryset(),
+        certificate_uuid=certificate_uuid,
+        is_active=True,
     )
 
-    if context_assembly:
-        certificate_qs = certificate_qs.filter(**{assembly_filter: context_assembly})
+    verify_url = _certificate_verify_absolute_url(
+        request,
+        certificate,
+    )
 
-    certificate = get_object_or_404(certificate_qs, certificate_uuid=certificate_uuid)
+    qr = qrcode.QRCode(
+        version=1,
+        box_size=10,
+        border=2,
+    )
 
-    verify_url = _certificate_verify_absolute_url(request, certificate)
-
-    qr = qrcode.QRCode(version=1, box_size=10, border=2)
     qr.add_data(verify_url)
     qr.make(fit=True)
 
-    image = qr.make_image(fill_color="#d8bf7c", back_color="white")
+    image = qr.make_image(
+        fill_color="#111111",
+        back_color="white",
+    )
 
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     buffer.seek(0)
 
-    return HttpResponse(buffer.getvalue(), content_type="image/png")
+    return HttpResponse(
+        buffer.getvalue(),
+        content_type="image/png",
+    )
 
 
 def certificate_verify(request, certificate_uuid):
