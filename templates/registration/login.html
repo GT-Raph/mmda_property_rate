@@ -480,7 +480,7 @@
                 </h1>
 
                 <p class="subtitle">
-                    Property Rate Management System
+                    Sign in with your registered phone number and password
                     <small>Ghana MMDA Platform</small>
                 </p>
 
@@ -606,17 +606,18 @@
 
                     <div class="field-group">
                         <label for="id_username">
-                            Email Address
+                            Phone Number
                         </label>
 
                         <input
-                            type="text"
+                            type="tel"
                             id="id_username"
                             name="username"
                             class="input-field"
-                            placeholder="Enter your email or username"
+                            placeholder="Enter your registered phone number"
                             value="{{ form.username.value|default_if_none:'' }}"
-                            autocomplete="username"
+                            autocomplete="tel"
+                            inputmode="tel"
                             autocapitalize="none"
                             spellcheck="false"
                             required
@@ -709,6 +710,12 @@
                         </a>
                     </div>
                 </form>
+
+                <div class="note-box">
+                    <strong>Citizen login:</strong>
+                    Use the phone number linked to your owner record and your password.
+                    Staff accounts can still use their assigned username if needed.
+                </div>
             {% else %}
                 <h1 class="title">
                     Welcome to PRMS

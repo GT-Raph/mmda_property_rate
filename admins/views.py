@@ -4,12 +4,13 @@ from decimal import Decimal
 from io import BytesIO
 
 import qrcode
+from django import forms
 from django.contrib import messages
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import authenticate, get_user_model, update_session_auth_hash
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
-from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum, Value, Q
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -33,12 +34,168 @@ from admins.models import AdminPreference, Assembly, LoginAudit, ReportRun, User
 from billing.models import Bill, BillDispute
 from field_operations.models import FieldVisit
 from payments.models import Payment
-from properties.models import Property
+from properties.models import Owner, Property
+from properties.utils import normalize_phone
 
 from .access import get_allowed_modules, get_user_role, landing_url_for_user
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
+User = get_user_model()
+
+
+def _phone_lookup_values(phone_number):
+    normalized_phone = normalize_phone(phone_number)
+
+    if not normalized_phone:
+        return []
+
+    lookup_values = {normalized_phone}
+
+    if normalized_phone.startswith("233") and len(normalized_phone) > 3:
+        lookup_values.add(f"0{normalized_phone[3:]}")
+
+    return list(lookup_values)
+
+
+def _find_citizen_user_by_phone(phone_number):
+    phone_lookup_values = _phone_lookup_values(phone_number)
+
+    if not phone_lookup_values:
+        return None
+
+    matched_users = []
+
+    profile_matches = (
+        User.objects.filter(
+            is_active=True,
+            profile__role="citizen",
+            profile__phone_number__in=phone_lookup_values,
+        )
+        .select_related("profile")
+        .distinct()
+    )
+
+    matched_users.extend(profile_matches)
+
+    owner_matches = (
+        User.objects.filter(
+            is_active=True,
+            profile__role="citizen",
+        )
+        .filter(
+            Q(owner_records__primary_phone__in=phone_lookup_values)
+            | Q(owner_records__alternate_phone__in=phone_lookup_values)
+        )
+        .select_related("profile")
+        .distinct()
+    )
+
+    matched_users.extend(owner_matches)
+
+    unique_users = {
+        user.id: user
+        for user in matched_users
+        if user and user.is_active
+    }
+
+    if len(unique_users) == 1:
+        return list(unique_users.values())[0]
+
+    return None
+
+
+class PortalAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label=_("Phone Number"),
+        widget=forms.TextInput(
+            attrs={
+                "autofocus": True,
+                "autocomplete": "tel",
+                "inputmode": "tel",
+            }
+        ),
+    )
+
+    error_messages = {
+        "invalid_login": _(
+            "Please enter a correct phone number and password. "
+            "For citizen accounts, use the phone number linked to your owner record."
+        ),
+        "inactive": _("This account is inactive."),
+        "citizen_phone_required": _(
+            "Citizen accounts must sign in with their registered phone number and password."
+        ),
+    }
+
+    def clean(self):
+        identifier = (self.cleaned_data.get("username") or "").strip()
+        password = self.cleaned_data.get("password")
+
+        if identifier and password:
+            self.user_cache, authenticated_with_phone = self._authenticate_identifier(
+                identifier,
+                password,
+            )
+
+            if self.user_cache is None:
+                raise self.get_invalid_login_error()
+
+            if get_user_role(self.user_cache) == "citizen" and not authenticated_with_phone:
+                raise forms.ValidationError(
+                    self.error_messages["citizen_phone_required"],
+                    code="citizen_phone_required",
+                )
+
+            self.confirm_login_allowed(self.user_cache)
+
+        return self.cleaned_data
+
+    def _authenticate_identifier(self, identifier, password):
+        normalized_phone = normalize_phone(identifier)
+
+        if normalized_phone:
+            citizen_user = _find_citizen_user_by_phone(identifier)
+
+            if citizen_user:
+                user = authenticate(
+                    self.request,
+                    username=citizen_user.get_username(),
+                    password=password,
+                )
+                return user, bool(user)
+
+        email_user = self._find_user_by_email(identifier)
+        if email_user:
+            user = authenticate(
+                self.request,
+                username=email_user.get_username(),
+                password=password,
+            )
+            return user, False
+
+        user = authenticate(
+            self.request,
+            username=identifier,
+            password=password,
+        )
+        return user, False
+
+    def _find_user_by_email(self, identifier):
+        identifier = (identifier or "").strip()
+
+        if "@" not in identifier:
+            return None
+
+        matches = User.objects.filter(
+            email__iexact=identifier,
+            is_active=True,
+        )
+
+        if matches.count() == 1:
+            return matches.first()
+
+        return None
 
 
 def _portal_access(user):
@@ -51,7 +208,7 @@ def _settings_url(tab="profile"):
 
 class PortalLoginView(LoginView):
     template_name = "registration/login.html"
-    authentication_form = AuthenticationForm
+    authentication_form = PortalAuthenticationForm
     redirect_authenticated_user = True
 
     selected_assembly_session_key = "selected_assembly_id"
@@ -163,13 +320,43 @@ class PortalLoginView(LoginView):
         if role in ["sys_admin", "revenue_admin"]:
             return True, ""
 
+        if role == "citizen":
+            has_owner_record = Owner.objects.filter(
+                linked_user=user,
+                assembly=assembly,
+            ).exists()
+
+            has_default_assembly = profile.assembly_id == assembly.id
+
+            allowed_manager = getattr(profile, "allowed_assemblies", None)
+            has_allowed_assembly = False
+            if allowed_manager is not None:
+                has_allowed_assembly = allowed_manager.filter(id=assembly.id).exists()
+
+            if has_owner_record or has_default_assembly or has_allowed_assembly:
+                return True, ""
+
+            return (
+                False,
+                _(
+                    "This citizen account is not authorized to access the "
+                    "selected assembly because it is not linked to a property "
+                    "owner record, does not use the selected assembly as its "
+                    "default assembly, and is not included in its allowed "
+                    "assemblies."
+                ),
+            )
+
         if not profile.assembly_id:
             return False, _("This account is not assigned to any assembly.")
 
         if profile.assembly_id != assembly.id:
             return (
                 False,
-                _("You are not authorized to access the selected assembly. Please choose your assigned assembly."),
+                _(
+                    "You are not authorized to access the selected assembly. "
+                    "Please choose your assigned assembly."
+                ),
             )
 
         return True, ""
@@ -182,7 +369,6 @@ class PortalLoginView(LoginView):
         else:
             self.request.session.set_expiry(0)
 
-        # messages.success(self.request, "Login successful.")
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -623,19 +809,17 @@ def dashboard(request):
     previous_month_end = current_month_start - timedelta(days=1)
     previous_month_start = previous_month_end.replace(day=1)
     week_start = today - timedelta(days=today.weekday())
-    current_year = today.year
 
     context_assembly = _get_current_assembly(request)
     user_role = get_user_role(request.user)
 
-    # Roles that should see all assembly payments
     finance_all_roles = {
-    "sys_admin",
-    "revenue_admin",
-    "billing_officer",
-    "payment_officer",
-    "report_officer",
-    "field_officer",
+        "sys_admin",
+        "revenue_admin",
+        "billing_officer",
+        "payment_officer",
+        "report_officer",
+        "field_officer",
     }
 
     properties_qs = Property.objects.select_related("owner")
@@ -654,11 +838,6 @@ def dashboard(request):
         field_visits_qs = field_visits_qs.filter(property__assembly=context_assembly)
         disputes_qs = disputes_qs.filter(bill__assembly=context_assembly)
 
-    # -----------------------------
-    # WORK SCOPE
-    # -----------------------------
-    # This is for non-finance dashboard data like
-    # my properties, my visits, my disputes, etc.
     work_properties_qs = properties_qs
     work_field_visits_qs = field_visits_qs
     work_disputes_qs = disputes_qs
@@ -670,11 +849,6 @@ def dashboard(request):
             bill__property_record__registered_by=request.user
         )
 
-    # -----------------------------
-    # FINANCE SCOPE
-    # -----------------------------
-    # This is for payment chart, revenue chart,
-    # recent payments and finance-related stats.
     finance_bills_qs = bills_qs
     finance_payments_qs = payments_qs
 
@@ -692,9 +866,6 @@ def dashboard(request):
         output_field=MONEY_FIELD,
     )
 
-    # -----------------------------
-    # PROPERTY / PERSONAL STATS
-    # -----------------------------
     total_properties = work_properties_qs.count()
     properties_this_month = work_properties_qs.filter(
         created_at__date__gte=current_month_start
@@ -706,9 +877,6 @@ def dashboard(request):
 
     property_change = _pct_change(properties_this_month, properties_previous_month)
 
-    # -----------------------------
-    # FINANCE STATS
-    # -----------------------------
     bills_this_month = finance_bills_qs.filter(
         created_at__date__gte=current_month_start
     ).count()
@@ -827,9 +995,6 @@ def dashboard(request):
             },
         ]
 
-    # -----------------------------
-    # REVENUE TREND
-    # -----------------------------
     month_starts = []
     for offset in range(5, -1, -1):
         month = current_month_start.month - offset
@@ -872,20 +1037,16 @@ def dashboard(request):
         if total > revenue_max:
             revenue_max = total
 
-    # -----------------------------
-    # PAYMENT DISTRIBUTION
-    # -----------------------------
-    # Use all visible finance bills, not only current year bills.
     distribution_bills = finance_bills_qs.exclude(status__in=["cancelled"])
 
     paid_bills_qs = distribution_bills.filter(
-        Q(status__iexact="paid") |
-        Q(amount_paid__gte=F("amount_due"), amount_due__gt=0)
+        Q(status__iexact="paid")
+        | Q(amount_paid__gte=F("amount_due"), amount_due__gt=0)
     ).distinct()
 
     partial_bills_qs = distribution_bills.filter(
-        Q(status__in=["part_paid", "partial"]) |
-        (Q(amount_paid__gt=0) & Q(amount_paid__lt=F("amount_due")))
+        Q(status__in=["part_paid", "partial"])
+        | (Q(amount_paid__gt=0) & Q(amount_paid__lt=F("amount_due")))
     ).exclude(
         id__in=paid_bills_qs.values_list("id", flat=True)
     ).distinct()
@@ -923,9 +1084,6 @@ def dashboard(request):
         },
     ]
 
-    # -----------------------------
-    # RECENT ACTIVITY
-    # -----------------------------
     recent_items = []
 
     for payment in finance_payments_qs.filter(status="successful").order_by("-paid_at", "-created_at")[:5]:
@@ -1003,9 +1161,6 @@ def dashboard(request):
         reverse=True,
     )[:6]
 
-    # -----------------------------
-    # ALERTS
-    # -----------------------------
     overdue_90_count = finance_bills_qs.filter(
         due_date__lt=today - timedelta(days=90)
     ).exclude(status__in=["paid", "cancelled"]).count()
