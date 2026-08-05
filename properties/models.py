@@ -72,9 +72,11 @@ class Property(TimeStampedModel):
 
     VERIFICATION_STATUS_CHOICES = [
         ("pending", "Pending"),
+        ("under_review", "Under Review"),
         ("verified", "Verified"),
         ("flagged", "Flagged"),
         ("possible_duplicate", "Possible Duplicate"),
+        ("rejected", "Rejected"),
     ]
 
     assembly = models.ForeignKey(
@@ -108,12 +110,32 @@ class Property(TimeStampedModel):
         related_name="properties",
     )
 
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+    )
 
-    property_use = models.CharField(max_length=20, choices=PROPERTY_USE_CHOICES)
-    building_type = models.CharField(max_length=20, choices=BUILDING_TYPE_CHOICES)
-    property_class = models.CharField(max_length=100, blank=True, editable=False)
+    property_use = models.CharField(
+        max_length=20,
+        choices=PROPERTY_USE_CHOICES,
+    )
+    building_type = models.CharField(
+        max_length=20,
+        choices=BUILDING_TYPE_CHOICES,
+    )
+    property_class = models.CharField(
+        max_length=100,
+        blank=True,
+        editable=False,
+    )
     applied_rate_policy = models.ForeignKey(
         "billing.RatePolicy",
         on_delete=models.SET_NULL,
@@ -132,7 +154,11 @@ class Property(TimeStampedModel):
         default="occupied",
     )
 
-    rateable_value = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    rateable_value = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+    )
     is_exempt = models.BooleanField(default=False)
     exemption_reason = models.TextField(blank=True)
 
@@ -153,7 +179,10 @@ class Property(TimeStampedModel):
         blank=True,
         related_name="registered_properties",
     )
-    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -168,12 +197,25 @@ class Property(TimeStampedModel):
 
     def save(self, *args, **kwargs):
         if not self.property_reference:
-            prefix = self.assembly.short_code if self.assembly_id and getattr(self.assembly, "short_code", "") else "MMDA"
-            self.property_reference = f"{prefix}-{uuid4().hex[:10].upper()}"
+            if (
+                self.assembly_id
+                and getattr(self.assembly, "short_code", "")
+            ):
+                prefix = self.assembly.short_code
+            else:
+                prefix = "MMDA"
+
+            self.property_reference = (
+                f"{prefix}-{uuid4().hex[:10].upper()}"
+            )
+
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.property_reference} - {self.owner.full_name}"
+        return (
+            f"{self.property_reference} - "
+            f"{self.owner.full_name}"
+        )
 
 
 class PropertyPhoto(TimeStampedModel):
@@ -182,8 +224,13 @@ class PropertyPhoto(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="photos",
     )
-    image = models.ImageField(upload_to="property_photos/")
-    caption = models.CharField(max_length=255, blank=True)
+    image = models.ImageField(
+        upload_to="property_photos/",
+    )
+    caption = models.CharField(
+        max_length=255,
+        blank=True,
+    )
     is_primary = models.BooleanField(default=False)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
