@@ -1,11 +1,37 @@
 from datetime import timedelta
 from io import BytesIO
 
-from datetime import timedelta
-from io import BytesIO
-
+from django.core.files.base import ContentFile
+from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
+from django.shortcuts import render, redirect
+from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 from django.contrib import messages
+from PIL import Image, UnidentifiedImageError
+
 from django.contrib.auth.decorators import login_required
+
+from admins.access import get_allowed_modules, get_user_role, landing_url_for_user
+from admins.decorators import module_required
+from admins.models import Assembly, UserProfile
+from field_operations.models import FieldAssignment, FieldVisit
+from properties.models import Property
+
+try:
+    from properties.models import PropertyPhoto
+except ImportError:
+    PropertyPhoto = None
+
+
+def _get_current_assembly(request):
+    """
+    Get the active assembly for the current request.
+
+    Priority:
+    1. Assembly selected in the current session.
+    2. Assembly assigned to the logged-in user's profile.
+    """
+
     assembly_id = request.session.get("active_assembly_id")
 
     if assembly_id:
@@ -14,303 +40,331 @@ from django.contrib.auth.decorators import login_required
                 id=assembly_id,
                 is_active=True,
             )
+        except Assembly.DoesNotExist:
+            pass
+
+    profile = getattr(request.user, "profile", None)
+
+    if profile and getattr(profile, "assembly_id", None):
+        try:
+            return Assembly.objects.get(
+                id=profile.assembly_id,
+                is_active=True,
+            )
+        except Assembly.DoesNotExist:
+            return None
+
+    return None
+
+
+def _safe_reverse(
+    url_name,
+    args=None,
+    kwargs=None,
+    fallback="#",
+):
+    """
+    Reverse a URL without breaking the dashboard if an optional URL
+    has not yet been registered.
+    """
+
+    try:
+        return reverse(
+            url_name,
+            args=args or [],
+            kwargs=kwargs or {},
+        )
+    except NoReverseMatch:
+        return fallback
+
+
+def _officer_name(user):
+    """
+    Return a safe display name for current, deleted,
+    or unassigned field officers.
+    """
+
+    if user is None:
+        return "Unassigned officer"
+
+    get_full_name = getattr(
+        user,
+        "get_full_name",
+        None,
+    )
+
+    full_name = ""
+
+    if callable(get_full_name):
+        full_name = (
+            get_full_name()
+            or ""
+        ).strip()
+
+    username = (
+        getattr(user, "username", "")
+        or ""
+    ).strip()
+
+    email = (
+        getattr(user, "email", "")
+        or ""
+    ).strip()
 
     return (
         full_name
         or username
         or email
         or "Unassigned officer"
-    from datetime import timedelta
-    from io import BytesIO
-
-    from django.contrib import messages
-    from django.contrib.auth.decorators import login_required
-    from django.core.files.base import ContentFile
-    from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
-    from django.shortcuts import redirect, render
-    from django.urls import NoReverseMatch, reverse
-    from django.utils import timezone
-    from PIL import Image, UnidentifiedImageError
-
-    from admins.access import (
-        get_allowed_modules,
-        get_user_role,
-        landing_url_for_user,
     )
-    from admins.decorators import module_required
-    from admins.models import Assembly, UserProfile
-    from field_operations.models import FieldAssignment, FieldVisit
-    from properties.models import Property
+
+
+def _format_datetime(value):
+    if not value:
+        return "No activity yet"
 
     try:
-        from properties.models import PropertyPhoto
-    except ImportError:
-        PropertyPhoto = None
+        value = timezone.localtime(value)
+    except (ValueError, TypeError):
+        pass
+
+    return value.strftime("%Y-%m-%d at %H:%M")
 
 
-    def _get_current_assembly(request):
-        """
-        Get the active assembly for the current request.
+def _visit_status(visit):
+    """
+    Return display information for a field visit.
 
-        Priority:
-        1. Assembly selected in the current session.
-        2. Assembly assigned to the logged-in user's profile.
-        """
+    No emoji or text symbols are returned. The template uses SVG icons.
+    """
 
-        assembly_id = request.session.get("active_assembly_id")
+    outcome = (
+        getattr(visit, "outcome", "")
+        or ""
+    ).strip().lower()
 
-        if assembly_id:
-            try:
-                return Assembly.objects.get(
-                    id=assembly_id,
-                    is_active=True,
-                )
-            except Assembly.DoesNotExist:
-                pass
-
-        profile = getattr(request.user, "profile", None)
-
-        if profile and getattr(profile, "assembly_id", None):
-            try:
-                return Assembly.objects.get(
-                    id=profile.assembly_id,
-                    is_active=True,
-                )
-            except Assembly.DoesNotExist:
-                return None
-
-        return None
-
-
-    def _safe_reverse(
-        url_name,
-        args=None,
-        kwargs=None,
-        fallback="#",
-    ):
-        """
-        Reverse a URL without breaking the dashboard if an optional URL
-        has not yet been registered.
-        """
-
-        try:
-            return reverse(
-                url_name,
-                args=args or [],
-                kwargs=kwargs or {},
-            )
-        except NoReverseMatch:
-            return fallback
-
-
-    def _officer_name(user):
-        """
-        Return a safe display name for current, deleted,
-        or unassigned field officers.
-        """
-
-        if user is None:
-            return "Unassigned officer"
-
-        get_full_name = getattr(
-            user,
-            "get_full_name",
-            None,
-        )
-
-        full_name = ""
-
-        if callable(get_full_name):
-            full_name = (
-                get_full_name()
-                or ""
-            ).strip()
-
-        username = (
-            getattr(user, "username", "")
-            or ""
-        ).strip()
-
-        email = (
-            getattr(user, "email", "")
-            or ""
-        ).strip()
-
-        return (
-            full_name
-            or username
-            or email
-            or "Unassigned officer"
-        )
-
-
-    def _format_datetime(value):
-        if not value:
-            return "No activity yet"
-
-        try:
-            value = timezone.localtime(value)
-        except (ValueError, TypeError):
-            pass
-
-        return value.strftime("%Y-%m-%d at %H:%M")
-
-
-    def _visit_title(visit):
-        if hasattr(visit, "get_visit_type_display"):
-            raw_title = visit.get_visit_type_display()
-        else:
-            raw_title = str(
-                getattr(
-                    visit,
-                    "visit_type",
-                    "Verification",
-                )
-            ).replace("_", " ").title()
-
-        title_mapping = {
-            "Verification": "Property Verification",
-            "Property Verification": "Property Verification",
-            "Payment Verification": "Payment Verification",
-            "Assessment": "Site Assessment",
-            "Site Assessment": "Site Assessment",
-            "Dispute": "Dispute Investigation",
-            "Dispute Investigation": "Dispute Investigation",
-            "Enumeration": "Property Enumeration",
-            "Follow Up": "Follow-up Visit",
-            "Follow-Up": "Follow-up Visit",
-        }
-
-        return title_mapping.get(
-            raw_title,
-            raw_title,
-        )
-
-
-    def _visit_status(visit):
-        """
-        Return display information for a field visit.
-
-        No emoji or text symbols are returned. The template uses SVG icons.
-        """
-
-        outcome = (
-            getattr(visit, "outcome", "")
-            or ""
-        ).strip().lower()
-
-        outcome_mapping = {
-            "compliant": {
-                "label": "Verified",
-                "status_class": "status-verified",
-                "icon_class": "activity-green",
-                "icon_name": "check",
-            },
-            "notice_served": {
-                "label": "Discrepancy",
-                "status_class": "status-discrepancy",
-                "icon_class": "activity-red",
-                "icon_name": "warning",
-            },
-            "follow_up_required": {
-                "label": "Pending",
-                "status_class": "status-pending",
-                "icon_class": "activity-yellow",
-                "icon_name": "clock",
-            },
-            "property_not_found": {
-                "label": "Discrepancy",
-                "status_class": "status-discrepancy",
-                "icon_class": "activity-red",
-                "icon_name": "warning",
-            },
-        }
-
-        if outcome in outcome_mapping:
-            return outcome_mapping[outcome]
-
-        status_text = (
-            f"{outcome} "
-            f"{getattr(visit, 'notes', '')}"
-        ).lower()
-
-        if any(
-            word in status_text
-            for word in [
-                "discrep",
-                "mismatch",
-                "issue",
-                "failed",
-                "fail",
-                "duplicate",
-                "rejected",
-            ]
-        ):
-            return {
-                "label": "Discrepancy",
-                "status_class": "status-discrepancy",
-                "icon_class": "activity-red",
-                "icon_name": "warning",
-            }
-
-        if any(
-            word in status_text
-            for word in [
-                "pending",
-                "await",
-                "review",
-                "progress",
-                "follow up",
-                "follow-up",
-            ]
-        ):
-            return {
-                "label": "Pending",
-                "status_class": "status-pending",
-                "icon_class": "activity-yellow",
-                "icon_name": "clock",
-            }
-
-        return {
+    outcome_mapping = {
+        "compliant": {
             "label": "Verified",
             "status_class": "status-verified",
             "icon_class": "activity-green",
             "icon_name": "check",
+        },
+        "notice_served": {
+            "label": "Discrepancy",
+            "status_class": "status-discrepancy",
+            "icon_class": "activity-red",
+            "icon_name": "warning",
+        },
+        "follow_up_required": {
+            "label": "Pending",
+            "status_class": "status-pending",
+            "icon_class": "activity-yellow",
+            "icon_name": "clock",
+        },
+        "property_not_found": {
+            "label": "Discrepancy",
+            "status_class": "status-discrepancy",
+            "icon_class": "activity-red",
+            "icon_name": "warning",
+        },
+    }
+
+    if outcome in outcome_mapping:
+        return outcome_mapping[outcome]
+
+    status_text = (
+        f"{outcome} "
+        f"{getattr(visit, 'notes', '')}"
+    ).lower()
+
+    if any(
+        word in status_text
+        for word in [
+            "discrep",
+            "mismatch",
+            "issue",
+            "failed",
+            "fail",
+            "duplicate",
+            "rejected",
+        ]
+    ):
+        return {
+            "label": "Discrepancy",
+            "status_class": "status-discrepancy",
+            "icon_class": "activity-red",
+            "icon_name": "warning",
         }
 
+    if any(
+        word in status_text
+        for word in [
+            "pending",
+            "await",
+            "review",
+            "progress",
+            "follow up",
+            "follow-up",
+        ]
+    ):
+        return {
+            "label": "Pending",
+            "status_class": "status-pending",
+            "icon_class": "activity-yellow",
+            "icon_name": "clock",
+        }
 
-    def _active_field_assignments(request, assembly):
-        queryset = (
-            FieldAssignment.objects
-            .select_related(
-                "property",
-                "property__owner",
-                "property__assembly",
-                "assembly",
-                "officer",
-                "assigned_by",
-            )
-            .filter(
-                officer=request.user,
-                status__in=[
-                    "assigned",
-                    "in_progress",
-                ],
-            )
-            .order_by(
-                "-assigned_at",
-                "-created_at",
-            )
+    return {
+        "label": "Verified",
+        "status_class": "status-verified",
+        "icon_class": "activity-green",
+        "icon_name": "check",
+    }
+
+
+def _active_field_assignments(request, assembly):
+    queryset = (
+        FieldAssignment.objects
+        .select_related(
+            "property",
+            "property__owner",
+            "property__assembly",
+            "assembly",
+            "officer",
+            "assigned_by",
+        )
+        .filter(
+            officer=request.user,
+            status__in=[
+                "assigned",
+                "in_progress",
+            ],
+        )
+        .order_by(
+            "-assigned_at",
+            "-created_at",
+        )
+    )
+
+    if assembly:
+        queryset = queryset.filter(
+            assembly=assembly,
         )
 
-        if assembly:
-            queryset = queryset.filter(
-                assembly=assembly,
+    return queryset
+
+
+def _visit_title(visit):
+    if hasattr(visit, "get_visit_type_display"):
+        raw_title = visit.get_visit_type_display()
+    else:
+        raw_title = str(
+            getattr(
+                visit,
+                "visit_type",
+                "Verification",
             )
+        ).replace("_", " ").title()
 
-        return queryset
+    title_mapping = {
+        "Verification": "Property Verification",
+        "Property Verification": "Property Verification",
+        "Payment Verification": "Payment Verification",
+        "Assessment": "Site Assessment",
+        "Site Assessment": "Site Assessment",
+        "Dispute": "Dispute Investigation",
+        "Dispute Investigation": "Dispute Investigation",
+        "Enumeration": "Property Enumeration",
+        "Follow Up": "Follow-up Visit",
+        "Follow-Up": "Follow-up Visit",
+    }
+
+    return title_mapping.get(
+        raw_title,
+        raw_title,
+    )
 
 
+def _visit_location(property_record):
+    location_parts = []
+
+    address_line = (
+        getattr(
+            property_record,
+            "address_line",
+            "",
+        )
+        or ""
+    ).strip()
+
+    suburb = (
+        getattr(
+            property_record,
+            "suburb",
+            "",
+        )
+        or ""
+    ).strip()
+
+    area_town = (
+        getattr(
+            property_record,
+            "area_town",
+            "",
+        )
+        or ""
+    ).strip()
+
+    digital_address = (
+        getattr(
+            property_record,
+            "digital_address",
+            "",
+        )
+        or ""
+    ).strip()
+
+    for location_value in [
+        address_line,
+        suburb,
+        area_town,
+    ]:
+        if (
+            location_value
+            and location_value not in location_parts
+        ):
+            location_parts.append(location_value)
+
+    if location_parts:
+        return ", ".join(location_parts)
+
+    if digital_address:
+        return digital_address
+
+    community_area = getattr(
+        property_record,
+        "community_area",
+        None,
+    )
+
+    if community_area:
+        return getattr(
+            community_area,
+            "name",
+            str(community_area),
+        )
+
+    return "Location not set"
+
+
+def _visit_description(visit):
+    notes = (
+        getattr(
+            visit,
+            "notes",
+            "",
+        )
         or ""
     ).strip()
 
@@ -580,9 +634,9 @@ def _build_field_officer_context(
             property__assembly=assembly
         )
 
-    active_assignments = _active_field_assignments(
-        request=request,
-        assembly=assembly,
+    visit_property_ids = officer_visits.values_list(
+        "property_id",
+        flat=True,
     )
 
     properties_queryset = (
@@ -595,14 +649,19 @@ def _build_field_officer_context(
             "applied_rate_policy",
         )
         .filter(
-            id__in=active_assignments.values_list(
-                "property_id",
-                flat=True,
-            )
+            Q(registered_by=request.user)
+            | Q(id__in=visit_property_ids)
         )
         .distinct()
         .order_by("-created_at")
     )
+
+    if assembly:
+        properties_queryset = (
+            properties_queryset.filter(
+                assembly=assembly
+            )
+        )
 
     total_properties = properties_queryset.count()
 
@@ -656,46 +715,10 @@ def _build_field_officer_context(
         )
         if total_properties
         else 0
-                uploaded_bytes = uploaded_file.read()
-
-                try:
-                    with Image.open(BytesIO(uploaded_bytes)) as image:
-                        image.load()
-
-                        if image.mode not in {"RGB", "RGBA", "L"}:
-                            image = image.convert(
-                                "RGBA"
-                                if "A" in image.getbands()
-                                else "RGB"
-                            )
-
-                        reencoded = BytesIO()
-                        image.save(reencoded, format="PNG")
-                except (UnidentifiedImageError, OSError, ValueError) as exc:
-                    raise ValidationError(
-                        "Verification uploads must be valid image files."
-                    ) from exc
-
-                reencoded_bytes = reencoded.getvalue()
-
-                if len(reencoded_bytes) > 8 * 1024 * 1024:
-                    raise ValidationError(
-                        (
-                            f"{uploaded_file.name} is larger than "
-                            "the 8 MB upload limit after processing."
-                        )
-                    )
     )
 
     accuracy_rate = (
-                    image=ContentFile(
-                        reencoded_bytes,
-                        name=(
-                            (uploaded_file.name or "verification-photo")
-                            .rsplit(".", 1)[0]
-                            + ".png"
-                        ),
-                    ),
+        round(
             (
                 location_complete_count
                 / total_properties
@@ -1428,9 +1451,9 @@ def field_officer_stats(request):
             property__assembly=assembly
         )
 
-    active_assignments = _active_field_assignments(
-        request=request,
-        assembly=assembly,
+    visit_property_ids = officer_visits.values_list(
+        "property_id",
+        flat=True,
     )
 
     properties_queryset = (
@@ -1443,14 +1466,17 @@ def field_officer_stats(request):
             "applied_rate_policy",
         )
         .filter(
-            id__in=active_assignments.values_list(
-                "property_id",
-                flat=True,
-            )
+            Q(registered_by=request.user)
+            | Q(id__in=visit_property_ids)
         )
         .distinct()
         .order_by("-created_at")
     )
+
+    if assembly:
+        properties_queryset = properties_queryset.filter(
+            assembly=assembly
+        )
 
     completed_properties = properties_queryset.filter(
         verification_status__in=completed_statuses
@@ -1831,9 +1857,18 @@ def _model_has_field(model, field_name):
 
 
 def _get_field_officer_property_queryset(request, assembly):
-    active_assignments = _active_field_assignments(
-        request=request,
-        assembly=assembly,
+    officer_visits = FieldVisit.objects.filter(
+        officer=request.user,
+    )
+
+    if assembly:
+        officer_visits = officer_visits.filter(
+            property__assembly=assembly,
+        )
+
+    visit_property_ids = officer_visits.values_list(
+        "property_id",
+        flat=True,
     )
 
     properties_queryset = (
@@ -1845,13 +1880,16 @@ def _get_field_officer_property_queryset(request, assembly):
             "registered_by",
         )
         .filter(
-            id__in=active_assignments.values_list(
-                "property_id",
-                flat=True,
-            )
+            Q(registered_by=request.user)
+            | Q(id__in=visit_property_ids)
         )
         .distinct()
     )
+
+    if assembly:
+        properties_queryset = properties_queryset.filter(
+            assembly=assembly,
+        )
 
     return properties_queryset
 
@@ -2593,13 +2631,11 @@ def _prms_create_field_visit(
             verification_type,
             "verification",
         ),
-        submitted_verification_type=verification_type,
         payment_status_seen="unknown",
         outcome=outcome_map.get(
             verification_status,
             "follow_up_required",
         ),
-        submitted_verification_status=verification_status,
         amount_outstanding_snapshot=(
             _prms_property_outstanding_amount(
                 property_obj
@@ -2635,6 +2671,23 @@ def _prms_save_property_photos(
     saved_count = 0
 
     for uploaded_file in photos:
+        content_type = (
+            getattr(
+                uploaded_file,
+                "content_type",
+                "",
+            )
+            or ""
+        ).lower()
+
+        if (
+            content_type
+            and not content_type.startswith("image/")
+        ):
+            raise ValidationError(
+                "Verification uploads must be image files."
+            )
+
         if uploaded_file.size > 8 * 1024 * 1024:
             raise ValidationError(
                 (
@@ -2643,46 +2696,9 @@ def _prms_save_property_photos(
                 )
             )
 
-        uploaded_bytes = uploaded_file.read()
-
-        try:
-            with Image.open(BytesIO(uploaded_bytes)) as image:
-                image.load()
-
-                if image.mode not in {"RGB", "RGBA", "L"}:
-                    image = image.convert(
-                        "RGBA"
-                        if "A" in image.getbands()
-                        else "RGB"
-                    )
-
-                reencoded = BytesIO()
-                image.save(reencoded, format="PNG")
-        except (UnidentifiedImageError, OSError, ValueError) as exc:
-            raise ValidationError(
-                "Verification uploads must be valid image files."
-            ) from exc
-
-        reencoded_bytes = reencoded.getvalue()
-
-        if len(reencoded_bytes) > 8 * 1024 * 1024:
-            raise ValidationError(
-                (
-                    f"{uploaded_file.name} is larger than "
-                    "the 8 MB upload limit after processing."
-                )
-            )
-
         PropertyPhoto.objects.create(
             property=property_obj,
-            image=ContentFile(
-                reencoded_bytes,
-                name=(
-                    (uploaded_file.name or "verification-photo")
-                    .rsplit(".", 1)[0]
-                    + ".png"
-                ),
-            ),
+            image=uploaded_file,
             uploaded_by=request.user,
             caption="Field verification photo",
         )
@@ -2873,17 +2889,11 @@ def assign_field_officer_property(request):
                 )
 
             with transaction.atomic():
-                    locked_property = (
-                        Property.objects
-                        .select_for_update()
-                        .get(pk=property_obj.pk)
-                    )
-
                 existing_assignment = (
                     FieldAssignment.objects
                     .select_for_update()
                     .filter(
-                            property=locked_property,
+                        property=property_obj,
                         status__in=[
                             "assigned",
                             "in_progress",
@@ -2935,8 +2945,8 @@ def assign_field_officer_property(request):
 
                 else:
                     FieldAssignment.objects.create(
-                        assembly=locked_property.assembly,
-                        property=locked_property,
+                        assembly=property_obj.assembly,
+                        property=property_obj,
                         officer=officer_profile.user,
                         assigned_by=request.user,
                         status="assigned",
@@ -3057,16 +3067,11 @@ def field_officer_verify_property(
                 "in_progress",
             ],
         )
-        .annotate(
-            priority_rank=Case(
-                When(priority="high", then=Value(0)),
-                When(priority="medium", then=Value(1)),
-                When(priority="low", then=Value(2)),
-                default=Value(3),
-                output_field=IntegerField(),
-            )
+        .order_by(
+            "-priority",
+            "due_date",
+            "-assigned_at",
         )
-        .order_by("priority_rank", "due_date", "-assigned_at")
     )
 
     if assembly:
