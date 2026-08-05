@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Property Owner Login</title>
+    <style>
+        :root {
+            --bg-dark: #111214;
+            --bg-dark-2: #191b1f;
+            --card: #f3f3f3;
+            --text: #1e1e1e;
+            --muted: #747983;
+            --gold-dark: #caa94f;
+            --gold-border: #dfc06b;
+            --blue-soft: #edf4ff;
+            --blue-border: #b7cffc;
+            --blue-text: #1f49c7;
+            --red-soft: #fff2f2;
+            --red-border: #efc2c2;
+            --red-text: #b42318;
+            --shadow: 0 30px 60px rgba(0, 0, 0, 0.28);
+            --radius: 20px;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(90deg, var(--bg-dark) 0%, var(--bg-dark-2) 100%);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 18px;
+        }
+        button, input { font-family: inherit; }
+        .page { width: 100%; max-width: 980px; display: flex; flex-direction: column; align-items: center; }
+        .card { width: 100%; max-width: 560px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 42px 48px 34px; }
+        .logo-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+        .logo-wrap img { width: 95px; height: 95px; object-fit: contain; }
+        .title { margin: 0; text-align: center; font-size: 27px; font-weight: 800; color: #1f1f1f; }
+        .subtitle { margin: 10px 0 30px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.45; }
+        .subtitle small { display: block; margin-top: 3px; font-size: 14px; }
+        .field-group { margin-bottom: 20px; }
+        .field-group label { display: block; margin-bottom: 10px; font-size: 15px; font-weight: 700; color: #242424; }
+        .input-field { width: 100%; height: 62px; border: 1px solid #d5d5d5; border-radius: 10px; background: #f7f7f7; padding: 0 18px; font-size: 16px; color: #222; outline: none; }
+        .input-field:focus { border-color: var(--gold-dark); background: #fff; box-shadow: 0 0 0 4px rgba(202, 169, 79, 0.12); }
+        .primary-btn { width: 100%; min-height: 60px; border: none; border-radius: 10px; background: linear-gradient(90deg, #cfad47 0%, #e5cf91 100%); color: #fff; font-size: 17px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 22px rgba(202, 169, 79, 0.22); }
+        .bottom-row { margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+        .remember-wrap { display: flex; align-items: center; gap: 10px; color: #4a4a4a; font-size: 14px; cursor: pointer; }
+        .remember-wrap input { width: 22px; height: 22px; accent-color: var(--gold-dark); }
+        .note-box { margin-top: 24px; border: 1px solid var(--blue-border); background: var(--blue-soft); border-radius: 10px; padding: 16px 18px; color: var(--blue-text); font-size: 14px; line-height: 1.5; }
+        .note-box a { color: var(--blue-text); font-weight: 800; }
+        .form-errors { background: var(--red-soft); border: 1px solid var(--red-border); color: var(--red-text); border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; font-size: 14px; line-height: 1.45; }
+        .field-error { margin-top: 7px; color: var(--red-text); font-size: 13px; }
+        .footer-text { margin-top: 26px; color: rgba(255, 255, 255, 0.82); font-size: 14px; text-align: center; }
+        @media (max-width: 760px) { body { padding: 20px 14px; } .card { padding: 32px 22px 26px; } .title { font-size: 24px; } }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="card">
+            <div class="logo-wrap">
+                <img src="{% static 'images/mmda_logo_1.png' %}" alt="PRMS Logo">
+            </div>
+
+            <h1 class="title">Property Owner Login</h1>
+            <p class="subtitle">Sign in with the phone number linked to your property record.<small>Ghana MMDA Platform</small></p>
+
+            {% if form.non_field_errors %}
+                <div class="form-errors" role="alert">
+                    {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+                </div>
+            {% elif form.errors %}
+                <div class="form-errors" role="alert">Please correct the errors below.</div>
+            {% endif %}
+
+            <form method="post" action="{% url 'owner-login' %}" autocomplete="on">
+                {% csrf_token %}
+
+                <div class="field-group">
+                    <label for="id_username">Phone Number</label>
+                    <input
+                        type="tel"
+                        id="id_username"
+                        name="username"
+                        class="input-field"
+                        placeholder="Enter your phone number"
+                        value="{{ form.username.value|default_if_none:'' }}"
+                        autocomplete="tel"
+                        inputmode="tel"
+                        required
+                    >
+                    {% for error in form.username.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="id_password">Password</label>
+                    <input type="password" id="id_password" name="password" class="input-field" placeholder="Enter your password" autocomplete="current-password" required>
+                    {% for error in form.password.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+
+                <button type="submit" class="primary-btn">Sign In</button>
+
+                <div class="bottom-row">
+                    <label class="remember-wrap" for="remember_me">
+                        <input type="checkbox" id="remember_me" name="remember_me" value="1">
+                        <span>Remember me</span>
+                    </label>
+                </div>
+            </form>
+
+            <div class="note-box">
+                <strong>Staff/Admin?</strong>
+                Use the admin login page instead.
+                <a href="{% url 'admin-login' %}">Open admin login</a>.
+            </div>
+        </section>
+
+        <p class="footer-text">© 2026 Ghana MMDA. All rights reserved.</p>
+    </main>
+</body>
+</html>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import EnumerationRecord, FieldVisit
+from .models import EnumerationRecord, FieldAssignment, FieldVisit
 
 
 @admin.register(EnumerationRecord)
@@ -66,3 +66,26 @@ class FieldVisitAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("created_at", "updated_at")
     autocomplete_fields = ("assembly", "property", "officer")
+
+
+@admin.register(FieldAssignment)
+class FieldAssignmentAdmin(admin.ModelAdmin):
+    list_display = (
+        "property",
+        "officer",
+        "assembly",
+        "status",
+        "priority",
+        "due_date",
+        "assigned_at",
+        "completed_at",
+    )
+    list_filter = ("status", "priority", "assembly", "due_date")
+    search_fields = (
+        "property__property_reference",
+        "property__owner__full_name",
+        "officer__username",
+        "officer__first_name",
+        "officer__last_name",
+    )
+    autocomplete_fields = ("property", "officer", "assigned_by")

@@ -14,30 +14,31 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.auth import views as auth_views
+from django.contrib import admin
 from django.contrib.auth.views import LogoutView
+from django.urls import include, path
+from django.views.generic import RedirectView
 
-from admins.views import PortalLoginView
+from admins.views import AdminLoginView, CitizenLoginView, PortalLoginView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    
-    path("", PortalLoginView.as_view(), name="portal-login"),
+    path("admin/", admin.site.urls),
+
+    # Separate authentication entry points.
+    path("", RedirectView.as_view(pattern_name="admin-login", permanent=False), name="portal-root"),
+    path("login/", PortalLoginView.as_view(), name="portal-login"),  # backwards-compatible admin login alias
+    path("admin-login/", AdminLoginView.as_view(), name="admin-login"),
+    path("owner/login/", CitizenLoginView.as_view(), name="owner-login"),
     path("logout/", LogoutView.as_view(), name="logout"),
-    # path("accounts/", include("django.contrib.auth.urls")),
 
     path("dashboard/", include("admins.urls")),
-    path('properties/', include('properties.urls')),
-    path('billing/', include('billing.urls')),
-    path('payments/', include('payments.urls')),
-    path('field-operations/', include("field_operations.urls")),
-    # path('dashboard/', include('admins.urls')),
+    path("properties/", include("properties.urls")),
+    path("billing/", include("billing.urls")),
+    path("payments/", include("payments.urls")),
+    path("field-operations/", include("field_operations.urls")),
     path("owner/", include("citizens.urls")),
-    
 ]
 
 if settings.DEBUG:

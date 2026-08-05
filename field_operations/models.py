@@ -140,3 +140,71 @@ class FieldVisit(TimeStampedModel):
 
     def __str__(self):
         return f"{self.property.property_reference} - {self.visit_type}"
+
+
+class FieldAssignment(TimeStampedModel):
+    STATUS_CHOICES = [
+        ("assigned", "Assigned"),
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
+        ("rejected", "Rejected"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    assembly = models.ForeignKey(
+        Assembly,
+        on_delete=models.CASCADE,
+        related_name="field_assignments",
+    )
+    property = models.ForeignKey(
+        Property,
+        on_delete=models.CASCADE,
+        related_name="field_assignments",
+    )
+    officer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="field_assignments",
+    )
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="field_assignments_created",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="assigned")
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium")
+    due_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    assigned_at = models.DateTimeField(default=timezone.now)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-assigned_at", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["property", "officer"],
+                condition=models.Q(status__in=["assigned", "in_progress"]),
+                name="unique_active_assignment_per_property_officer",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["assembly", "status"]),
+            models.Index(fields=["officer", "status"]),
+            models.Index(fields=["property", "status"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.property_id and not self.assembly_id:
+            self.assembly = self.property.assembly
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.property.property_reference} -> {self.officer.get_username()}"

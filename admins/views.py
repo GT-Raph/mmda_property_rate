@@ -2,6 +2,7 @@ import base64
 from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
+from django import forms
 
 import qrcode
 from django import forms
@@ -103,6 +104,130 @@ def _find_citizen_user_by_phone(phone_number):
         return list(unique_users.values())[0]
 
     return None
+
+def _find_admin_user_by_identifier(identifier):
+    identifier = (identifier or "").strip()
+
+    if not identifier:
+        return None
+
+    user = User.objects.filter(username__iexact=identifier, is_active=True).first()
+    if user:
+        return user
+
+    user = User.objects.filter(email__iexact=identifier, is_active=True).first()
+    if user:
+        return user
+
+    return None
+
+
+def _set_citizen_active_assembly(request, user):
+    profile = getattr(user, "profile", None)
+
+    if profile and profile.assembly_id:
+        request.session["active_assembly_id"] = profile.assembly_id
+        request.session["active_assembly_name"] = profile.assembly.name
+        request.session.modified = True
+        return
+
+    owner = (
+        Owner.objects
+        .filter(linked_user=user, assembly__is_active=True)
+        .select_related("assembly")
+        .order_by("id")
+        .first()
+    )
+
+    if owner and owner.assembly_id:
+        request.session["active_assembly_id"] = owner.assembly_id
+        request.session["active_assembly_name"] = owner.assembly.name
+        request.session.modified = True
+
+
+class AdminAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Email Address or Username",
+        widget=forms.TextInput(
+            attrs={
+                "autofocus": True,
+                "autocomplete": "username",
+            }
+        ),
+    )
+
+    def clean(self):
+        identifier = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+
+        if identifier and password:
+            user = _find_admin_user_by_identifier(identifier)
+
+            if user is None:
+                raise forms.ValidationError(
+                    _("Please enter a correct username/email and password."),
+                    code="invalid_login",
+                )
+
+            if get_user_role(user) == "citizen":
+                raise forms.ValidationError(
+                    _("Property owners must use the owner login page."),
+                    code="invalid_login",
+                )
+
+            if not user.check_password(password):
+                raise forms.ValidationError(
+                    _("Please enter a correct username/email and password."),
+                    code="invalid_login",
+                )
+
+            self.confirm_login_allowed(user)
+            self.user_cache = user
+
+        return self.cleaned_data
+
+
+class CitizenPhoneAuthenticationForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Phone Number",
+        widget=forms.TextInput(
+            attrs={
+                "autofocus": True,
+                "autocomplete": "tel",
+                "inputmode": "tel",
+            }
+        ),
+    )
+
+    def clean(self):
+        phone_number = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+
+        if phone_number and password:
+            user = _find_citizen_user_by_phone(phone_number)
+
+            if user is None:
+                raise forms.ValidationError(
+                    _("No active property owner account was found for this phone number."),
+                    code="invalid_login",
+                )
+
+            if get_user_role(user) != "citizen":
+                raise forms.ValidationError(
+                    _("This login page is only for property owners."),
+                    code="invalid_login",
+                )
+
+            if not user.check_password(password):
+                raise forms.ValidationError(
+                    _("Please enter the correct phone number and password."),
+                    code="invalid_login",
+                )
+
+            self.confirm_login_allowed(user)
+            self.user_cache = user
+
+        return self.cleaned_data
 
 
 class PortalAuthenticationForm(AuthenticationForm):
@@ -208,7 +333,7 @@ def _settings_url(tab="profile"):
 
 class PortalLoginView(LoginView):
     template_name = "registration/login.html"
-    authentication_form = PortalAuthenticationForm
+    authentication_form = AuthenticationForm
     redirect_authenticated_user = True
 
     selected_assembly_session_key = "selected_assembly_id"
@@ -374,6 +499,42 @@ class PortalLoginView(LoginView):
     def get_success_url(self):
         return landing_url_for_user(self.request.user)
 
+
+class AdminLoginView(PortalLoginView):
+    """
+    Dedicated staff/admin login.
+
+    This keeps the existing assembly-selection login flow for admin users.
+    Citizens are blocked from this page and redirected to the owner login.
+    """
+    authentication_form = AdminAuthenticationForm
+
+
+class CitizenLoginView(LoginView):
+    """
+    Dedicated property owner login.
+
+    Citizens sign in with phone number + password.
+    No assembly-selection screen is shown here.
+    """
+    template_name = "registration/owner_login.html"
+    authentication_form = CitizenPhoneAuthenticationForm
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        remember_me = self.request.POST.get("remember_me")
+
+        if remember_me:
+            self.request.session.set_expiry(1209600)
+        else:
+            self.request.session.set_expiry(0)
+
+        response = super().form_valid(form)
+        _set_citizen_active_assembly(self.request, self.request.user)
+        return response
+
+    def get_success_url(self):
+        return reverse("citizens:dashboard")
 
 def _get_current_assembly(request):
     assembly_id = request.session.get("active_assembly_id")

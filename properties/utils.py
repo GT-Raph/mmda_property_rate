@@ -1,4 +1,6 @@
 import re
+import secrets
+import string
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -36,6 +38,33 @@ def split_full_name(full_name):
     if len(parts) == 1:
         return parts[0], ""
     return parts[0], " ".join(parts[1:])
+
+
+def generate_temporary_password(length=8):
+    alphabet = string.ascii_uppercase + string.digits
+    token = "".join(secrets.choice(alphabet) for _ in range(length))
+    return f"PRMS-{token}"
+
+
+def build_unique_citizen_username(owner):
+    normalized_phone = normalize_phone(getattr(owner, "primary_phone", ""))
+
+    if normalized_phone:
+        base = normalized_phone[:140]
+    else:
+        base_name = normalize_text(owner.full_name).replace(" ", "")
+        base = re.sub(r"[^a-z0-9]", "", base_name) or "citizen"
+        base = base[:140]
+
+    username = base
+    counter = 1
+
+    while User.objects.filter(username=username).exists():
+        suffix = str(counter)
+        username = f"{base[:140 - len(suffix)]}{suffix}"
+        counter += 1
+
+    return username
 
 
 def build_unique_username(owner):
@@ -121,8 +150,6 @@ def find_matching_citizen_for_owner(owner):
 
     candidates = candidate_citizen_users_for_owner(owner)
 
-    # Strongest match: a Ghana Card already recorded on another linked owner
-    # record. This allows the same citizen to be found across assemblies.
     if owner_ghana_card:
         matched_user = _single_user_or_none(
             candidates.filter(
@@ -132,7 +159,6 @@ def find_matching_citizen_for_owner(owner):
         if matched_user:
             return matched_user
 
-    # Exact email match.
     if owner_email:
         matched_user = _single_user_or_none(
             candidates.filter(email__iexact=owner.email.strip()).distinct()
@@ -140,7 +166,6 @@ def find_matching_citizen_for_owner(owner):
         if matched_user:
             return matched_user
 
-    # Exact phone match against the profile and all existing owner records.
     owner_phone_values = {
         value
         for value in [owner_primary_phone, owner_alternate_phone]
@@ -156,7 +181,6 @@ def find_matching_citizen_for_owner(owner):
         if len(phone_matches) == 1:
             return phone_matches[0]
 
-    # Name plus email or phone is a reliable fallback.
     if owner_name:
         name_matches = []
 
@@ -194,8 +218,6 @@ def ensure_citizen_profile_access(user, owner):
         profile.role = "citizen"
         updated_fields.append("role")
 
-    # Keep the first assembly as the default assembly. Additional assemblies
-    # are stored in allowed_assemblies.
     if not profile.assembly_id and owner.assembly_id:
         profile.assembly = owner.assembly
         updated_fields.append("assembly")
@@ -222,7 +244,7 @@ def ensure_citizen_profile_access(user, owner):
 
 
 @transaction.atomic
-def link_or_create_citizen_for_owner(owner, default_password="1234"):
+def link_or_create_citizen_for_owner(owner, default_password=None):
     if not owner:
         return {
             "user": None,
@@ -231,6 +253,7 @@ def link_or_create_citizen_for_owner(owner, default_password="1234"):
             "linked": False,
             "assembly_added": False,
             "username": "",
+            "login_phone": "",
             "temporary_password": "",
         }
 
@@ -245,6 +268,7 @@ def link_or_create_citizen_for_owner(owner, default_password="1234"):
             "linked": True,
             "assembly_added": assembly_added,
             "username": user.username,
+            "login_phone": owner.primary_phone,
             "temporary_password": "",
         }
 
@@ -266,11 +290,13 @@ def link_or_create_citizen_for_owner(owner, default_password="1234"):
             "linked": True,
             "assembly_added": assembly_added,
             "username": matched_user.username,
+            "login_phone": owner.primary_phone,
             "temporary_password": "",
         }
 
     first_name, last_name = split_full_name(owner.full_name)
-    username = build_unique_username(owner)
+    username = build_unique_citizen_username(owner)
+    temporary_password = default_password or generate_temporary_password()
 
     safe_email = (owner.email or "").strip().lower()
     if (
@@ -288,7 +314,7 @@ def link_or_create_citizen_for_owner(owner, default_password="1234"):
         email=safe_email,
         is_active=True,
     )
-    user.set_password(default_password)
+    user.set_password(temporary_password)
     user.save()
 
     owner.linked_user = user
@@ -303,5 +329,6 @@ def link_or_create_citizen_for_owner(owner, default_password="1234"):
         "linked": True,
         "assembly_added": assembly_added,
         "username": user.username,
-        "temporary_password": default_password,
+        "login_phone": owner.primary_phone,
+        "temporary_password": temporary_password,
     }

@@ -1,0 +1,290 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Assign Field Officer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f5f7;
+            color: #1f2937;
+        }
+
+        .page {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 28px;
+        }
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            color: #6b7280;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #374151;
+        }
+
+        select,
+        input,
+        textarea {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 13px 14px;
+            font-size: 15px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-weight: 800;
+            font-size: 15px;
+            cursor: pointer;
+            background: #caa94f;
+            color: #ffffff;
+        }
+
+        .messages {
+            margin-bottom: 18px;
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #fff8e7;
+            border: 1px solid #f1ddb0;
+            color: #8a6300;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 13px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #374151;
+            font-weight: 800;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .empty {
+            color: #6b7280;
+            padding: 18px 0;
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                padding: 18px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+        <header class="header">
+            <h1>Assign Field Officer</h1>
+            <p>
+                Assign properties to field officers for verification.
+                {% if context_assembly %}
+                    Current assembly: <strong>{{ context_assembly.name }}</strong>
+                {% endif %}
+            </p>
+        </header>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <section class="card">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="grid">
+                    <div class="field">
+                        <label for="property_id">Property</label>
+                        <select id="property_id" name="property_id" required>
+                            <option value="">Select property</option>
+                            {% for property in properties %}
+                                <option value="{{ property.id }}">
+                                    {{ property.property_reference }} —
+                                    {{ property.owner.full_name }}
+                                    {% if property.area_town %}
+                                        — {{ property.area_town }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="officer_id">Field Officer</label>
+                        <select id="officer_id" name="officer_id" required>
+                            <option value="">Select field officer</option>
+                            {% for officer_profile in officers %}
+                                <option value="{{ officer_profile.user.id }}">
+                                    {{ officer_profile.user.get_full_name|default:officer_profile.user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="priority">Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="due_date">Due Date</label>
+                        <input type="date" id="due_date" name="due_date">
+                    </div>
+
+                    <div class="field full">
+                        <label for="notes">Assignment Notes</label>
+                        <textarea id="notes" name="notes" placeholder="Add instructions for the field officer"></textarea>
+                    </div>
+
+                    <div class="field full">
+                        <button type="submit" class="btn">
+                            Assign Property
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Recent Assignments</h2>
+
+            {% if assignments %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Owner</th>
+                            <th>Officer</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Due Date</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for assignment in assignments %}
+                            <tr>
+                                <td>{{ assignment.property.property_reference }}</td>
+                                <td>{{ assignment.property.owner.full_name }}</td>
+                                <td>
+                                    {{ assignment.officer.get_full_name|default:assignment.officer.username }}
+                                </td>
+                                <td>
+                                    <span class="status">
+                                        {{ assignment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ assignment.get_priority_display }}</td>
+                                <td>{{ assignment.due_date|default:"—" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty">
+                    No field assignments have been created yet.
+                </div>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>
