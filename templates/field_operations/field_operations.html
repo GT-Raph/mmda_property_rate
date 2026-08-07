@@ -1732,17 +1732,49 @@
         </header>
 
         <div class="page">
-            <div class="page-heading">
-                <h1>{{ page_title }}</h1>
+            <div
+                class="page-heading"
+                style="
+                    display:flex;
+                    align-items:flex-start;
+                    justify-content:space-between;
+                    gap:20px;
+                    flex-wrap:wrap;
+                "
+            >
+                <div>
+                    <h1>{{ page_title }}</h1>
 
-                <p class="page-subtitle">
-                    {{ page_subtitle }}
-                </p>
-
-                {% if context_assembly and not is_field_officer %}
-                    <p class="assembly-caption">
-                        {{ context_assembly.name }}
+                    <p class="page-subtitle">
+                        {{ page_subtitle }}
                     </p>
+
+                    {% if context_assembly and not is_field_officer %}
+                        <p class="assembly-caption">
+                            {{ context_assembly.name }}
+                        </p>
+                    {% endif %}
+                </div>
+
+                {% if not is_field_officer %}
+                    <a
+                        href="{{ assign_property_url }}"
+                        style="
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            min-height:44px;
+                            padding:0 20px;
+                            border-radius:10px;
+                            background:#111111;
+                            color:#ffffff;
+                            font-size:14px;
+                            font-weight:700;
+                            text-decoration:none;
+                        "
+                    >
+                        + Assign Property
+                    </a>
                 {% endif %}
             </div>
 

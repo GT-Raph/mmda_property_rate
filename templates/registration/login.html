@@ -606,15 +606,15 @@
 
                     <div class="field-group">
                         <label for="id_username">
-                            Phone Number
+                            Username
                         </label>
 
                         <input
-                            type="tel"
+                            type="text"
                             id="id_username"
                             name="username"
                             class="input-field"
-                            placeholder="Enter your registered phone number"
+                            placeholder="Enter your Username"
                             value="{{ form.username.value|default_if_none:'' }}"
                             autocomplete="tel"
                             inputmode="tel"

@@ -494,8 +494,15 @@ def add_property(request):
 
 
 def _property_access_queryset(request):
-    context_assembly = _get_current_assembly(request)
-    user_role = get_user_role(request.user)
+    context_assembly = (
+        _get_current_assembly(
+            request
+        )
+    )
+
+    user_role = get_user_role(
+        request.user
+    )
 
     queryset = (
         Property.objects
@@ -506,14 +513,25 @@ def _property_access_queryset(request):
             "applied_rate_policy",
             "registered_by",
         )
-        .order_by("-created_at")
+        .order_by(
+            "-created_at"
+        )
     )
 
     if context_assembly:
-        queryset = queryset.filter(assembly=context_assembly)
+        queryset = queryset.filter(
+            assembly=context_assembly
+        )
 
+    # Field officers should access properties
+    # assigned to them, not only properties
+    # they originally registered.
     if user_role == "field_officer":
-        queryset = queryset.filter(registered_by=request.user)
+        queryset = queryset.filter(
+            field_assignments__officer=(
+                request.user
+            )
+        ).distinct()
 
     return queryset
 
@@ -562,13 +580,30 @@ def property_detail(request, property_id):
 
 
 @module_required("properties")
-def edit_property(request, property_id):
+def edit_property(
+    request,
+    property_id,
+):
     property_obj = get_object_or_404(
-        _property_access_queryset(request),
+        _property_access_queryset(
+            request
+        ),
         pk=property_id,
     )
 
-    portal_access = get_allowed_modules(request.user)
+    portal_access = (
+        get_allowed_modules(
+            request.user
+        )
+    )
+
+    user_role = get_user_role(
+        request.user
+    )
+
+    old_verification_status = (
+        property_obj.verification_status
+    )
 
     if request.method == "POST":
         owner_form = OwnerUpdateForm(
@@ -576,6 +611,7 @@ def edit_property(request, property_id):
             instance=property_obj.owner,
             prefix="owner",
         )
+
         property_form = PropertyUpdateForm(
             request.POST,
             instance=property_obj,
@@ -583,41 +619,181 @@ def edit_property(request, property_id):
             prefix="property",
         )
 
-        if owner_form.is_valid() and property_form.is_valid():
+        # Field officers verify through their
+        # dedicated verification workflow.
+        # They should not bypass it here.
+        if user_role == "field_officer":
+            property_form.fields.pop(
+                "verification_status",
+                None,
+            )
+
+        if (
+            owner_form.is_valid()
+            and property_form.is_valid()
+        ):
             with transaction.atomic():
                 owner_form.save()
-                property_form.save()
+
+                saved_property = (
+                    property_form.save()
+                )
+
+                new_status = (
+                    saved_property
+                    .verification_status
+                )
+
+                # Admin/property officer verification.
+                if (
+                    user_role
+                    != "field_officer"
+                ):
+                    if (
+                        new_status
+                        == "verified"
+                    ):
+                        saved_property.last_verified_at = (
+                            timezone.now()
+                        )
+
+                        saved_property.save(
+                            update_fields=[
+                                "last_verified_at",
+                                "updated_at",
+                            ]
+                        )
+
+                    elif (
+                        old_verification_status
+                        == "verified"
+                        and new_status
+                        != "verified"
+                    ):
+                        saved_property.last_verified_at = None
+
+                        saved_property.save(
+                            update_fields=[
+                                "last_verified_at",
+                                "updated_at",
+                            ]
+                        )
+
+                    # Keep any existing assignment
+                    # synchronized with the admin decision.
+                    from field_operations.models import (
+                        FieldAssignment,
+                    )
+
+                    active_assignments = (
+                        FieldAssignment.objects
+                        .filter(
+                            property=(
+                                saved_property
+                            ),
+                            status__in=[
+                                "assigned",
+                                "in_progress",
+                            ],
+                        )
+                    )
+
+                    if (
+                        new_status
+                        == "verified"
+                    ):
+                        active_assignments.update(
+                            status="completed",
+                            completed_at=(
+                                timezone.now()
+                            ),
+                        )
+
+                    elif (
+                        new_status
+                        == "rejected"
+                    ):
+                        active_assignments.update(
+                            status="rejected",
+                            completed_at=(
+                                timezone.now()
+                            ),
+                        )
+
+                    elif new_status in {
+                        "pending",
+                        "under_review",
+                        "flagged",
+                        "possible_duplicate",
+                    }:
+                        active_assignments.update(
+                            status="in_progress",
+                            completed_at=None,
+                        )
 
             messages.success(
                 request,
-                f"Property {property_obj.property_reference} was updated successfully.",
+                (
+                    f"Property "
+                    f"{property_obj.property_reference} "
+                    "was updated successfully."
+                ),
             )
-            return redirect("properties:property-detail", property_id=property_obj.id)
 
-        messages.error(request, "Please correct the highlighted errors and try again.")
+            return redirect(
+                "properties:property-detail",
+                property_id=(
+                    property_obj.id
+                ),
+            )
+
+        messages.error(
+            request,
+            (
+                "Please correct the highlighted "
+                "errors and try again."
+            ),
+        )
 
     else:
         owner_form = OwnerUpdateForm(
             instance=property_obj.owner,
             prefix="owner",
         )
+
         property_form = PropertyUpdateForm(
             instance=property_obj,
             assembly=property_obj.assembly,
             prefix="property",
         )
 
+        if user_role == "field_officer":
+            property_form.fields.pop(
+                "verification_status",
+                None,
+            )
+
     context = {
         "page_title": "Edit Property",
-        "page_subtitle": property_obj.property_reference,
-        "context_assembly": _get_current_assembly(request),
+        "page_subtitle": (
+            property_obj.property_reference
+        ),
+        "context_assembly": (
+            _get_current_assembly(
+                request
+            )
+        ),
         "portal_access": portal_access,
         "property_obj": property_obj,
         "owner_form": owner_form,
         "property_form": property_form,
     }
 
-    return render(request, "properties/property_edit.html", context)
+    return render(
+        request,
+        "properties/property_edit.html",
+        context,
+    )
 
 
 @module_required("properties")

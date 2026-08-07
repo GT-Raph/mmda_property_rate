@@ -419,8 +419,28 @@
                 <div class="summary-icon"><img src="{% static 'images/bill.png' %}" alt="Bills"></div>
             </div>
 
-            {% if unpaid_count %}
-                <a href="{% url 'citizens:payment-confirm' %}?all=1" class="pay-all">Pay Now</a>
+            {% if payable_count %}
+                <a
+                    href="{% url 'citizens:payment-confirm' %}?all=1"
+                    class="pay-all"
+                >
+                    Pay Verified Bills
+                </a>
+            {% elif unpaid_count %}
+                <div
+                    style="
+                        margin-top:14px;
+                        padding:12px 14px;
+                        border-radius:10px;
+                        background:#fff3cd;
+                        color:#856404;
+                        font-size:13px;
+                        line-height:1.5;
+                    "
+                >
+                    Payment is unavailable until your
+                    property has been verified by the MMDA.
+                </div>
             {% endif %}
         </section>
 
@@ -482,9 +502,52 @@
                     </div>
 
                     <div class="actions">
-                        <a href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}" class="btn-gold">Pay Bill</a>
-                        <a href="{% url 'citizens:bill-detail' bill.id %}" class="btn-white">View Full Bill</a>
+                        {% if bill.can_pay %}
+                            <a
+                                href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}"
+                                class="btn-gold"
+                            >
+                                Pay Bill
+                            </a>
+                        {% else %}
+                            <span
+                                style="
+                                    display:inline-flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    padding:11px 16px;
+                                    border-radius:8px;
+                                    background:#eeeeee;
+                                    color:#777777;
+                                    font-size:13px;
+                                    font-weight:700;
+                                "
+                            >
+                                Awaiting Verification
+                            </span>
+                        {% endif %}
+
+                        <a
+                            href="{% url 'citizens:bill-detail' bill.id %}"
+                            class="btn-white"
+                        >
+                            View Full Bill
+                        </a>
                     </div>
+
+                    {% if not bill.can_pay %}
+                        <div
+                            style="
+                                margin-top:10px;
+                                font-size:12px;
+                                color:#b45309;
+                            "
+                        >
+                            Property status:
+                            {{ bill.verification_status }}.
+                            Payment becomes available after verification.
+                        </div>
+                    {% endif %}
                 </section>
             {% endfor %}
         {% else %}

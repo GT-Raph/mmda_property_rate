@@ -61,6 +61,39 @@ def _bill_balance(bill):
     return balance if balance > 0 else Decimal("0.00")
 
 
+def _property_can_accept_payment(
+    property_obj,
+):
+    """
+    A property can only accept citizen payments
+    after MMDA verification.
+    """
+
+    if not property_obj:
+        return False
+
+    verification_status = (
+        getattr(
+            property_obj,
+            "verification_status",
+            "",
+        )
+        or ""
+    ).lower()
+
+    is_active = getattr(
+        property_obj,
+        "is_active",
+        True,
+    )
+
+    return (
+        is_active
+        and verification_status
+        == "verified"
+    )
+
+
 def _field_value(obj, field_names, default=Decimal("0.00")):
     for field_name in field_names:
         if hasattr(obj, field_name):
@@ -901,89 +934,299 @@ def citizen_property_certificate(request, property_id):
     return render(request, "citizens/property_certificate.html", context)
 
 
+
 @login_required
 def citizen_bills(request):
-    if get_user_role(request.user) != "citizen":
-        return redirect("portal-login")
+    if (
+        get_user_role(request.user)
+        != "citizen"
+    ):
+        return redirect(
+            "portal-login"
+        )
 
-    context_assembly = _get_current_assembly(request)
-    owner = _citizen_owner_or_none(request)
+    context_assembly = (
+        _get_current_assembly(
+            request
+        )
+    )
 
-    owner_name = _owner_name(owner) if owner else (request.user.get_full_name() or request.user.username)
-    owner_short_name = request.user.first_name or owner_name.split()[0]
+    owner = (
+        _citizen_owner_or_none(
+            request
+        )
+    )
+
+    owner_name = (
+        _owner_name(owner)
+        if owner
+        else (
+            request.user.get_full_name()
+            or request.user.username
+        )
+    )
+
+    owner_short_name = (
+        request.user.first_name
+        or owner_name.split()[0]
+    )
 
     unpaid_bills = []
     paid_bills = []
-    outstanding_total = Decimal("0.00")
+
+    outstanding_total = (
+        Decimal("0.00")
+    )
+
     unpaid_count = 0
+    payable_count = 0
 
     if owner:
-        bills_qs = Bill.objects.filter(_owner_q(owner, "property_record__owner")).select_related(
-            "property_record",
-            "rate_policy",
-        ).order_by("-billing_year", "-created_at")
+        bills_qs = (
+            Bill.objects
+            .filter(
+                _owner_q(
+                    owner,
+                    "property_record__owner",
+                )
+            )
+            .select_related(
+                "property_record",
+                "rate_policy",
+            )
+            .order_by(
+                "-billing_year",
+                "-created_at",
+            )
+        )
 
         if context_assembly:
-            bills_qs = bills_qs.filter(assembly=context_assembly)
+            bills_qs = (
+                bills_qs.filter(
+                    assembly=(
+                        context_assembly
+                    )
+                )
+            )
 
-        unpaid_qs = bills_qs.exclude(status__in=["paid", "cancelled"])
-        paid_qs = bills_qs.filter(status="paid")
+        unpaid_qs = (
+            bills_qs.exclude(
+                status__in=[
+                    "paid",
+                    "cancelled",
+                ]
+            )
+        )
 
-        unpaid_count = unpaid_qs.count()
+        paid_qs = (
+            bills_qs.filter(
+                status="paid",
+            )
+        )
+
+        unpaid_count = (
+            unpaid_qs.count()
+        )
 
         for bill in unpaid_qs:
-            prop = bill.property_record
-            balance = _bill_balance(bill)
-            outstanding_total += balance
+            prop = (
+                bill.property_record
+            )
+
+            balance = (
+                _bill_balance(
+                    bill
+                )
+            )
+
+            outstanding_total += (
+                balance
+            )
+
+            can_pay = (
+                _property_can_accept_payment(
+                    prop
+                )
+            )
+
+            if can_pay:
+                payable_count += 1
 
             unpaid_bills.append(
                 {
                     "id": bill.id,
-                    "bill_year": bill.billing_year,
-                    "status_label": "Unpaid",
-                    "account_number": _account_number_for_property(prop),
-                    "property_location": _property_location(prop),
-                    "property_type": _property_type_label(prop),
-                    "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
-                    "rate_impost": _rate_impost_value(bill),
-                    "arrears": _money_full(_arrears_value(bill)),
-                    "penalty": _money_full(_penalty_value(bill)),
-                    "current_fee": _money_full(_current_fee_value(bill)),
-                    "total_due": _money_full(balance),
-                    "due_date": bill.due_date.strftime("%Y-%m-%d") if bill.due_date else "—",
+                    "bill_year": (
+                        bill.billing_year
+                    ),
+                    "status_label": (
+                        "Unpaid"
+                    ),
+                    "account_number": (
+                        _account_number_for_property(
+                            prop
+                        )
+                    ),
+                    "property_location": (
+                        _property_location(
+                            prop
+                        )
+                    ),
+                    "property_type": (
+                        _property_type_label(
+                            prop
+                        )
+                    ),
+                    "verification_status": (
+                        prop.get_verification_status_display()
+                        if hasattr(
+                            prop,
+                            (
+                                "get_verification_"
+                                "status_display"
+                            ),
+                        )
+                        else (
+                            prop.verification_status
+                        )
+                    ),
+                    "can_pay": can_pay,
+                    "rateable_value": (
+                        _money_full(
+                            getattr(
+                                prop,
+                                "rateable_value",
+                                0,
+                            )
+                        )
+                    ),
+                    "rate_impost": (
+                        _rate_impost_value(
+                            bill
+                        )
+                    ),
+                    "arrears": (
+                        _money_full(
+                            _arrears_value(
+                                bill
+                            )
+                        )
+                    ),
+                    "penalty": (
+                        _money_full(
+                            _penalty_value(
+                                bill
+                            )
+                        )
+                    ),
+                    "current_fee": (
+                        _money_full(
+                            _current_fee_value(
+                                bill
+                            )
+                        )
+                    ),
+                    "total_due": (
+                        _money_full(
+                            balance
+                        )
+                    ),
+                    "due_date": (
+                        bill.due_date.strftime(
+                            "%Y-%m-%d"
+                        )
+                        if bill.due_date
+                        else "—"
+                    ),
                 }
             )
 
         for bill in paid_qs[:10]:
-            prop = bill.property_record
+            prop = (
+                bill.property_record
+            )
+
+            paid_date = (
+                getattr(
+                    bill,
+                    "last_payment_at",
+                    None,
+                )
+                or getattr(
+                    bill,
+                    "updated_at",
+                    None,
+                )
+                or getattr(
+                    bill,
+                    "created_at",
+                    None,
+                )
+            )
+
             paid_bills.append(
                 {
                     "id": bill.id,
-                    "bill_year": bill.billing_year,
-                    "status_label": "Paid",
-                    "account_number": _account_number_for_property(prop),
-                    "property_location": _property_location(prop),
-                    "amount": _money_full(getattr(bill, "amount_due", 0)),
+                    "bill_year": (
+                        bill.billing_year
+                    ),
+                    "status_label": (
+                        "Paid"
+                    ),
+                    "account_number": (
+                        _account_number_for_property(
+                            prop
+                        )
+                    ),
+                    "property_location": (
+                        _property_location(
+                            prop
+                        )
+                    ),
+                    "amount": (
+                        _money_full(
+                            getattr(
+                                bill,
+                                "amount_due",
+                                0,
+                            )
+                        )
+                    ),
                     "paid_on": (
-                        getattr(bill, "updated_at", None) or getattr(bill, "created_at", None)
-                    ).strftime("%Y-%m-%d")
-                    if (getattr(bill, "updated_at", None) or getattr(bill, "created_at", None))
-                    else "—",
+                        paid_date.strftime(
+                            "%Y-%m-%d"
+                        )
+                        if paid_date
+                        else "—"
+                    ),
                 }
             )
 
     context = {
         "page_title": "My Bills",
         "owner_name": owner_name,
-        "owner_short_name": owner_short_name,
+        "owner_short_name": (
+            owner_short_name
+        ),
         "owner_role": "Property Owner",
-        "outstanding_total": _money_full(outstanding_total),
+        "outstanding_total": (
+            _money_full(
+                outstanding_total
+            )
+        ),
         "unpaid_count": unpaid_count,
+        "payable_count": payable_count,
         "unpaid_bills": unpaid_bills,
         "paid_bills": paid_bills,
-        "has_owner_profile": bool(owner),
+        "has_owner_profile": (
+            bool(owner)
+        ),
     }
-    return render(request, "citizens/bills.html", context)
+
+    return render(
+        request,
+        "citizens/bills.html",
+        context,
+    )
 
 
 @login_required
@@ -1042,16 +1285,48 @@ def citizen_payment_confirm(request):
         selected_bill_ids = request.GET.getlist("bill")
         if request.GET.get("all") == "1":
             selected_bill_ids = list(
-                Bill.objects.filter(_owner_q(owner, "property_record__owner"))
-                .exclude(status__in=["paid", "cancelled"])
-                .values_list("id", flat=True)
+                Bill.objects
+                .filter(
+                    _owner_q(
+                        owner,
+                        "property_record__owner",
+                    ),
+                    property_record__verification_status=(
+                        "verified"
+                    ),
+                    property_record__is_active=True,
+                )
+                .exclude(
+                    status__in=[
+                        "paid",
+                        "cancelled",
+                    ]
+                )
+                .values_list(
+                    "id",
+                    flat=True,
+                )
             )
         form = CitizenPaymentForm()
 
-    bills_qs = Bill.objects.filter(
-        _owner_q(owner, "property_record__owner"),
-        id__in=selected_bill_ids,
-    ).select_related("property_record", "rate_policy")
+    bills_qs = (
+        Bill.objects
+        .filter(
+            _owner_q(
+                owner,
+                "property_record__owner",
+            ),
+            id__in=selected_bill_ids,
+            property_record__verification_status=(
+                "verified"
+            ),
+            property_record__is_active=True,
+        )
+        .select_related(
+            "property_record",
+            "rate_policy",
+        )
+    )
 
     if context_assembly:
         bills_qs = bills_qs.filter(assembly=context_assembly)
@@ -1726,29 +2001,322 @@ def citizen_certificate_qr(request, certificate_uuid):
     )
 
 
-def certificate_verify(request, certificate_uuid):
+def _certificate_payment_summary(
+    property_obj,
+):
+    today = timezone.localdate()
+
+    current_year = today.year
+
+    bills = (
+        Bill.objects
+        .filter(
+            property_record=(
+                property_obj
+            )
+        )
+        .order_by(
+            "-billing_year",
+            "-created_at",
+        )
+    )
+
+    current_bill = (
+        bills.filter(
+            billing_year=(
+                current_year
+            )
+        )
+        .first()
+    )
+
+    total_outstanding = (
+        Decimal("0.00")
+    )
+
+    for bill in bills.exclude(
+        status="cancelled"
+    ):
+        total_outstanding += (
+            _bill_balance(
+                bill
+            )
+        )
+
+    payment_status = (
+        "No Bill Issued"
+    )
+
+    payment_status_class = (
+        "neutral"
+    )
+
+    current_amount_due = (
+        Decimal("0.00")
+    )
+
+    current_amount_paid = (
+        Decimal("0.00")
+    )
+
+    current_balance = (
+        Decimal("0.00")
+    )
+
+    billing_year = (
+        current_year
+    )
+
+    if current_bill:
+        current_amount_due = (
+            _safe_decimal(
+                current_bill.amount_due
+            )
+        )
+
+        current_amount_paid = (
+            _safe_decimal(
+                current_bill.amount_paid
+            )
+        )
+
+        current_balance = (
+            _bill_balance(
+                current_bill
+            )
+        )
+
+        billing_year = (
+            current_bill.billing_year
+        )
+
+        if (
+            current_bill.status
+            == "paid"
+            or (
+                current_amount_due > 0
+                and current_balance <= 0
+            )
+        ):
+            payment_status = (
+                "Paid"
+            )
+
+            payment_status_class = (
+                "paid"
+            )
+
+        elif current_amount_paid > 0:
+            payment_status = (
+                "Part Paid"
+            )
+
+            payment_status_class = (
+                "part-paid"
+            )
+
+        elif (
+            current_bill.due_date
+            and current_bill.due_date
+            < today
+        ):
+            payment_status = (
+                "Overdue"
+            )
+
+            payment_status_class = (
+                "unpaid"
+            )
+
+        else:
+            payment_status = (
+                "Unpaid"
+            )
+
+            payment_status_class = (
+                "unpaid"
+            )
+
+    last_payment = (
+        Payment.objects
+        .filter(
+            Q(
+                property=property_obj
+            )
+            | Q(
+                bill__property_record=(
+                    property_obj
+                )
+            ),
+            status="successful",
+        )
+        .order_by(
+            "-paid_at",
+            "-created_at",
+        )
+        .first()
+    )
+
+    return {
+        "billing_year": billing_year,
+        "payment_status": (
+            payment_status
+        ),
+        "payment_status_class": (
+            payment_status_class
+        ),
+        "current_amount_due": (
+            _money_full(
+                current_amount_due
+            )
+        ),
+        "current_amount_paid": (
+            _money_full(
+                current_amount_paid
+            )
+        ),
+        "current_balance": (
+            _money_full(
+                current_balance
+            )
+        ),
+        "total_outstanding": (
+            _money_full(
+                total_outstanding
+            )
+        ),
+        "last_payment_date": (
+            timezone.localtime(
+                last_payment.paid_at
+            ).strftime(
+                "%d %b %Y %H:%M"
+            )
+            if (
+                last_payment
+                and last_payment.paid_at
+            )
+            else "No successful payment"
+        ),
+    }
+
+
+def certificate_verify(
+    request,
+    certificate_uuid,
+):
     certificate = get_object_or_404(
         _certificate_queryset(),
-        certificate_uuid=certificate_uuid,
+        certificate_uuid=(
+            certificate_uuid
+        ),
         is_active=True,
     )
 
-    prop = _certificate_property_obj(certificate)
-    owner = getattr(prop, "owner", None)
+    prop = (
+        _certificate_property_obj(
+            certificate
+        )
+    )
+
+    payment_summary = (
+        _certificate_payment_summary(
+            prop
+        )
+    )
+
+    verification_status = (
+        getattr(
+            prop,
+            "verification_status",
+            "",
+        )
+        or ""
+    ).lower()
+
+    if (
+        verification_status
+        == "verified"
+        and getattr(
+            prop,
+            "is_active",
+            True,
+        )
+    ):
+        verification_label = (
+            "Verified"
+        )
+
+        verification_class = (
+            "verified"
+        )
+
+    elif verification_status == "rejected":
+        verification_label = (
+            "Rejected"
+        )
+
+        verification_class = (
+            "rejected"
+        )
+
+    else:
+        verification_label = (
+            "Pending Verification"
+        )
+
+        verification_class = (
+            "pending"
+        )
 
     context = {
         "certificate": certificate,
-        "certificate_number": _certificate_number(certificate),
-        "property_reference": prop.property_reference,
-        "property_type": _property_type_label(prop),
-        "property_location": _property_location(prop),
-        "digital_address": _digital_address(prop),
-        "rateable_value": _money_full(getattr(prop, "rateable_value", 0)),
-        "registered_date": _property_registered_date(prop),
-        "owner_name": _owner_name(owner),
-        "status_label": "Verified & Active" if getattr(prop, "is_active", True) else "Inactive",
+        "certificate_number": (
+            _certificate_number(
+                certificate
+            )
+        ),
+        "property_reference": (
+            prop.property_reference
+        ),
+        "property_type": (
+            _property_type_label(
+                prop
+            )
+        ),
+        "property_location": (
+            _property_location(
+                prop
+            )
+        ),
+        "digital_address": (
+            _digital_address(
+                prop
+            )
+        ),
+        "registered_date": (
+            _property_registered_date(
+                prop
+            )
+        ),
+
+        "verification_label": (
+            verification_label
+        ),
+        "verification_class": (
+            verification_class
+        ),
+
+        **payment_summary,
     }
-    return render(request, "citizens/certificate_verify.html", context)
+
+    return render(
+        request,
+        (
+            "citizens/"
+            "certificate_verify.html"
+        ),
+        context,
+    )
 
 
 @login_required

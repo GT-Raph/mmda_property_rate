@@ -1043,15 +1043,37 @@ def _build_admin_context(
     portal_access,
 ):
     """
-    Build the existing administrator Field Operations page.
+    Administrator Field Officers dashboard.
+
+    Assignment statistics come from FieldAssignment,
+    not from Property.registered_by.
     """
 
     officer_profiles = (
         UserProfile.objects
-        .filter(role="field_officer")
+        .filter(
+            role="field_officer",
+            user__is_active=True,
+        )
         .select_related(
             "user",
             "assembly",
+        )
+    )
+
+    assignments_queryset = (
+        FieldAssignment.objects
+        .select_related(
+            "property",
+            "property__owner",
+            "property__assembly",
+            "officer",
+            "assigned_by",
+            "assembly",
+        )
+        .order_by(
+            "-assigned_at",
+            "-created_at",
         )
     )
 
@@ -1075,67 +1097,60 @@ def _build_admin_context(
             | Q(assembly__isnull=True)
         )
 
-        visits_queryset = visits_queryset.filter(
-            property__assembly=assembly
-        )
-
-    assigned_properties_queryset = (
-        Property.objects
-        .select_related(
-            "owner",
-            "assembly",
-            "registered_by",
-        )
-        .filter(
-            registration_source="field",
-            registered_by__isnull=False,
-        )
-    )
-
-    if assembly:
-        assigned_properties_queryset = (
-            assigned_properties_queryset.filter(
-                assembly=assembly
+        assignments_queryset = (
+            assignments_queryset.filter(
+                assembly=assembly,
             )
         )
 
-    assigned_statistics = (
-        assigned_properties_queryset
-        .values("registered_by_id")
+        visits_queryset = visits_queryset.filter(
+            property__assembly=assembly,
+        )
+
+    assignment_statistics = (
+        assignments_queryset
+        .values("officer_id")
         .annotate(
-            assigned_count=Count(
+            active_count=Count(
                 "id",
-                distinct=True,
+                filter=Q(
+                    status__in=[
+                        "assigned",
+                        "in_progress",
+                    ],
+                ),
             ),
             completed_count=Count(
                 "id",
                 filter=Q(
-                    verification_status="verified"
+                    status="completed",
                 ),
-                distinct=True,
             ),
-            last_verified_at=Max(
-                "last_verified_at"
+            last_assigned_at=Max(
+                "assigned_at",
+            ),
+            last_completed_at=Max(
+                "completed_at",
             ),
         )
     )
 
-    assigned_statistics_map = {
-        row["registered_by_id"]: row
-        for row in assigned_statistics
+    statistics_map = {
+        row["officer_id"]: row
+        for row in assignment_statistics
     }
 
     officer_cards = []
 
     for profile in officer_profiles:
-        statistics = assigned_statistics_map.get(
+        statistics = statistics_map.get(
             profile.user_id,
             {},
         )
 
         assigned_count = (
             statistics.get(
-                "assigned_count",
+                "active_count",
                 0,
             )
             or 0
@@ -1149,46 +1164,59 @@ def _build_admin_context(
             or 0
         )
 
-        last_verified_at = statistics.get(
-            "last_verified_at"
+        last_assigned_at = statistics.get(
+            "last_assigned_at",
+        )
+
+        last_completed_at = statistics.get(
+            "last_completed_at",
         )
 
         last_visit_activity = (
             visits_queryset
-            .filter(officer=profile.user)
-            .aggregate(
-                last_activity=Max("visited_at")
+            .filter(
+                officer=profile.user,
             )
-            .get("last_activity")
+            .aggregate(
+                last_activity=Max(
+                    "visited_at",
+                )
+            )
+            .get(
+                "last_activity",
+            )
         )
 
-        available_activity_dates = [
+        activity_dates = [
             value
             for value in [
-                last_verified_at,
+                last_assigned_at,
+                last_completed_at,
                 last_visit_activity,
             ]
             if value is not None
         ]
 
         last_activity = (
-            max(available_activity_dates)
-            if available_activity_dates
+            max(activity_dates)
+            if activity_dates
             else None
+        )
+
+        total_work = (
+            assigned_count
+            + completed_count
         )
 
         progress = 0
 
-        if assigned_count > 0:
-            progress = min(
-                100,
-                round(
-                    (
-                        completed_count
-                        / assigned_count
-                    )
-                    * 100
-                ),
+        if total_work:
+            progress = round(
+                (
+                    completed_count
+                    / total_work
+                )
+                * 100
             )
 
         officer_cards.append(
@@ -1207,7 +1235,10 @@ def _build_admin_context(
                 ),
                 "assigned": assigned_count,
                 "completed": completed_count,
-                "progress": progress,
+                "progress": min(
+                    progress,
+                    100,
+                ),
                 "last_activity": (
                     _format_datetime(
                         last_activity
@@ -1218,8 +1249,7 @@ def _build_admin_context(
 
     officer_cards.sort(
         key=lambda card: (
-            card["assigned"] > 0,
-            card["progress"],
+            card["assigned"],
             card["completed"],
             card["name"],
         ),
@@ -1229,8 +1259,13 @@ def _build_admin_context(
     recent_activities = []
 
     for visit in visits_queryset[:6]:
-        visit_status = _visit_status(visit)
-        property_record = visit.property
+        visit_status = _visit_status(
+            visit
+        )
+
+        property_record = (
+            visit.property
+        )
 
         visit_datetime = (
             visit.visited_at
@@ -1239,7 +1274,9 @@ def _build_admin_context(
 
         recent_activities.append(
             {
-                "title": _visit_title(visit),
+                "title": _visit_title(
+                    visit
+                ),
                 "property_ref": getattr(
                     property_record,
                     "property_reference",
@@ -1249,7 +1286,9 @@ def _build_admin_context(
                     property_record
                 ),
                 "description": (
-                    _visit_description(visit)
+                    _visit_description(
+                        visit
+                    )
                 ),
                 "officer": _officer_name(
                     visit.officer
@@ -1258,16 +1297,24 @@ def _build_admin_context(
                     visit_datetime
                 ),
                 "status": (
-                    visit_status["label"]
+                    visit_status[
+                        "label"
+                    ]
                 ),
                 "status_class": (
-                    visit_status["status_class"]
+                    visit_status[
+                        "status_class"
+                    ]
                 ),
                 "icon_name": (
-                    visit_status["icon_name"]
+                    visit_status[
+                        "icon_name"
+                    ]
                 ),
                 "icon_class": (
-                    visit_status["icon_class"]
+                    visit_status[
+                        "icon_class"
+                    ]
                 ),
             }
         )
@@ -1276,13 +1323,20 @@ def _build_admin_context(
         "is_field_officer": False,
         "page_title": "Field Operations",
         "page_subtitle": (
-            "Monitor field officer activities "
-            "and verifications"
+            "Assign properties and monitor "
+            "field officer verification work"
         ),
         "officer_cards": officer_cards,
         "recent_activities": recent_activities,
         "context_assembly": assembly,
         "portal_access": portal_access,
+
+        "assign_property_url": reverse(
+            (
+                "field_operations:"
+                "assign-field-officer-property"
+            )
+        ),
     }
 
 

@@ -2,123 +2,422 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Verification</title>
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="robots"
+        content="noindex,nofollow"
+    >
+
+    <title>
+        Property Certificate Verification
+    </title>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: #f7f7f7;
-            color: #111;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            background: #f5f6f8;
+            color: #111827;
         }
+
         .page {
-            max-width: 760px;
+            width: min(
+                780px,
+                calc(100% - 28px)
+            );
             margin: 0 auto;
-            padding: 28px 18px 40px;
+            padding: 32px 0 48px;
         }
+
         .card {
-            background: #fff;
-            border: 1px solid #e7e7e7;
+            overflow: hidden;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 20px;
-            padding: 24px;
+            box-shadow:
+                0 12px 32px
+                rgba(0, 0, 0, 0.06);
         }
-        .status {
-            display: inline-block;
-            background: #dff5e7;
-            color: #16a34a;
-            border-radius: 999px;
-            padding: 8px 14px;
-            font-size: 14px;
-            font-weight: 700;
-            margin-bottom: 18px;
+
+        .header {
+            padding: 26px;
+            border-bottom:
+                1px solid #e5e7eb;
         }
+
         h1 {
-            margin: 0 0 10px;
-            font-size: 28px;
+            margin: 0;
+            font-size: 26px;
             font-weight: 800;
         }
+
         .sub {
-            color: #737887;
-            margin-bottom: 22px;
+            margin: 8px 0 0;
+            color: #6b7280;
+            line-height: 1.5;
         }
+
+        .content {
+            padding: 26px;
+        }
+
+        .status-row {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .status-card {
+            padding: 18px;
+            border-radius: 14px;
+            border:
+                1px solid #e5e7eb;
+        }
+
+        .status-label {
+            margin-bottom: 7px;
+            color: #6b7280;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+
+        .status-value {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .verified,
+        .paid {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #047857;
+        }
+
+        .pending,
+        .part-paid {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #b45309;
+        }
+
+        .rejected,
+        .unpaid {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #b91c1c;
+        }
+
+        .neutral {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .section-title {
+            margin: 24px 0 14px;
+            font-size: 17px;
+            font-weight: 800;
+        }
+
         .grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px 28px;
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+            gap: 14px;
         }
+
+        .detail {
+            padding: 14px;
+            border-radius: 12px;
+            background: #f9fafb;
+            border:
+                1px solid #e5e7eb;
+        }
+
         .label {
-            color: #737887;
-            font-size: 13px;
             margin-bottom: 6px;
+            color: #6b7280;
+            font-size: 12px;
         }
+
         .value {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
-            line-height: 1.45;
+            overflow-wrap: anywhere;
         }
+
+        .payment-box {
+            margin-top: 14px;
+            padding: 18px;
+            border:
+                1px solid #e5e7eb;
+            border-radius: 14px;
+        }
+
+        .payment-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(
+                    2,
+                    minmax(0, 1fr)
+                );
+            gap: 14px;
+        }
+
         .foot {
-            margin-top: 22px;
-            padding-top: 16px;
-            border-top: 1px solid #e7e7e7;
-            color: #737887;
-            font-size: 14px;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top:
+                1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 12px;
             line-height: 1.6;
         }
-        @media (max-width: 600px) {
-            .grid {
-                grid-template-columns: 1fr;
+
+        @media (
+            max-width: 600px
+        ) {
+            .status-row,
+            .grid,
+            .payment-grid {
+                grid-template-columns:
+                    1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <main class="page">
         <section class="card">
-            <div class="status">{{ status_label }}</div>
-            <h1>Property Certificate Verified</h1>
-            <div class="sub">This QR code belongs to a valid property certificate.</div>
+            <header class="header">
+                <h1>
+                    Property Certificate
+                    Verification
+                </h1>
 
-            <div class="grid">
-                <div>
-                    <div class="label">Certificate ID</div>
-                    <div class="value">{{ certificate_number }}</div>
-                </div>
-                <div>
-                    <div class="label">Property ID</div>
-                    <div class="value">{{ property_reference }}</div>
+                <p class="sub">
+                    Live MMDA property verification
+                    and property-rate compliance
+                    information.
+                </p>
+            </header>
+
+            <div class="content">
+
+                <div class="status-row">
+
+                    <div
+                        class="
+                            status-card
+                            {{ verification_class }}
+                        "
+                    >
+                        <div class="status-label">
+                            Property Verification
+                        </div>
+
+                        <div class="status-value">
+                            {{ verification_label }}
+                        </div>
+                    </div>
+
+                    <div
+                        class="
+                            status-card
+                            {{ payment_status_class }}
+                        "
+                    >
+                        <div class="status-label">
+                            {{ billing_year }}
+                            Property Rate
+                        </div>
+
+                        <div class="status-value">
+                            {{ payment_status }}
+                        </div>
+                    </div>
+
                 </div>
 
-                <div>
-                    <div class="label">Property Type</div>
-                    <div class="value">{{ property_type }}</div>
-                </div>
-                <div>
-                    <div class="label">Owner</div>
-                    <div class="value">{{ owner_name }}</div>
+                <h2 class="section-title">
+                    Property
+                </h2>
+
+                <div class="grid">
+                    <div class="detail">
+                        <div class="label">
+                            Certificate ID
+                        </div>
+
+                        <div class="value">
+                            {{ certificate_number }}
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="label">
+                            Property Reference
+                        </div>
+
+                        <div class="value">
+                            {{ property_reference }}
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="label">
+                            Property Type
+                        </div>
+
+                        <div class="value">
+                            {{ property_type }}
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="label">
+                            Digital Address
+                        </div>
+
+                        <div class="value">
+                            {{ digital_address }}
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="label">
+                            Location
+                        </div>
+
+                        <div class="value">
+                            {{ property_location }}
+                        </div>
+                    </div>
+
+                    <div class="detail">
+                        <div class="label">
+                            Registered
+                        </div>
+
+                        <div class="value">
+                            {{ registered_date }}
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <div class="label">Address</div>
-                    <div class="value">{{ property_location }}</div>
-                </div>
-                <div>
-                    <div class="label">Digital Address</div>
-                    <div class="value">{{ digital_address }}</div>
+                <h2 class="section-title">
+                    Property Rate Compliance
+                </h2>
+
+                <div class="payment-box">
+                    <div class="payment-grid">
+
+                        <div>
+                            <div class="label">
+                                Billing Year
+                            </div>
+
+                            <div class="value">
+                                {{ billing_year }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Payment Status
+                            </div>
+
+                            <div class="value">
+                                {{ payment_status }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Amount Due
+                            </div>
+
+                            <div class="value">
+                                {{ current_amount_due }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Amount Paid
+                            </div>
+
+                            <div class="value">
+                                {{ current_amount_paid }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Current Balance
+                            </div>
+
+                            <div class="value">
+                                {{ current_balance }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Total Outstanding
+                            </div>
+
+                            <div class="value">
+                                {{ total_outstanding }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="label">
+                                Last Successful Payment
+                            </div>
+
+                            <div class="value">
+                                {{ last_payment_date }}
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
-                <div>
-                    <div class="label">Rateable Value</div>
-                    <div class="value">{{ rateable_value }}</div>
-                </div>
-                <div>
-                    <div class="label">Registered</div>
-                    <div class="value">{{ registered_date }}</div>
-                </div>
-            </div>
+                <div class="foot">
+                    Certificate UUID:
+                    {{ certificate.certificate_uuid }}
+                    <br>
 
-            <div class="foot">
-                Certificate UUID: {{ certificate.certificate_uuid }}<br>
-                This page confirms the QR code is valid and linked to this property record.
+                    This information is retrieved
+                    from the live MMDA Property Rate
+                    Management System at the time
+                    the QR code is scanned.
+                </div>
+
             </div>
         </section>
     </main>
