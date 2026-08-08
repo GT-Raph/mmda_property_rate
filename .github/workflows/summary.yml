@@ -18,6 +18,7 @@ jobs:
 
       - name: Run AI inference
         id: inference
+        continue-on-error: true
         uses: actions/ai-inference@v1
         with:
           prompt: |
@@ -28,7 +29,11 @@ jobs:
 
       - name: Comment with AI summary
         run: |
-          gh issue comment $ISSUE_NUMBER --body "$RESPONSE"
+          SUMMARY="$RESPONSE"
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="Thanks for opening this issue. Automated AI summarization is temporarily unavailable, but the team has been notified and will review your report shortly."
+          fi
+          gh issue comment "$ISSUE_NUMBER" --body "$SUMMARY"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
