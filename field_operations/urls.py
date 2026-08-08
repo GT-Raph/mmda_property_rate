@@ -32,4 +32,9 @@ urlpatterns = [
         views.field_officer_verify_property,
         name="field-officer-verify-property",
     ),
+    path(
+        "assignments/",
+        views.field_officer_assignments,
+        name="field-officer-assignments",
+    ),
 ]

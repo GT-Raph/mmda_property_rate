@@ -1,0 +1,153 @@
+{% if portal_role == 'field_officer' or is_field_officer %}
+
+    <a
+        href="{% url 'field_operations:field-operations' %}"
+        class="{% if request.resolver_match.url_name == 'field-operations' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include 'shared/nav_icon.html' with icon='dashboard' %}
+        </span>
+        <span>Dashboard</span>
+    </a>
+
+    <a
+        href="{% url 'field_operations:field-officer-assignments' %}"
+        class="{% if request.resolver_match.url_name == 'field-officer-assignments' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include 'shared/nav_icon.html' with icon='assignment' %}
+        </span>
+        <span>Assignments</span>
+    </a>
+
+    <a
+        href="{% url 'field_operations:field-officer-verify' %}"
+        class="{% if request.resolver_match.url_name == 'field-officer-verify' or request.resolver_match.url_name == 'field-officer-verify-property' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include 'shared/nav_icon.html' with icon='verify' %}
+        </span>
+        <span>Verification</span>
+    </a>
+
+    <a
+        href="{% url 'field_operations:field-officer-stats' %}"
+        class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include 'shared/nav_icon.html' with icon='stats' %}
+        </span>
+        <span>Statistics</span>
+    </a>
+
+    {% if portal_access.properties %}
+        <a
+            href="{% url 'properties:property-registry' %}"
+            class="{% if '/properties/' in request.path %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='property' %}
+            </span>
+            <span>Properties</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.settings %}
+        <a
+            href="{% url 'admins:settings' %}"
+            class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='settings' %}
+            </span>
+            <span>Settings</span>
+        </a>
+    {% endif %}
+
+{% else %}
+
+    {% if portal_access.dashboard %}
+        <a
+            href="{% url 'admins:admin-dashboard' %}"
+            class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='dashboard' %}
+            </span>
+            <span>Dashboard</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.properties %}
+        <a
+            href="{% url 'properties:property-registry' %}"
+            class="{% if '/properties/' in request.path %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='property' %}
+            </span>
+            <span>Properties</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.billing %}
+        <a
+            href="{% url 'billing:billing-management' %}"
+            class="{% if '/billing/' in request.path %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='bill' %}
+            </span>
+            <span>Billing &amp; Payments</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.field_operations %}
+        <a
+            href="{% url 'field_operations:field-operations' %}"
+            class="{% if '/field-operations/' in request.path %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='field' %}
+            </span>
+            <span>Field Officers</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.reports %}
+        <a
+            href="{% url 'admins:reports-analytics' %}"
+            class="{% if request.resolver_match.url_name == 'reports-analytics' %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='report' %}
+            </span>
+            <span>Reports</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.assembly %}
+        <a
+            href="{% url 'admins:assembly-management' %}"
+            class="{% if request.resolver_match.url_name == 'assembly-management' %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='assembly' %}
+            </span>
+            <span>Assembly</span>
+        </a>
+    {% endif %}
+
+    {% if portal_access.settings %}
+        <a
+            href="{% url 'admins:settings' %}"
+            class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
+        >
+            <span class="nav-icon">
+                {% include 'shared/nav_icon.html' with icon='settings' %}
+            </span>
+            <span>Settings</span>
+        </a>
+    {% endif %}
+
+{% endif %}

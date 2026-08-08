@@ -1,8 +1,10 @@
 from datetime import timedelta
 from io import BytesIO
+import logging
 
 from django.core.files.base import ContentFile
 from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
+from django.http import request
 from django.shortcuts import render, redirect
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -22,6 +24,7 @@ try:
 except ImportError:
     PropertyPhoto = None
 
+logger = logging.getLogger(__name__)
 
 def _get_current_assembly(request):
     """
@@ -792,26 +795,36 @@ def _build_field_officer_context(
         },
     ]
 
+    assignments_url = _safe_reverse(
+        "field_operations:field-officer-assignments",
+        fallback=verify_property_url,
+    )
+
+    stats_url = _safe_reverse(
+        "field_operations:field-officer-stats",
+        fallback=verify_property_url,
+    )
+
     quick_actions = [
+        {
+            "label": "Assignments",
+            "url": assignments_url,
+            "icon_name": "assignment",
+        },
         {
             "label": "Submit Verification",
             "url": verify_property_url,
-            "icon_name": "check",
-        },
-        {
-            "label": "Upload Photos",
-            "url": property_registry_url,
-            "icon_name": "camera",
+            "icon_name": "verify",
         },
         {
             "label": "Register Property",
             "url": add_property_url,
-            "icon_name": "route",
+            "icon_name": "property",
         },
         {
-            "label": "View All",
-            "url": property_registry_url,
-            "icon_name": "pin",
+            "label": "My Statistics",
+            "url": stats_url,
+            "icon_name": "stats",
         },
     ]
 
@@ -1032,7 +1045,7 @@ def _build_field_officer_context(
         "total_properties": total_properties,
         "verified_count": verified_count,
         "view_all_assignments_url": (
-            property_registry_url
+            assignments_url
         ),
     }
 
@@ -1505,9 +1518,25 @@ def field_officer_stats(request):
             property__assembly=assembly
         )
 
-    visit_property_ids = officer_visits.values_list(
-        "property_id",
-        flat=True,
+    officer_assignments = (
+        FieldAssignment.objects
+        .filter(
+            officer=request.user,
+        )
+    )
+
+    if assembly:
+        officer_assignments = (
+            officer_assignments.filter(
+                assembly=assembly,
+            )
+        )
+
+    assigned_property_ids = (
+        officer_assignments.values_list(
+            "property_id",
+            flat=True,
+        )
     )
 
     properties_queryset = (
@@ -1520,11 +1549,12 @@ def field_officer_stats(request):
             "applied_rate_policy",
         )
         .filter(
-            Q(registered_by=request.user)
-            | Q(id__in=visit_property_ids)
+            id__in=assigned_property_ids,
         )
         .distinct()
-        .order_by("-created_at")
+        .order_by(
+            "-created_at"
+        )
     )
 
     if assembly:
@@ -1903,593 +1933,711 @@ def field_officer_stats(request):
         context,
     )
 
-def _model_has_field(model, field_name):
-    return field_name in {
-        field.name
-        for field in model._meta.get_fields()
-    }
-
-
-def _get_field_officer_property_queryset(request, assembly):
-    officer_visits = FieldVisit.objects.filter(
-        officer=request.user,
-    )
-
-    if assembly:
-        officer_visits = officer_visits.filter(
-            property__assembly=assembly,
-        )
-
-    visit_property_ids = officer_visits.values_list(
-        "property_id",
-        flat=True,
-    )
-
-    properties_queryset = (
-        Property.objects
-        .select_related(
-            "owner",
-            "assembly",
-            "community_area",
-            "registered_by",
-        )
-        .filter(
-            Q(registered_by=request.user)
-            | Q(id__in=visit_property_ids)
-        )
-        .distinct()
-    )
-
-    if assembly:
-        properties_queryset = properties_queryset.filter(
-            assembly=assembly,
-        )
-
-    return properties_queryset
-
-
-def _save_property_photos(request, property_obj):
-    if PropertyPhoto is None:
-        return 0
-
-    photos = request.FILES.getlist("photos")
-
-    if not photos:
-        return 0
-
-    field_names = {
-        field.name
-        for field in PropertyPhoto._meta.get_fields()
-    }
-
-    file_field_name = None
-
-    for candidate in [
-        "image",
-        "photo",
-        "file",
-        "photo_file",
-        "property_photo",
-    ]:
-        if candidate in field_names:
-            file_field_name = candidate
-            break
-
-    if not file_field_name:
-        return 0
-
-    saved_count = 0
-
-    for uploaded_file in photos:
-        photo_kwargs = {
-            file_field_name: uploaded_file,
-        }
-
-        if "property" in field_names:
-            photo_kwargs["property"] = property_obj
-
-        if "uploaded_by" in field_names:
-            photo_kwargs["uploaded_by"] = request.user
-
-        if "caption" in field_names:
-            photo_kwargs["caption"] = "Field verification photo"
-
-        if "description" in field_names:
-            photo_kwargs["description"] = "Uploaded during field verification"
-
-        try:
-            PropertyPhoto.objects.create(**photo_kwargs)
-            saved_count += 1
-        except Exception:
-            continue
-
-    return saved_count
-
-
-def _create_field_visit_record(
-    request,
-    property_obj,
-    verification_type,
-    verification_status,
-    owner_present,
-    notes,
-    latitude,
-    longitude,
-):
-    field_names = {
-        field.name
-        for field in FieldVisit._meta.get_fields()
-    }
-
-    visit_kwargs = {}
-
-    if "property" in field_names:
-        visit_kwargs["property"] = property_obj
-
-    if "officer" in field_names:
-        visit_kwargs["officer"] = request.user
-
-    if "visited_at" in field_names:
-        visit_kwargs["visited_at"] = timezone.now()
-
-    if "visit_type" in field_names:
-        visit_kwargs["visit_type"] = verification_type
-
-    if "outcome" in field_names:
-        visit_kwargs["outcome"] = verification_status
-
-    if "notes" in field_names:
-        owner_label = "Yes" if owner_present == "yes" else "No"
-        visit_kwargs["notes"] = (
-            f"Owner present: {owner_label}\n\n"
-            f"{notes}"
-        ).strip()
-
-    if latitude and "latitude" in field_names:
-        visit_kwargs["latitude"] = latitude
-
-    if longitude and "longitude" in field_names:
-        visit_kwargs["longitude"] = longitude
-
-    if "gps_latitude" in field_names and latitude:
-        visit_kwargs["gps_latitude"] = latitude
-
-    if "gps_longitude" in field_names and longitude:
-        visit_kwargs["gps_longitude"] = longitude
-
-    if visit_kwargs:
-        try:
-            return FieldVisit.objects.create(
-                **visit_kwargs,
-            )
-        except Exception:
-            return None
-
-    return None
-
 
 @login_required
-def field_officer_verify_property(request, property_id=None):
-    user_role = get_user_role(request.user)
-
-    if user_role != "field_officer":
-        return redirect(landing_url_for_user(request.user))
-
-    assembly = _get_current_assembly(request)
-    portal_access = get_allowed_modules(request.user)
-
-    officer_name = _officer_name(request.user)
-    officer_initial = officer_name[0].upper() if officer_name else "F"
-    officer_zone = assembly.name if assembly else "Assigned Assembly"
-
-    property_queryset = _get_field_officer_property_queryset(
-        request=request,
-        assembly=assembly,
-    )
-
-    property_obj = None
-
-    if property_id:
-        property_obj = property_queryset.filter(
-            pk=property_id,
-        ).first()
-
-        if not property_obj:
-            messages.error(
-                request,
-                "You do not have access to verify this property.",
-            )
-            return redirect("field_operations:field-operations")
-
-    verification_type_choices = [
-        ("property_verification", "Property Verification"),
-        ("site_assessment", "Site Assessment"),
-        ("payment_verification", "Payment Verification"),
-        ("dispute_investigation", "Dispute Investigation"),
-        ("follow_up", "Follow-up Visit"),
-    ]
-
-    verification_status_choices = [
-        ("verified", "Verified"),
-        ("pending", "Pending"),
-        ("under_review", "Under Review"),
-        ("flagged", "Flagged"),
-        ("possible_duplicate", "Possible Duplicate"),
-        ("rejected", "Rejected"),
-    ]
-
-    form_error = ""
-
-    form_values = {
-        "property_reference": (
-            property_obj.property_reference
-            if property_obj
-            else ""
-        ),
-        "verification_type": "property_verification",
-        "verification_status": (
-            property_obj.verification_status
-            if property_obj
-            else ""
-        ),
-        "owner_present": "yes",
-        "notes": "",
-        "latitude": (
-            str(property_obj.latitude)
-            if property_obj and property_obj.latitude is not None
-            else ""
-        ),
-        "longitude": (
-            str(property_obj.longitude)
-            if property_obj and property_obj.longitude is not None
-            else ""
-        ),
-    }
-
-    if request.method == "POST":
-        form_values.update(
-            {
-                "property_reference": request.POST.get(
-                    "property_reference",
-                    "",
-                ).strip(),
-                "verification_type": request.POST.get(
-                    "verification_type",
-                    "",
-                ).strip(),
-                "verification_status": request.POST.get(
-                    "verification_status",
-                    "",
-                ).strip(),
-                "owner_present": request.POST.get(
-                    "owner_present",
-                    "yes",
-                ).strip(),
-                "notes": request.POST.get(
-                    "notes",
-                    "",
-                ).strip(),
-                "latitude": request.POST.get(
-                    "latitude",
-                    "",
-                ).strip(),
-                "longitude": request.POST.get(
-                    "longitude",
-                    "",
-                ).strip(),
-            }
-        )
-
-        if not property_obj:
-            property_obj = property_queryset.filter(
-                property_reference__iexact=form_values["property_reference"],
-            ).first()
-
-        if not property_obj:
-            form_error = "Property ID not found or not assigned to you."
-
-        elif not form_values["verification_type"]:
-            form_error = "Select a verification type."
-
-        elif not form_values["verification_status"]:
-            form_error = "Select a verification status."
-
-        elif not form_values["notes"]:
-            form_error = "Enter verification notes."
-
-        else:
-            property_obj.verification_status = form_values[
-                "verification_status"
-            ]
-
-            update_fields = [
-                "verification_status",
-            ]
-
-            completed_statuses = {
-                "verified",
-                "approved",
-                "completed",
-            }
-
-            if (
-                form_values["verification_status"]
-                in completed_statuses
-            ):
-                property_obj.last_verified_at = timezone.now()
-                update_fields.append("last_verified_at")
-
-            if form_values["latitude"]:
-                property_obj.latitude = form_values["latitude"]
-                update_fields.append("latitude")
-
-            if form_values["longitude"]:
-                property_obj.longitude = form_values["longitude"]
-                update_fields.append("longitude")
-
-            property_obj.save(
-                update_fields=list(set(update_fields)),
-            )
-
-            _create_field_visit_record(
-                request=request,
-                property_obj=property_obj,
-                verification_type=form_values["verification_type"],
-                verification_status=form_values["verification_status"],
-                owner_present=form_values["owner_present"],
-                notes=form_values["notes"],
-                latitude=form_values["latitude"],
-                longitude=form_values["longitude"],
-            )
-
-            photo_count = _save_property_photos(
-                request=request,
-                property_obj=property_obj,
-            )
-
-            if photo_count:
-                messages.success(
-                    request,
-                    f"Verification submitted successfully. {photo_count} photo(s) uploaded.",
-                )
-            else:
-                messages.success(
-                    request,
-                    "Verification submitted successfully.",
-                )
-
-            return redirect(
-                "field_operations:field-officer-stats"
-            )
-
-    dashboard_url = _safe_reverse(
-        "field_operations:field-operations",
-    )
-
-    verify_url = _safe_reverse(
-        "field_operations:field-officer-verify",
-        fallback=dashboard_url,
-    )
-
-    stats_url = _safe_reverse(
-        "field_operations:field-officer-stats",
-        fallback=dashboard_url,
-    )
-
-    profile_url = _safe_reverse(
-        "admins:settings",
-        fallback=dashboard_url,
-    )
-
-    context = {
-        "is_field_officer": True,
-        "page_title": "Submit Verification",
-        "page_subtitle": "Complete field verification report",
-        "portal_access": portal_access,
-        "context_assembly": assembly,
-        "officer_name": officer_name,
-        "officer_initial": officer_initial,
-        "officer_zone": officer_zone,
-        "property_obj": property_obj,
-        "verification_type_choices": verification_type_choices,
-        "verification_status_choices": verification_status_choices,
-        "form_error": form_error,
-        "cancel_url": dashboard_url,
-        "dashboard_url": dashboard_url,
-        "tasks_url": dashboard_url,
-        "verify_url": verify_url,
-        "stats_url": stats_url,
-        "profile_url": profile_url,
-        **form_values,
-    }
-
-    return render(
-        request,
-        "field_operations/field_officer_verify.html",
-        context,
-    )
-
-def assign_field_officer_property(request):
-    from django.contrib import messages
-    from django.db.models import Q
-    from django.shortcuts import get_object_or_404, redirect, render
-    from django.utils import timezone
-
-    from admins.access import get_allowed_modules, get_user_role, landing_url_for_user
-    from admins.models import Assembly, UserProfile
-    from properties.models import Property
-    from .models import FieldAssignment
-
-    if not request.user.is_authenticated:
-        return redirect("portal-login")
-
-    user_role = get_user_role(request.user)
-
-    allowed_roles = {
-        "sys_admin",
-        "revenue_admin",
-        "report_officer",
-    }
-
-    if user_role not in allowed_roles:
+def field_officer_assignments(request):
+    if (
+        get_user_role(request.user)
+        != "field_officer"
+    ):
         messages.error(
             request,
-            "You are not authorized to assign properties to field officers.",
+            "Only field officers can view assignments.",
         )
-        return redirect(landing_url_for_user(request.user))
 
-    assembly = None
-    assembly_id = request.session.get("active_assembly_id")
+        return redirect(
+            landing_url_for_user(
+                request.user
+            )
+        )
 
-    if assembly_id:
-        assembly = Assembly.objects.filter(
-            id=assembly_id,
-            is_active=True,
-        ).first()
-
-    if not assembly:
-        profile = getattr(request.user, "profile", None)
-
-        if profile and profile.assembly_id:
-            assembly = Assembly.objects.filter(
-                id=profile.assembly_id,
-                is_active=True,
-            ).first()
-
-    properties_queryset = (
-        Property.objects
-        .select_related("owner", "assembly")
-        .order_by("-created_at")
+    assembly = _get_current_assembly(
+        request
     )
 
-    officers_queryset = (
-        UserProfile.objects
-        .select_related("user", "assembly")
-        .filter(
-            role="field_officer",
-            user__is_active=True,
-        )
-        .order_by("user__first_name", "user__last_name", "user__username")
-    )
-
-    assignments_queryset = (
+    assignments = (
         FieldAssignment.objects
         .select_related(
             "property",
             "property__owner",
-            "officer",
+            "property__assembly",
             "assembly",
             "assigned_by",
         )
-        .order_by("-assigned_at", "-created_at")
+        .filter(
+            officer=request.user,
+        )
+        .order_by(
+            Case(
+                When(
+                    status="assigned",
+                    then=Value(0),
+                ),
+                When(
+                    status="in_progress",
+                    then=Value(1),
+                ),
+                When(
+                    status="completed",
+                    then=Value(2),
+                ),
+                default=Value(3),
+                output_field=IntegerField(),
+            ),
+            "due_date",
+            "-assigned_at",
+        )
     )
 
     if assembly:
-        properties_queryset = properties_queryset.filter(
+        assignments = assignments.filter(
             assembly=assembly,
         )
 
-        officers_queryset = officers_queryset.filter(
-            Q(assembly=assembly)
-            | Q(allowed_assemblies=assembly)
-        ).distinct()
+    portal_access = get_allowed_modules(
+        request.user
+    )
 
-        assignments_queryset = assignments_queryset.filter(
-            assembly=assembly,
-        )
-
-    if request.method == "POST":
-        property_id = request.POST.get("property_id")
-        officer_id = request.POST.get("officer_id")
-        priority = request.POST.get("priority") or "medium"
-        due_date = request.POST.get("due_date") or None
-        notes = request.POST.get("notes") or ""
-
-        if not property_id or not officer_id:
-            messages.error(
-                request,
-                "Please select both a property and a field officer.",
-            )
-            return redirect("field_operations:assign-field-officer-property")
-
-        property_obj = get_object_or_404(
-            properties_queryset,
-            id=property_id,
-        )
-
-        officer_profile = get_object_or_404(
-            officers_queryset,
-            user_id=officer_id,
-        )
-
-        existing_assignment = (
-            FieldAssignment.objects
-            .filter(
-                property=property_obj,
-                officer=officer_profile.user,
-                status__in=["assigned", "in_progress"],
-            )
-            .first()
-        )
-
-        if existing_assignment:
-            existing_assignment.priority = priority
-            existing_assignment.due_date = due_date
-            existing_assignment.notes = notes
-            existing_assignment.assigned_by = request.user
-            existing_assignment.save(
-                update_fields=[
-                    "priority",
-                    "due_date",
-                    "notes",
-                    "assigned_by",
-                    "updated_at",
-                ]
-            )
-
-            messages.success(
-                request,
-                "Existing field assignment updated successfully.",
-            )
-        else:
-            FieldAssignment.objects.create(
-                assembly=property_obj.assembly,
-                property=property_obj,
-                officer=officer_profile.user,
-                assigned_by=request.user,
-                status="assigned",
-                priority=priority,
-                due_date=due_date,
-                notes=notes,
-                assigned_at=timezone.now(),
-            )
-
-            messages.success(
-                request,
-                "Property assigned to field officer successfully.",
-            )
-
-        return redirect("field_operations:assign-field-officer-property")
-
-    portal_access = get_allowed_modules(request.user)
-
-    context = {
-        "page_title": "Assign Field Officer",
-        "page_subtitle": "Assign properties to field officers for verification",
-        "context_assembly": assembly,
-        "properties": properties_queryset[:200],
-        "officers": officers_queryset,
-        "assignments": assignments_queryset[:50],
-        "portal_access": portal_access,
-        "allowed_modules": portal_access,
-        "user_role": user_role,
-    }
+    officer_name = _officer_name(
+        request.user
+    )
 
     return render(
         request,
-        "field_operations/assign_field_officer_property.html",
-        context,
+        (
+            "field_operations/"
+            "field_officer_assignments.html"
+        ),
+        {
+            "page_title": "My Assignments",
+            "page_subtitle": (
+                "Properties assigned to you "
+                "for field verification."
+            ),
+            "assignments": assignments,
+
+            "active_count": (
+                assignments.filter(
+                    status__in=[
+                        "assigned",
+                        "in_progress",
+                    ]
+                ).count()
+            ),
+
+            "completed_count": (
+                assignments.filter(
+                    status="completed",
+                ).count()
+            ),
+
+            "officer_name": officer_name,
+
+            "officer_initial": (
+                officer_name[:1].upper()
+                or "F"
+            ),
+
+            "officer_zone": (
+                assembly.name
+                if assembly
+                else "Assigned Assembly"
+            ),
+
+            "context_assembly": assembly,
+            "portal_access": portal_access,
+            "is_field_officer": True,
+        },
     )
+
+
+# def _model_has_field(model, field_name):
+#     return field_name in {
+#         field.name
+#         for field in model._meta.get_fields()
+#     }
+
+
+# def _get_field_officer_property_queryset(request, assembly):
+#     officer_visits = FieldVisit.objects.filter(
+#         officer=request.user,
+#     )
+
+#     if assembly:
+#         officer_visits = officer_visits.filter(
+#             property__assembly=assembly,
+#         )
+
+#     visit_property_ids = officer_visits.values_list(
+#         "property_id",
+#         flat=True,
+#     )
+
+#     properties_queryset = (
+#         Property.objects
+#         .select_related(
+#             "owner",
+#             "assembly",
+#             "community_area",
+#             "registered_by",
+#         )
+#         .filter(
+#             Q(registered_by=request.user)
+#             | Q(id__in=visit_property_ids)
+#         )
+#         .distinct()
+#     )
+
+#     if assembly:
+#         properties_queryset = properties_queryset.filter(
+#             assembly=assembly,
+#         )
+
+#     return properties_queryset
+
+
+# def _save_property_photos(request, property_obj):
+#     if PropertyPhoto is None:
+#         return 0
+
+#     photos = request.FILES.getlist("photos")
+
+#     if not photos:
+#         return 0
+
+#     field_names = {
+#         field.name
+#         for field in PropertyPhoto._meta.get_fields()
+#     }
+
+#     file_field_name = None
+
+#     for candidate in [
+#         "image",
+#         "photo",
+#         "file",
+#         "photo_file",
+#         "property_photo",
+#     ]:
+#         if candidate in field_names:
+#             file_field_name = candidate
+#             break
+
+#     if not file_field_name:
+#         return 0
+
+#     saved_count = 0
+
+#     for uploaded_file in photos:
+#         photo_kwargs = {
+#             file_field_name: uploaded_file,
+#         }
+
+#         if "property" in field_names:
+#             photo_kwargs["property"] = property_obj
+
+#         if "uploaded_by" in field_names:
+#             photo_kwargs["uploaded_by"] = request.user
+
+#         if "caption" in field_names:
+#             photo_kwargs["caption"] = "Field verification photo"
+
+#         if "description" in field_names:
+#             photo_kwargs["description"] = "Uploaded during field verification"
+
+#         try:
+#             PropertyPhoto.objects.create(**photo_kwargs)
+#             saved_count += 1
+#         except Exception:
+#             continue
+
+#     return saved_count
+
+
+# def _create_field_visit_record(
+#     request,
+#     property_obj,
+#     verification_type,
+#     verification_status,
+#     owner_present,
+#     notes,
+#     latitude,
+#     longitude,
+# ):
+#     field_names = {
+#         field.name
+#         for field in FieldVisit._meta.get_fields()
+#     }
+
+#     visit_kwargs = {}
+
+#     if "property" in field_names:
+#         visit_kwargs["property"] = property_obj
+
+#     if "officer" in field_names:
+#         visit_kwargs["officer"] = request.user
+
+#     if "visited_at" in field_names:
+#         visit_kwargs["visited_at"] = timezone.now()
+
+#     if "visit_type" in field_names:
+#         visit_kwargs["visit_type"] = verification_type
+
+#     if "outcome" in field_names:
+#         visit_kwargs["outcome"] = verification_status
+
+#     if "notes" in field_names:
+#         owner_label = "Yes" if owner_present == "yes" else "No"
+#         visit_kwargs["notes"] = (
+#             f"Owner present: {owner_label}\n\n"
+#             f"{notes}"
+#         ).strip()
+
+#     if latitude and "latitude" in field_names:
+#         visit_kwargs["latitude"] = latitude
+
+#     if longitude and "longitude" in field_names:
+#         visit_kwargs["longitude"] = longitude
+
+#     if "gps_latitude" in field_names and latitude:
+#         visit_kwargs["gps_latitude"] = latitude
+
+#     if "gps_longitude" in field_names and longitude:
+#         visit_kwargs["gps_longitude"] = longitude
+
+#     if visit_kwargs:
+#         try:
+#             return FieldVisit.objects.create(
+#                 **visit_kwargs,
+#             )
+#         except Exception:
+#             return None
+
+#     return None
+
+
+# @login_required
+# def field_officer_verify_property(request, property_id=None):
+#     user_role = get_user_role(request.user)
+
+#     if user_role != "field_officer":
+#         return redirect(landing_url_for_user(request.user))
+
+#     assembly = _get_current_assembly(request)
+#     portal_access = get_allowed_modules(request.user)
+
+#     officer_name = _officer_name(request.user)
+#     officer_initial = officer_name[0].upper() if officer_name else "F"
+#     officer_zone = assembly.name if assembly else "Assigned Assembly"
+
+#     property_queryset = _get_field_officer_property_queryset(
+#         request=request,
+#         assembly=assembly,
+#     )
+
+#     property_obj = None
+
+#     if property_id:
+#         property_obj = property_queryset.filter(
+#             pk=property_id,
+#         ).first()
+
+#         if not property_obj:
+#             messages.error(
+#                 request,
+#                 "You do not have access to verify this property.",
+#             )
+#             return redirect("field_operations:field-operations")
+
+#     verification_type_choices = [
+#         ("property_verification", "Property Verification"),
+#         ("site_assessment", "Site Assessment"),
+#         ("payment_verification", "Payment Verification"),
+#         ("dispute_investigation", "Dispute Investigation"),
+#         ("follow_up", "Follow-up Visit"),
+#     ]
+
+#     verification_status_choices = [
+#         ("verified", "Verified"),
+#         ("pending", "Pending"),
+#         ("under_review", "Under Review"),
+#         ("flagged", "Flagged"),
+#         ("possible_duplicate", "Possible Duplicate"),
+#         ("rejected", "Rejected"),
+#     ]
+
+#     form_error = ""
+
+#     form_values = {
+#         "property_reference": (
+#             property_obj.property_reference
+#             if property_obj
+#             else ""
+#         ),
+#         "verification_type": "property_verification",
+#         "verification_status": (
+#             property_obj.verification_status
+#             if property_obj
+#             else ""
+#         ),
+#         "owner_present": "yes",
+#         "notes": "",
+#         "latitude": (
+#             str(property_obj.latitude)
+#             if property_obj and property_obj.latitude is not None
+#             else ""
+#         ),
+#         "longitude": (
+#             str(property_obj.longitude)
+#             if property_obj and property_obj.longitude is not None
+#             else ""
+#         ),
+#     }
+
+#     if request.method == "POST":
+#         form_values.update(
+#             {
+#                 "property_reference": request.POST.get(
+#                     "property_reference",
+#                     "",
+#                 ).strip(),
+#                 "verification_type": request.POST.get(
+#                     "verification_type",
+#                     "",
+#                 ).strip(),
+#                 "verification_status": request.POST.get(
+#                     "verification_status",
+#                     "",
+#                 ).strip(),
+#                 "owner_present": request.POST.get(
+#                     "owner_present",
+#                     "yes",
+#                 ).strip(),
+#                 "notes": request.POST.get(
+#                     "notes",
+#                     "",
+#                 ).strip(),
+#                 "latitude": request.POST.get(
+#                     "latitude",
+#                     "",
+#                 ).strip(),
+#                 "longitude": request.POST.get(
+#                     "longitude",
+#                     "",
+#                 ).strip(),
+#             }
+#         )
+
+#         if not property_obj:
+#             property_obj = property_queryset.filter(
+#                 property_reference__iexact=form_values["property_reference"],
+#             ).first()
+
+#         if not property_obj:
+#             form_error = "Property ID not found or not assigned to you."
+
+#         elif not form_values["verification_type"]:
+#             form_error = "Select a verification type."
+
+#         elif not form_values["verification_status"]:
+#             form_error = "Select a verification status."
+
+#         elif not form_values["notes"]:
+#             form_error = "Enter verification notes."
+
+#         else:
+#             property_obj.verification_status = form_values[
+#                 "verification_status"
+#             ]
+
+#             update_fields = [
+#                 "verification_status",
+#             ]
+
+#             completed_statuses = {
+#                 "verified",
+#                 "approved",
+#                 "completed",
+#             }
+
+#             if (
+#                 form_values["verification_status"]
+#                 in completed_statuses
+#             ):
+#                 property_obj.last_verified_at = timezone.now()
+#                 update_fields.append("last_verified_at")
+
+#             if form_values["latitude"]:
+#                 property_obj.latitude = form_values["latitude"]
+#                 update_fields.append("latitude")
+
+#             if form_values["longitude"]:
+#                 property_obj.longitude = form_values["longitude"]
+#                 update_fields.append("longitude")
+
+#             property_obj.save(
+#                 update_fields=list(set(update_fields)),
+#             )
+
+#             _create_field_visit_record(
+#                 request=request,
+#                 property_obj=property_obj,
+#                 verification_type=form_values["verification_type"],
+#                 verification_status=form_values["verification_status"],
+#                 owner_present=form_values["owner_present"],
+#                 notes=form_values["notes"],
+#                 latitude=form_values["latitude"],
+#                 longitude=form_values["longitude"],
+#             )
+
+#             photo_count = _save_property_photos(
+#                 request=request,
+#                 property_obj=property_obj,
+#             )
+
+#             if photo_count:
+#                 messages.success(
+#                     request,
+#                     f"Verification submitted successfully. {photo_count} photo(s) uploaded.",
+#                 )
+#             else:
+#                 messages.success(
+#                     request,
+#                     "Verification submitted successfully.",
+#                 )
+
+#             return redirect(
+#                 "field_operations:field-officer-stats"
+#             )
+
+#     dashboard_url = _safe_reverse(
+#         "field_operations:field-operations",
+#     )
+
+#     verify_url = _safe_reverse(
+#         "field_operations:field-officer-verify",
+#         fallback=dashboard_url,
+#     )
+
+#     stats_url = _safe_reverse(
+#         "field_operations:field-officer-stats",
+#         fallback=dashboard_url,
+#     )
+
+#     profile_url = _safe_reverse(
+#         "admins:settings",
+#         fallback=dashboard_url,
+#     )
+
+#     context = {
+#         "is_field_officer": True,
+#         "page_title": "Submit Verification",
+#         "page_subtitle": "Complete field verification report",
+#         "portal_access": portal_access,
+#         "context_assembly": assembly,
+#         "officer_name": officer_name,
+#         "officer_initial": officer_initial,
+#         "officer_zone": officer_zone,
+#         "property_obj": property_obj,
+#         "verification_type_choices": verification_type_choices,
+#         "verification_status_choices": verification_status_choices,
+#         "form_error": form_error,
+#         "cancel_url": dashboard_url,
+#         "dashboard_url": dashboard_url,
+#         "tasks_url": dashboard_url,
+#         "verify_url": verify_url,
+#         "stats_url": stats_url,
+#         "profile_url": profile_url,
+#         **form_values,
+#     }
+
+#     return render(
+#         request,
+#         "field_operations/field_officer_verify.html",
+#         context,
+#     )
+
+# def assign_field_officer_property(request):
+#     from django.contrib import messages
+#     from django.db.models import Q
+#     from django.shortcuts import get_object_or_404, redirect, render
+#     from django.utils import timezone
+
+#     from admins.access import get_allowed_modules, get_user_role, landing_url_for_user
+#     from admins.models import Assembly, UserProfile
+#     from properties.models import Property
+#     from .models import FieldAssignment
+
+#     if not request.user.is_authenticated:
+#         return redirect("portal-login")
+
+#     user_role = get_user_role(request.user)
+
+#     allowed_roles = {
+#         "sys_admin",
+#         "revenue_admin",
+#         "report_officer",
+#     }
+
+#     if user_role not in allowed_roles:
+#         messages.error(
+#             request,
+#             "You are not authorized to assign properties to field officers.",
+#         )
+#         return redirect(landing_url_for_user(request.user))
+
+#     assembly = None
+#     assembly_id = request.session.get("active_assembly_id")
+
+#     if assembly_id:
+#         assembly = Assembly.objects.filter(
+#             id=assembly_id,
+#             is_active=True,
+#         ).first()
+
+#     if not assembly:
+#         profile = getattr(request.user, "profile", None)
+
+#         if profile and profile.assembly_id:
+#             assembly = Assembly.objects.filter(
+#                 id=profile.assembly_id,
+#                 is_active=True,
+#             ).first()
+
+#     properties_queryset = (
+#         Property.objects
+#         .select_related("owner", "assembly")
+#         .order_by("-created_at")
+#     )
+
+#     officers_queryset = (
+#         UserProfile.objects
+#         .select_related("user", "assembly")
+#         .filter(
+#             role="field_officer",
+#             user__is_active=True,
+#         )
+#         .order_by("user__first_name", "user__last_name", "user__username")
+#     )
+
+#     assignments_queryset = (
+#         FieldAssignment.objects
+#         .select_related(
+#             "property",
+#             "property__owner",
+#             "officer",
+#             "assembly",
+#             "assigned_by",
+#         )
+#         .order_by("-assigned_at", "-created_at")
+#     )
+
+#     if assembly:
+#         properties_queryset = properties_queryset.filter(
+#             assembly=assembly,
+#         )
+
+#         officers_queryset = officers_queryset.filter(
+#             Q(assembly=assembly)
+#             | Q(allowed_assemblies=assembly)
+#         ).distinct()
+
+#         assignments_queryset = assignments_queryset.filter(
+#             assembly=assembly,
+#         )
+
+#     if request.method == "POST":
+#         property_id = request.POST.get("property_id")
+#         officer_id = request.POST.get("officer_id")
+#         priority = request.POST.get("priority") or "medium"
+#         due_date = request.POST.get("due_date") or None
+#         notes = request.POST.get("notes") or ""
+
+#         if not property_id or not officer_id:
+#             messages.error(
+#                 request,
+#                 "Please select both a property and a field officer.",
+#             )
+#             return redirect("field_operations:assign-field-officer-property")
+
+#         property_obj = get_object_or_404(
+#             properties_queryset,
+#             id=property_id,
+#         )
+
+#         officer_profile = get_object_or_404(
+#             officers_queryset,
+#             user_id=officer_id,
+#         )
+
+#         existing_assignment = (
+#             FieldAssignment.objects
+#             .filter(
+#                 property=property_obj,
+#                 officer=officer_profile.user,
+#                 status__in=["assigned", "in_progress"],
+#             )
+#             .first()
+#         )
+
+#         if existing_assignment:
+#             existing_assignment.priority = priority
+#             existing_assignment.due_date = due_date
+#             existing_assignment.notes = notes
+#             existing_assignment.assigned_by = request.user
+#             existing_assignment.save(
+#                 update_fields=[
+#                     "priority",
+#                     "due_date",
+#                     "notes",
+#                     "assigned_by",
+#                     "updated_at",
+#                 ]
+#             )
+
+#             messages.success(
+#                 request,
+#                 "Existing field assignment updated successfully.",
+#             )
+#         else:
+#             FieldAssignment.objects.create(
+#                 assembly=property_obj.assembly,
+#                 property=property_obj,
+#                 officer=officer_profile.user,
+#                 assigned_by=request.user,
+#                 status="assigned",
+#                 priority=priority,
+#                 due_date=due_date,
+#                 notes=notes,
+#                 assigned_at=timezone.now(),
+#             )
+
+#             messages.success(
+#                 request,
+#                 "Property assigned to field officer successfully.",
+#             )
+
+#         return redirect("field_operations:assign-field-officer-property")
+
+#     portal_access = get_allowed_modules(request.user)
+
+#     context = {
+#         "page_title": "Assign Field Officer",
+#         "page_subtitle": "Assign properties to field officers for verification",
+#         "context_assembly": assembly,
+#         "properties": properties_queryset[:200],
+#         "officers": officers_queryset,
+#         "assignments": assignments_queryset[:50],
+#         "portal_access": portal_access,
+#         "allowed_modules": portal_access,
+#         "user_role": user_role,
+#     }
+
+#     return render(
+#         request,
+#         "field_operations/assign_field_officer_property.html",
+#         context,
+#     )
 
 def _prms_current_assembly(request):
     from admins.models import Assembly
@@ -2649,10 +2797,6 @@ def _prms_create_field_visit(
     latitude,
     longitude,
 ):
-    from django.utils import timezone
-
-    from .models import FieldVisit
-
     visit_type_map = {
         "property_verification": "verification",
         "site_assessment": "verification",
@@ -2680,29 +2824,43 @@ def _prms_create_field_visit(
         assembly=property_obj.assembly,
         property=property_obj,
         officer=request.user,
-        visited_at=timezone.now(),
+
         visit_type=visit_type_map.get(
             verification_type,
             "verification",
         ),
+
+        submitted_verification_type=(
+            verification_type
+        ),
+
+        submitted_verification_status=(
+            verification_status
+        ),
+
         payment_status_seen="unknown",
+
         outcome=outcome_map.get(
             verification_status,
             "follow_up_required",
         ),
+
         amount_outstanding_snapshot=(
             _prms_property_outstanding_amount(
                 property_obj
             )
         ),
+
+        visited_at=timezone.now(),
+
         notes=(
             f"Owner present: {owner_label}\n\n"
             f"{notes}"
         ).strip(),
+
         latitude=latitude,
         longitude=longitude,
     )
-
 
 def _prms_save_property_photos(
     request,
@@ -2765,24 +2923,8 @@ def _prms_save_property_photos(
 def assign_field_officer_property(request):
     from datetime import date
 
-    from django.contrib import messages
     from django.core.exceptions import ValidationError
     from django.db import transaction
-    from django.shortcuts import (
-        get_object_or_404,
-        redirect,
-        render,
-    )
-    from django.utils import timezone
-
-    from admins.access import (
-        get_allowed_modules,
-        get_user_role,
-        landing_url_for_user,
-    )
-    from properties.models import Property
-
-    from .models import FieldAssignment
 
     if not request.user.is_authenticated:
         return redirect("admin-login")
@@ -2798,10 +2940,7 @@ def assign_field_officer_property(request):
     if user_role not in allowed_roles:
         messages.error(
             request,
-            (
-                "You are not authorized to assign "
-                "properties to field officers."
-            ),
+            "You are not authorized to assign properties to field officers.",
         )
         return redirect(
             landing_url_for_user(request.user)
@@ -2816,7 +2955,12 @@ def assign_field_officer_property(request):
             "assembly",
         )
         .filter(is_active=True)
-        .order_by("-created_at")
+        .exclude(
+            verification_status="verified",
+        )
+        .order_by(
+            "property_reference"
+        )
     )
 
     if assembly:
@@ -2827,7 +2971,9 @@ def assign_field_officer_property(request):
         )
 
     officers_queryset = (
-        _prms_field_officer_profiles(assembly)
+        _prms_field_officer_profiles(
+            assembly
+        )
     )
 
     assignments_queryset = (
@@ -2853,10 +2999,14 @@ def assign_field_officer_property(request):
         )
 
     if request.method == "POST":
-        property_id = (
-            request.POST.get("property_id")
-            or ""
-        ).strip()
+        property_ids = [
+            value.strip()
+            for value
+            in request.POST.getlist(
+                "property_ids"
+            )
+            if value.strip()
+        ]
 
         officer_id = (
             request.POST.get("officer_id")
@@ -2879,12 +3029,14 @@ def assign_field_officer_property(request):
         ).strip()
 
         try:
-            if not property_id or not officer_id:
+            if not property_ids:
                 raise ValidationError(
-                    (
-                        "Please select both a property "
-                        "and a field officer."
-                    )
+                    "Select at least one property."
+                )
+
+            if not officer_id:
+                raise ValidationError(
+                    "Select a field officer."
                 )
 
             allowed_priorities = {
@@ -2902,129 +3054,158 @@ def assign_field_officer_property(request):
 
             if due_date_value:
                 try:
-                    due_date = date.fromisoformat(
-                        due_date_value
+                    due_date = (
+                        date.fromisoformat(
+                            due_date_value
+                        )
                     )
                 except ValueError as exc:
                     raise ValidationError(
-                        (
-                            "Enter a valid assignment "
-                            "due date."
-                        )
+                        "Enter a valid assignment due date."
                     ) from exc
 
                 if due_date < timezone.localdate():
                     raise ValidationError(
-                        (
-                            "The assignment due date "
-                            "cannot be in the past."
-                        )
+                        "The assignment due date cannot be in the past."
                     )
 
-            property_obj = get_object_or_404(
-                properties_queryset,
-                id=property_id,
+            officer_profile = (
+                officers_queryset.filter(
+                    user_id=officer_id,
+                )
+                .first()
             )
 
-            officer_profile = get_object_or_404(
-                officers_queryset,
-                user_id=officer_id,
+            if not officer_profile:
+                raise ValidationError(
+                    "Select a valid field officer."
+                )
+
+            unique_property_ids = list(
+                dict.fromkeys(
+                    property_ids
+                )
             )
 
-            if not officer_profile.can_access_assembly(
-                property_obj.assembly_id
+            selected_properties = list(
+                properties_queryset.filter(
+                    id__in=unique_property_ids
+                )
+            )
+
+            if (
+                len(selected_properties)
+                != len(unique_property_ids)
             ):
                 raise ValidationError(
-                    (
-                        "The selected field officer does "
-                        "not belong to the property's "
-                        "assembly."
-                    )
+                    "One or more selected properties are unavailable or already verified."
                 )
+
+            created_count = 0
+            reassigned_count = 0
 
             with transaction.atomic():
-                existing_assignment = (
-                    FieldAssignment.objects
-                    .select_for_update()
-                    .filter(
-                        property=property_obj,
-                        status__in=[
-                            "assigned",
-                            "in_progress",
-                        ],
-                    )
-                    .first()
-                )
+                for property_obj in (
+                    selected_properties
+                ):
+                    if not officer_profile.can_access_assembly(
+                        property_obj.assembly_id
+                    ):
+                        raise ValidationError(
+                            (
+                                f"{property_obj.property_reference}: "
+                                "the selected officer cannot access this assembly."
+                            )
+                        )
 
-                if existing_assignment:
-                    existing_assignment.officer = (
-                        officer_profile.user
-                    )
-                    existing_assignment.priority = (
-                        priority
-                    )
-                    existing_assignment.due_date = (
-                        due_date
-                    )
-                    existing_assignment.notes = notes
-                    existing_assignment.assigned_by = (
-                        request.user
-                    )
-                    existing_assignment.status = (
-                        "assigned"
-                    )
-                    existing_assignment.assigned_at = (
-                        timezone.now()
-                    )
-                    existing_assignment.completed_at = None
-
-                    existing_assignment.save(
-                        update_fields=[
-                            "officer",
-                            "priority",
-                            "due_date",
-                            "notes",
-                            "assigned_by",
-                            "status",
-                            "assigned_at",
-                            "completed_at",
-                            "updated_at",
-                        ]
+                    existing_assignment = (
+                        FieldAssignment.objects
+                        .select_for_update()
+                        .filter(
+                            property=property_obj,
+                            status__in=[
+                                "assigned",
+                                "in_progress",
+                            ],
+                        )
+                        .first()
                     )
 
-                    success_message = (
-                        "Existing field assignment "
-                        "updated successfully."
-                    )
+                    if existing_assignment:
+                        existing_assignment.officer = (
+                            officer_profile.user
+                        )
+                        existing_assignment.priority = (
+                            priority
+                        )
+                        existing_assignment.due_date = (
+                            due_date
+                        )
+                        existing_assignment.notes = (
+                            notes
+                        )
+                        existing_assignment.assigned_by = (
+                            request.user
+                        )
+                        existing_assignment.status = (
+                            "assigned"
+                        )
+                        existing_assignment.assigned_at = (
+                            timezone.now()
+                        )
+                        existing_assignment.completed_at = (
+                            None
+                        )
 
-                else:
-                    FieldAssignment.objects.create(
-                        assembly=property_obj.assembly,
-                        property=property_obj,
-                        officer=officer_profile.user,
-                        assigned_by=request.user,
-                        status="assigned",
-                        priority=priority,
-                        due_date=due_date,
-                        notes=notes,
-                        assigned_at=timezone.now(),
-                    )
+                        existing_assignment.save(
+                            update_fields=[
+                                "officer",
+                                "priority",
+                                "due_date",
+                                "notes",
+                                "assigned_by",
+                                "status",
+                                "assigned_at",
+                                "completed_at",
+                                "updated_at",
+                            ]
+                        )
 
-                    success_message = (
-                        "Property assigned to field "
-                        "officer successfully."
-                    )
+                        reassigned_count += 1
+
+                    else:
+                        FieldAssignment.objects.create(
+                            assembly=(
+                                property_obj.assembly
+                            ),
+                            property=property_obj,
+                            officer=(
+                                officer_profile.user
+                            ),
+                            assigned_by=(
+                                request.user
+                            ),
+                            status="assigned",
+                            priority=priority,
+                            due_date=due_date,
+                            notes=notes,
+                            assigned_at=(
+                                timezone.now()
+                            ),
+                        )
+
+                        created_count += 1
 
             messages.success(
                 request,
-                success_message,
+                (
+                    f"{created_count} assignment(s) created; "
+                    f"{reassigned_count} reassigned/updated."
+                ),
             )
 
             return redirect(
-                (
-                    "field_operations:"
-                    "assign-field-officer-property"
-                )
+                "field_operations:assign-field-officer-property"
             )
 
         except ValidationError as exc:
@@ -3037,28 +3218,30 @@ def assign_field_officer_property(request):
         request.user
     )
 
-    context = {
-        "page_title": "Assign Field Officer",
-        "page_subtitle": (
-            "Assign properties to field officers "
-            "for verification"
-        ),
-        "context_assembly": assembly,
-        "properties": properties_queryset[:200],
-        "officers": officers_queryset,
-        "assignments": assignments_queryset[:50],
-        "portal_access": portal_access,
-        "allowed_modules": portal_access,
-        "user_role": user_role,
-    }
-
     return render(
         request,
         (
             "field_operations/"
             "assign_field_officer_property.html"
         ),
-        context,
+        {
+            "page_title": "Assign Properties",
+            "page_subtitle": (
+                "Assign one or more properties "
+                "to a field officer."
+            ),
+            "context_assembly": assembly,
+            "properties": (
+                properties_queryset[:500]
+            ),
+            "officers": officers_queryset,
+            "assignments": (
+                assignments_queryset[:100]
+            ),
+            "portal_access": portal_access,
+            "allowed_modules": portal_access,
+            "user_role": user_role,
+        },
     )
 
 
@@ -3427,18 +3610,18 @@ def field_officer_verify_property(
                 ]
 
                 if (
-                    form_values[
-                        "verification_status"
-                    ]
+                    form_values["verification_status"]
                     == "verified"
                 ):
                     property_obj.last_verified_at = (
                         timezone.now()
                     )
+                else:
+                    property_obj.last_verified_at = None
 
-                    update_fields.append(
-                        "last_verified_at"
-                    )
+                update_fields.append(
+                    "last_verified_at"
+                )
 
                 if latitude is not None:
                     property_obj.latitude = latitude
@@ -3544,6 +3727,18 @@ def field_officer_verify_property(
         except ValidationError as exc:
             form_error = "; ".join(
                 exc.messages
+            )
+
+        except Exception:
+            logger.exception(
+                "Field verification failed for user %s.",
+                request.user.pk,
+            )
+
+            form_error = (
+                "Verification could not be saved. "
+                "Please try again. If the problem "
+                "continues, contact the administrator."
             )
 
     officer_name = _prms_user_display_name(

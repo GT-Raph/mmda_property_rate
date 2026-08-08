@@ -503,28 +503,29 @@
 
                     <div class="actions">
                         {% if bill.can_pay %}
+
                             <a
                                 href="{% url 'citizens:payment-confirm' %}?bill={{ bill.id }}"
                                 class="btn-gold"
                             >
                                 Pay Bill
                             </a>
+
                         {% else %}
-                            <span
+
+                            <button
+                                type="button"
+                                class="btn-gold js-pay-blocked"
+                                data-property-reference="{{ bill.account_number }}"
+                                data-verification-status="{{ bill.verification_status }}"
                                 style="
-                                    display:inline-flex;
-                                    align-items:center;
-                                    justify-content:center;
-                                    padding:11px 16px;
-                                    border-radius:8px;
-                                    background:#eeeeee;
-                                    color:#777777;
-                                    font-size:13px;
-                                    font-weight:700;
+                                    border:0;
+                                    cursor:pointer;
                                 "
                             >
-                                Awaiting Verification
-                            </span>
+                                Pay Bill
+                            </button>
+
                         {% endif %}
 
                         <a
@@ -629,5 +630,6 @@
             Profile
         </a>
     </nav>
+    {% include "citizens/_payment_verification_modal.html" %}
 </body>
 </html>

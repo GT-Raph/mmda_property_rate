@@ -115,6 +115,9 @@ class UserProfile(TimeStampedModel):
     phone_number = models.CharField(max_length=20, blank=True)
     employee_id = models.CharField(max_length=50, blank=True)
     is_verified = models.BooleanField(default=False)
+    must_change_password = models.BooleanField(
+        default=False
+    )
 
     EMPLOYEE_ID_PREFIXES = {
         "sys_admin": "SA",

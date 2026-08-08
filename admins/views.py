@@ -2,6 +2,7 @@ import base64
 from datetime import date, timedelta
 from decimal import Decimal
 from io import BytesIO
+import profile
 from django import forms
 
 import qrcode
@@ -1684,6 +1685,22 @@ def settings_view(request):
                 update_session_auth_hash(request, user)
                 messages.success(request, "Password updated successfully.")
                 return redirect(_settings_url("password"))
+
+            profile = getattr(
+                user,
+                "profile",
+                None,
+            )
+
+            if profile:
+                profile.must_change_password = False
+
+                profile.save(
+                    update_fields=[
+                        "must_change_password",
+                        "updated_at",
+                    ]
+                )
 
             context = _settings_base_context(request, active_tab="password")
             context["password_form"] = form

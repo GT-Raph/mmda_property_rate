@@ -103,6 +103,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_otp.middleware.OTPMiddleware",
+    "admins.middleware.ForcePasswordChangeMiddleware",
     "admins.middleware.LoginAuditMiddleware",
 ]
 

@@ -397,7 +397,6 @@ def add_property(request):
                     account_result = (
                         link_or_create_citizen_for_owner(
                             owner,
-                            default_password="1234",
                         )
                     )
 
@@ -430,9 +429,11 @@ def add_property(request):
                         request,
                         (
                             "Citizen account created for "
-                            f"{owner.full_name}. Username: "
-                            f"{account_result['username']} | "
-                            "Temporary password: 1234"
+                            f"{owner.full_name}. "
+                            "Phone number: "
+                            f"{account_result['login_phone']} | "
+                            "Temporary password: "
+                            f"{account_result['temporary_password']}"
                         ),
                     )
 

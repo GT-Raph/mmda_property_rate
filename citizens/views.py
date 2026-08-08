@@ -9,7 +9,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, request
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -1230,42 +1230,209 @@ def citizen_bills(request):
 
 
 @login_required
-def citizen_bill_detail(request, bill_id):
-    if get_user_role(request.user) != "citizen":
-        return redirect("portal-login")
+def citizen_bill_detail(
+    request,
+    bill_id,
+):
+    if (
+        get_user_role(request.user)
+        != "citizen"
+    ):
+        return redirect(
+            "portal-login"
+        )
 
-    owner = _citizen_owner_or_none(request)
+    owner = _citizen_owner_or_none(
+        request
+    )
+
     if not owner:
-        return redirect("citizens:bills")
+        return redirect(
+            "citizens:bills"
+        )
 
-    context_assembly = _get_current_assembly(request)
+    context_assembly = (
+        _get_current_assembly(
+            request
+        )
+    )
 
-    bill_qs = Bill.objects.filter(_owner_q(owner, "property_record__owner")).select_related("property_record", "rate_policy")
+    bill_qs = (
+        Bill.objects
+        .filter(
+            _owner_q(
+                owner,
+                "property_record__owner",
+            )
+        )
+        .select_related(
+            "property_record",
+            "rate_policy",
+        )
+    )
+
     if context_assembly:
-        bill_qs = bill_qs.filter(assembly=context_assembly)
+        bill_qs = bill_qs.filter(
+            assembly=context_assembly,
+        )
 
-    bill = get_object_or_404(bill_qs, id=bill_id)
+    bill = get_object_or_404(
+        bill_qs,
+        id=bill_id,
+    )
+
     prop = bill.property_record
+
+    can_pay = (
+        _property_can_accept_payment(
+            prop
+        )
+        and bill.status
+        not in [
+            "paid",
+            "cancelled",
+        ]
+        and _bill_balance(bill) > 0
+    )
+
+    verification_status = (
+        prop.get_verification_status_display()
+        if hasattr(
+            prop,
+            "get_verification_status_display",
+        )
+        else "Pending"
+    )
 
     context = {
         "bill": bill,
         "property": prop,
-        "assembly_name": context_assembly.name if context_assembly else "MMDA",
-        "account_number": _account_number_for_property(prop),
-        "owner_name": _owner_name(owner),
-        "suburb": getattr(prop, "suburb", "") or "—",
-        "property_use": _property_type_label(prop),
-        "zone": getattr(prop, "zone", "") or "—",
-        "rateable_value": _money_full(getattr(prop, "rateable_value", 0)).replace("GH₵", "").strip(),
-        "rate_impost": _rate_impost_value(bill),
-        "arrears": _money_full(_arrears_value(bill)).replace("GH₵", "GHS "),
-        "penalty": _money_full(_penalty_value(bill)).replace("GH₵", "GHS "),
-        "current_fee": _money_full(_current_fee_value(bill)).replace("GH₵", "GHS "),
-        "total_due": _money_full(_bill_balance(bill)).replace("GH₵", "GHS "),
-        "due_date": bill.due_date.strftime("%Y-%m-%d") if bill.due_date else "—",
-    }
-    return render(request, "citizens/bill_detail.html", context)
 
+        "assembly_name": (
+            context_assembly.name
+            if context_assembly
+            else "MMDA"
+        ),
+
+        "account_number": (
+            _account_number_for_property(
+                prop
+            )
+        ),
+
+        "owner_name": (
+            _owner_name(owner)
+        ),
+
+        "suburb": (
+            getattr(
+                prop,
+                "suburb",
+                "",
+            )
+            or "—"
+        ),
+
+        "property_use": (
+            _property_type_label(
+                prop
+            )
+        ),
+
+        "zone": (
+            getattr(
+                prop,
+                "zone",
+                "",
+            )
+            or "—"
+        ),
+
+        "rateable_value": (
+            _money_full(
+                getattr(
+                    prop,
+                    "rateable_value",
+                    0,
+                )
+            )
+            .replace(
+                "GH₵",
+                "",
+            )
+            .strip()
+        ),
+
+        "rate_impost": (
+            _rate_impost_value(
+                bill
+            )
+        ),
+
+        "arrears": (
+            _money_full(
+                _arrears_value(
+                    bill
+                )
+            ).replace(
+                "GH₵",
+                "GHS ",
+            )
+        ),
+
+        "penalty": (
+            _money_full(
+                _penalty_value(
+                    bill
+                )
+            ).replace(
+                "GH₵",
+                "GHS ",
+            )
+        ),
+
+        "current_fee": (
+            _money_full(
+                _current_fee_value(
+                    bill
+                )
+            ).replace(
+                "GH₵",
+                "GHS ",
+            )
+        ),
+
+        "total_due": (
+            _money_full(
+                _bill_balance(
+                    bill
+                )
+            ).replace(
+                "GH₵",
+                "GHS ",
+            )
+        ),
+
+        "due_date": (
+            bill.due_date.strftime(
+                "%Y-%m-%d"
+            )
+            if bill.due_date
+            else "—"
+        ),
+
+        "can_pay": can_pay,
+
+        "verification_status": (
+            verification_status
+        ),
+    }
+
+    return render(
+        request,
+        "citizens/bill_detail.html",
+        context,
+    )
 
 @login_required
 def citizen_payment_confirm(request):
@@ -1332,6 +1499,47 @@ def citizen_payment_confirm(request):
         bills_qs = bills_qs.filter(assembly=context_assembly)
 
     selected_bills = []
+    requested_ids = {
+        str(value)
+        for value in selected_bill_ids
+        if str(value).strip()
+    }
+
+    eligible_ids = {
+        str(item["id"])
+        for item in selected_bills
+    }
+
+    if requested_ids - eligible_ids:
+        messages.warning(
+            request,
+            (
+                "Payment is unavailable until "
+                "the property has been verified "
+                "by the MMDA."
+            ),
+        )
+
+        return redirect(
+            "citizens:bills"
+        )
+
+    if (
+        request.method == "GET"
+        and request.GET.get("all") == "1"
+        and not selected_bills
+    ):
+        messages.warning(
+            request,
+            (
+                "There are no verified bills "
+                "available for payment."
+            ),
+        )
+
+        return redirect(
+            "citizens:bills"
+        )
     total_amount = Decimal("0.00")
 
     for bill in bills_qs:
@@ -1409,11 +1617,27 @@ def citizen_payment_success(request):
         mobile_number = payload.get("mobile_number")
         master_reference = f"TXN-{uuid.uuid4().hex[:16].upper()}"
 
-        bills_qs = Bill.objects.filter(
-            _owner_q(owner, "property_record__owner"),
-            id__in=bill_ids,
-        ).select_related("property_record").order_by("id")
-
+        bills_qs = (
+            Bill.objects
+            .filter(
+                _owner_q(
+                    owner,
+                    "property_record__owner",
+                ),
+                id__in=bill_ids,
+                property_record__verification_status=(
+                    "verified"
+                ),
+                property_record__is_active=True,
+            )
+            .select_related(
+                "property_record"
+            )
+            .order_by(
+                "id"
+            )
+        )
+        
         if context_assembly:
             bills_qs = bills_qs.filter(assembly=context_assembly)
 
@@ -1833,24 +2057,66 @@ def citizen_update_address(request):
 @login_required
 @require_POST
 def citizen_change_password(request):
-    redirect_response = _citizen_only(request)
+    redirect_response = _citizen_only(
+        request
+    )
+
     if redirect_response:
         return redirect_response
 
-    form = CitizenPasswordForm(request.user, request.POST)
+    form = CitizenPasswordForm(
+        request.user,
+        request.POST,
+    )
 
     if form.is_valid():
         user = form.save()
-        update_session_auth_hash(request, user)
-        messages.success(request, "Password updated successfully.")
-        return redirect("citizens:profile")
 
-    context = _build_citizen_profile_context(
-        request,
-        active_modal="password",
-        form_overrides={"password_form": form},
+        update_session_auth_hash(
+            request,
+            user,
+        )
+
+        profile = getattr(
+            user,
+            "profile",
+            None,
+        )
+
+        if profile:
+            profile.must_change_password = False
+
+            profile.save(
+                update_fields=[
+                    "must_change_password",
+                    "updated_at",
+                ]
+            )
+
+        messages.success(
+            request,
+            "Password updated successfully.",
+        )
+
+        return redirect(
+            "citizens:profile"
+        )
+
+    context = (
+        _build_citizen_profile_context(
+            request,
+            active_modal="password",
+            form_overrides={
+                "password_form": form,
+            },
+        )
     )
-    return render(request, "citizens/profile.html", context)
+
+    return render(
+        request,
+        "citizens/profile.html",
+        context,
+    )
 
 
 @login_required

@@ -1,0 +1,47 @@
+:root {
+    --prms-gold: #c7a541;
+    --prms-gold-hover: #b89432;
+
+    --prms-red: #b42318;
+    --prms-red-hover: #912018;
+}
+
+.generate-btn,
+.primary-btn,
+.assignment-button,
+.btn-primary,
+.btn-gold,
+.pay-all,
+.upload-label {
+    background: var(--prms-gold) !important;
+    border-color: var(--prms-gold) !important;
+    color: #ffffff !important;
+}
+
+.generate-btn:hover,
+.primary-btn:hover,
+.assignment-button:hover,
+.btn-primary:hover,
+.btn-gold:hover,
+.pay-all:hover,
+.upload-label:hover {
+    background: var(--prms-gold-hover) !important;
+    border-color: var(--prms-gold-hover) !important;
+    color: #ffffff !important;
+}
+
+.btn-danger,
+.danger-btn,
+.delete-btn {
+    background: var(--prms-red) !important;
+    border-color: var(--prms-red) !important;
+    color: #ffffff !important;
+}
+
+.btn-danger:hover,
+.danger-btn:hover,
+.delete-btn:hover {
+    background: var(--prms-red-hover) !important;
+    border-color: var(--prms-red-hover) !important;
+    color: #ffffff !important;
+}

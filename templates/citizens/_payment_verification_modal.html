@@ -1,0 +1,220 @@
+<style>
+    .verification-modal[hidden] {
+        display: none;
+    }
+
+    .verification-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 5000;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+    }
+
+    .verification-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+    }
+
+    .verification-modal-dialog {
+        position: relative;
+        width: min(430px, 100%);
+        padding: 28px;
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow:
+            0 24px 60px rgba(0,0,0,.22);
+        text-align: center;
+    }
+
+    .verification-modal-icon {
+        width: 52px;
+        height: 52px;
+        margin: 0 auto 15px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #fff6dc;
+        color: #765c0d;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .verification-modal-dialog h2 {
+        margin: 0 0 10px;
+    }
+
+    .verification-modal-dialog p {
+        color: #666666;
+        line-height: 1.55;
+    }
+
+    .verification-modal-details {
+        margin: 18px 0;
+        padding: 13px;
+        border-radius: 10px;
+        background: #f5f5f5;
+    }
+
+    .verification-modal-details strong,
+    .verification-modal-details span {
+        display: block;
+    }
+
+    .verification-modal-details span {
+        margin-top: 5px;
+        color: #765c0d;
+        font-size: 13px;
+    }
+
+    .verification-modal-close {
+        min-width: 120px;
+        min-height: 42px;
+        border: 0;
+        border-radius: 9px;
+        background: #c7a541;
+        color: #ffffff;
+        font-weight: 800;
+        cursor: pointer;
+    }
+</style>
+
+
+<div
+    id="verificationPaymentModal"
+    class="verification-modal"
+    hidden
+>
+    <div
+        class="verification-modal-backdrop"
+        data-close-verification-modal
+    ></div>
+
+    <div
+        class="verification-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+    >
+
+        <div class="verification-modal-icon">
+            !
+        </div>
+
+        <h2>
+            Property Verification Required
+        </h2>
+
+        <p>
+            You cannot make a property-rate
+            payment until this property has been
+            verified by the MMDA.
+        </p>
+
+        <div class="verification-modal-details">
+
+            <strong
+                id="verificationModalReference"
+            >
+                Property
+            </strong>
+
+            <span
+                id="verificationModalStatus"
+            >
+                Current status: Pending
+            </span>
+
+        </div>
+
+        <p>
+            Once an administrator or assigned
+            field officer marks the property as
+            verified, payment becomes available
+            automatically.
+        </p>
+
+        <button
+            type="button"
+            class="verification-modal-close"
+            data-close-verification-modal
+        >
+            Okay
+        </button>
+
+    </div>
+</div>
+
+
+<script>
+(function () {
+    const modal =
+        document.getElementById(
+            "verificationPaymentModal"
+        );
+
+    if (!modal) {
+        return;
+    }
+
+    const reference =
+        document.getElementById(
+            "verificationModalReference"
+        );
+
+    const status =
+        document.getElementById(
+            "verificationModalStatus"
+        );
+
+    document
+        .querySelectorAll(
+            ".js-pay-blocked"
+        )
+        .forEach(function (button) {
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    reference.textContent =
+                        button.dataset
+                            .propertyReference
+                        || "Property";
+
+                    status.textContent =
+                        "Current status: "
+                        + (
+                            button.dataset
+                                .verificationStatus
+                            || "Pending"
+                        );
+
+                    modal.hidden = false;
+
+                    document.body.style.overflow =
+                        "hidden";
+                }
+            );
+        });
+
+    document
+        .querySelectorAll(
+            "[data-close-verification-modal]"
+        )
+        .forEach(function (element) {
+
+            element.addEventListener(
+                "click",
+                function () {
+
+                    modal.hidden = true;
+
+                    document.body.style.overflow =
+                        "";
+                }
+            );
+        });
+})();
+</script>
