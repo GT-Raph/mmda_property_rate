@@ -457,15 +457,7 @@
     <h1>{{ page_title|default:"Submit Verification" }}</h1>
     <div class="page-subtitle">{{ page_subtitle|default:"Complete field verification report" }}</div>
 
-    {% if messages %}
-        <div class="message-stack">
-            {% for message in messages %}
-                <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+
 
     {% if form_error %}
         <div class="message-stack">
@@ -661,5 +653,6 @@
         output.textContent = names.join(", ");
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

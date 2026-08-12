@@ -1,0 +1,130 @@
+{% load static %}
+
+<style>
+    .bottom-nav {
+        grid-template-columns:
+            repeat(6, 1fr) !important;
+    }
+
+    .notification-nav-wrap {
+        position: relative;
+    }
+
+    .notification-nav-badge {
+        position: absolute;
+        top: 4px;
+        right: calc(50% - 20px);
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #b42318;
+        color: #ffffff;
+        font-size: 9px;
+        font-weight: 800;
+    }
+</style>
+
+
+<nav class="bottom-nav">
+
+    <a
+        href="{% url 'citizens:dashboard' %}"
+        class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/icons/dashboard.png' %}"
+                alt="Dashboard"
+                class="nav-icon-img"
+            >
+        </span>
+        Dashboard
+    </a>
+
+
+    <a
+        href="{% url 'citizens:properties' %}"
+        class="{% if request.resolver_match.url_name == 'properties' %}active{% endif %}"
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/property.png' %}"
+                alt="Properties"
+            >
+        </span>
+        Properties
+    </a>
+
+
+    <a
+        href="{% url 'citizens:bills' %}"
+        class="{% if request.resolver_match.url_name == 'bills' or request.resolver_match.url_name == 'bill-detail' %}active{% endif %}"
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/bill.png' %}"
+                alt="Bills"
+            >
+        </span>
+        Bills
+    </a>
+
+
+    <a
+        href="{% url 'citizens:certificates' %}"
+        class="{% if request.resolver_match.url_name == 'certificates' %}active{% endif %}"
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/qr-code.png' %}"
+                alt="Certificates"
+            >
+        </span>
+        Certificates
+    </a>
+
+
+    <a
+        href="{% url 'notifications' %}"
+        class="
+            notification-nav-wrap
+            {% if request.resolver_match.url_name == 'notifications' %}
+                active
+            {% endif %}
+        "
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/icons/notification.png' %}"
+                alt="Notifications"
+            >
+        </span>
+
+        Notifications
+
+        {% if unread_notification_count %}
+            <span class="notification-nav-badge">
+                {{ unread_notification_count }}
+            </span>
+        {% endif %}
+    </a>
+
+
+    <a
+        href="{% url 'citizens:profile' %}"
+        class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}"
+    >
+        <span class="nav-ico nav-img">
+            <img
+                src="{% static 'images/settings.png' %}"
+                alt="Profile"
+            >
+        </span>
+        Profile
+    </a>
+
+</nav>

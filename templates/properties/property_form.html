@@ -923,15 +923,6 @@
             {% endif %}
         </div>
 
-        {% if messages %}
-            <div class="message-stack">
-                {% for message in messages %}
-                    <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
 
         {% if form.non_field_errors %}
             <div class="message error">
@@ -1995,6 +1986,6 @@
         });
     });
 </script>
-
+{% include "shared/message_modal.html" %}
 </body>
 </html>

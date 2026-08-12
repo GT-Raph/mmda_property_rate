@@ -1440,16 +1440,27 @@ def citizen_payment_confirm(request):
         return redirect("portal-login")
 
     owner = _citizen_owner_or_none(request)
+
     if not owner:
         return redirect("citizens:bills")
 
-    context_assembly = _get_current_assembly(request)
+    context_assembly = _get_current_assembly(
+        request
+    )
 
     if request.method == "POST":
-        selected_bill_ids = request.POST.getlist("bill_ids")
-        form = CitizenPaymentForm(request.POST)
+        selected_bill_ids = (
+            request.POST.getlist("bill_ids")
+        )
+        form = CitizenPaymentForm(
+            request.POST
+        )
+
     else:
-        selected_bill_ids = request.GET.getlist("bill")
+        selected_bill_ids = (
+            request.GET.getlist("bill")
+        )
+
         if request.GET.get("all") == "1":
             selected_bill_ids = list(
                 Bill.objects
@@ -1474,7 +1485,17 @@ def citizen_payment_confirm(request):
                     flat=True,
                 )
             )
+
         form = CitizenPaymentForm()
+
+    if not selected_bill_ids:
+        messages.warning(
+            request,
+            "Select a bill to make payment.",
+        )
+        return redirect(
+            "citizens:bills"
+        )
 
     bills_qs = (
         Bill.objects
@@ -1489,6 +1510,12 @@ def citizen_payment_confirm(request):
             ),
             property_record__is_active=True,
         )
+        .exclude(
+            status__in=[
+                "paid",
+                "cancelled",
+            ]
+        )
         .select_related(
             "property_record",
             "rate_policy",
@@ -1496,9 +1523,66 @@ def citizen_payment_confirm(request):
     )
 
     if context_assembly:
-        bills_qs = bills_qs.filter(assembly=context_assembly)
+        bills_qs = bills_qs.filter(
+            assembly=context_assembly
+        )
 
     selected_bills = []
+    total_amount = Decimal("0.00")
+
+    for bill in bills_qs:
+        balance = _bill_balance(bill)
+
+        if balance <= 0:
+            continue
+
+        total_amount += balance
+
+        selected_bills.append(
+            {
+                "id": bill.id,
+                "account_number": (
+                    _account_number_for_property(
+                        bill.property_record
+                    )
+                ),
+                "location": (
+                    _property_location(
+                        bill.property_record
+                    )
+                ),
+                "current_fee": (
+                    _money_full(
+                        _current_fee_value(
+                            bill
+                        )
+                    )
+                ),
+                "arrears": (
+                    _money_full(
+                        _arrears_value(
+                            bill
+                        )
+                    )
+                ),
+                "penalty": (
+                    _money_full(
+                        _penalty_value(
+                            bill
+                        )
+                    )
+                ),
+                "balance": (
+                    _money_full(
+                        balance
+                    )
+                ),
+            }
+        )
+
+    # IMPORTANT:
+    # Do this comparison AFTER selected_bills
+    # has been populated.
     requested_ids = {
         str(value)
         for value in selected_bill_ids
@@ -1514,9 +1598,11 @@ def citizen_payment_confirm(request):
         messages.warning(
             request,
             (
-                "Payment is unavailable until "
-                "the property has been verified "
-                "by the MMDA."
+                "Payment is unavailable for one "
+                "or more selected bills. The "
+                "property must be verified and "
+                "the bill must have an outstanding "
+                "balance."
             ),
         )
 
@@ -1524,11 +1610,7 @@ def citizen_payment_confirm(request):
             "citizens:bills"
         )
 
-    if (
-        request.method == "GET"
-        and request.GET.get("all") == "1"
-        and not selected_bills
-    ):
+    if not selected_bills:
         messages.warning(
             request,
             (
@@ -1540,45 +1622,66 @@ def citizen_payment_confirm(request):
         return redirect(
             "citizens:bills"
         )
-    total_amount = Decimal("0.00")
 
-    for bill in bills_qs:
-        balance = _bill_balance(bill)
-        total_amount += balance
-        selected_bills.append(
-            {
-                "id": bill.id,
-                "account_number": _account_number_for_property(bill.property_record),
-                "location": _property_location(bill.property_record),
-                "current_fee": _money_full(_current_fee_value(bill)),
-                "arrears": _money_full(_arrears_value(bill)),
-                "penalty": _money_full(_penalty_value(bill)),
-                "balance": _money_full(balance),
-            }
+    if (
+        request.method == "POST"
+        and form.is_valid()
+    ):
+        request.session[
+            "citizen_payment_payload"
+        ] = {
+            "bill_ids": [
+                item["id"]
+                for item in selected_bills
+            ],
+            "network": (
+                form.cleaned_data["network"]
+            ),
+            "mobile_number": (
+                form.cleaned_data[
+                    "mobile_number"
+                ]
+            ),
+            "total_amount": str(
+                total_amount
+            ),
+        }
+
+        request.session.pop(
+            "citizen_payment_result",
+            None,
         )
 
-    if request.method == "POST" and form.is_valid() and selected_bills:
-        request.session["citizen_payment_payload"] = {
-            "bill_ids": [item["id"] for item in selected_bills],
-            "network": form.cleaned_data["network"],
-            "mobile_number": form.cleaned_data["mobile_number"],
-            "total_amount": str(total_amount),
-        }
-        request.session.pop("citizen_payment_result", None)
         request.session.modified = True
-        return redirect("citizens:payment-processing")
+
+        return redirect(
+            "citizens:payment-processing"
+        )
 
     context = {
         "page_title": "Confirm Payment",
-        "owner_name": _owner_name(owner),
-        "owner_short_name": request.user.first_name or _owner_name(owner).split()[0],
+        "owner_name": (
+            _owner_name(owner)
+        ),
+        "owner_short_name": (
+            request.user.first_name
+            or _owner_name(owner).split()[0]
+        ),
         "owner_role": "Property Owner",
         "selected_bills": selected_bills,
-        "total_amount": _money_full(total_amount),
+        "total_amount": (
+            _money_full(
+                total_amount
+            )
+        ),
         "form": form,
     }
-    return render(request, "citizens/payment_confirm.html", context)
 
+    return render(
+        request,
+        "citizens/payment_confirm.html",
+        context,
+    )
 
 @login_required
 def citizen_payment_processing(request):

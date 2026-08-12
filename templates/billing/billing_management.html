@@ -966,17 +966,7 @@
                 <button type="submit" form="generateBillsForm" class="generate-btn">Generate Bills</button>
             </div>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="message-box
-                        {% if message.tags == 'success' %}message-success
-                        {% elif message.tags == 'info' %}message-info
-                        {% elif message.tags == 'warning' %}message-warning
-                        {% else %}message-error{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+
 
             <section class="card chart-card">
                 <div class="chart-card-head">
@@ -1231,5 +1221,6 @@
         });
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

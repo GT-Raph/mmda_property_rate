@@ -429,12 +429,13 @@ def add_property(request):
                         request,
                         (
                             "Citizen account created for "
-                            f"{owner.full_name}. "
+                            f"{owner.full_name}.\n\n"
                             "Phone number: "
-                            f"{account_result['login_phone']} | "
+                            f"{account_result['login_phone']}\n"
                             "Temporary password: "
                             f"{account_result['temporary_password']}"
                         ),
+                        extra_tags="credentials",
                     )
 
                 elif account_result.get("linked"):

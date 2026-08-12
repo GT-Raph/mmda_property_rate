@@ -261,3 +261,116 @@ class LoginAudit(TimeStampedModel):
             f"{self.user.get_username()} - "
             f"{self.device_name or 'Session'}"
         )
+
+
+class UserNotification(TimeStampedModel):
+    LEVEL_CHOICES = [
+        ("info", "Information"),
+        ("success", "Success"),
+        ("warning", "Warning"),
+        ("error", "Error"),
+    ]
+
+    TYPE_CHOICES = [
+        (
+            "property_verified",
+            "Property Verified",
+        ),
+        (
+            "property_update",
+            "Property Update",
+        ),
+        (
+            "payment",
+            "Payment",
+        ),
+        (
+            "billing",
+            "Billing",
+        ),
+        (
+            "assignment",
+            "Assignment",
+        ),
+        (
+            "system",
+            "System",
+        ),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="system_notifications",
+    )
+
+    notification_type = models.CharField(
+        max_length=40,
+        choices=TYPE_CHOICES,
+        default="system",
+    )
+
+    level = models.CharField(
+        max_length=20,
+        choices=LEVEL_CHOICES,
+        default="info",
+    )
+
+    title = models.CharField(
+        max_length=160,
+    )
+
+    message = models.TextField()
+
+    action_url = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    is_read = models.BooleanField(
+        default=False,
+    )
+
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-created_at",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "user",
+                    "is_read",
+                    "-created_at",
+                ],
+                name=(
+                    "admins_notif_user_read_idx"
+                ),
+            ),
+        ]
+
+    def mark_read(self):
+        if self.is_read:
+            return
+
+        self.is_read = True
+        self.read_at = timezone.now()
+
+        self.save(
+            update_fields=[
+                "is_read",
+                "read_at",
+                "updated_at",
+            ]
+        )
+
+    def __str__(self):
+        return (
+            f"{self.user.get_username()} - "
+            f"{self.title}"
+        )

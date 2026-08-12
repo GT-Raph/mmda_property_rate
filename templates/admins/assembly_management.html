@@ -1001,16 +1001,7 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
-            {% if messages %}
-                <div class="message-stack">
-                    {% for message in messages %}
-                        <div class="message-box {% if message.tags == 'success' %}message-success{% else %}message-error{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
+           
             {% if assembly %}
                 <section class="card hero-card">
                     <div class="hero-left">
@@ -1191,5 +1182,6 @@
         window.location.href = "{% url 'admins:assembly-management' %}";
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

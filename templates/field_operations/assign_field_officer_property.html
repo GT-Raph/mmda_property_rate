@@ -373,15 +373,7 @@
                 <p>{{ page_subtitle }}</p>
             </header>
 
-            {% if messages %}
-                <div class="messages">
-                    {% for message in messages %}
-                        <div class="message {{ message.tags }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+
 
             <div class="layout">
 
@@ -607,6 +599,6 @@
         </div>
 
     </main>
-
+{% include "shared/message_modal.html" %}
 </body>
 </html>

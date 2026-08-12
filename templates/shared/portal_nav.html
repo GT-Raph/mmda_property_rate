@@ -1,11 +1,11 @@
-{% if portal_role == 'field_officer' or is_field_officer %}
+{% if portal_role == "field_officer" or is_field_officer %}
 
     <a
         href="{% url 'field_operations:field-operations' %}"
         class="{% if request.resolver_match.url_name == 'field-operations' %}active{% endif %}"
     >
         <span class="nav-icon">
-            {% include 'shared/nav_icon.html' with icon='dashboard' %}
+            {% include "shared/nav_icon.html" with icon="dashboard" %}
         </span>
         <span>Dashboard</span>
     </a>
@@ -15,7 +15,7 @@
         class="{% if request.resolver_match.url_name == 'field-officer-assignments' %}active{% endif %}"
     >
         <span class="nav-icon">
-            {% include 'shared/nav_icon.html' with icon='assignment' %}
+            {% include "shared/nav_icon.html" with icon="assignment" %}
         </span>
         <span>Assignments</span>
     </a>
@@ -25,7 +25,7 @@
         class="{% if request.resolver_match.url_name == 'field-officer-verify' or request.resolver_match.url_name == 'field-officer-verify-property' %}active{% endif %}"
     >
         <span class="nav-icon">
-            {% include 'shared/nav_icon.html' with icon='verify' %}
+            {% include "shared/nav_icon.html" with icon="verify" %}
         </span>
         <span>Verification</span>
     </a>
@@ -35,7 +35,7 @@
         class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}"
     >
         <span class="nav-icon">
-            {% include 'shared/nav_icon.html' with icon='stats' %}
+            {% include "shared/nav_icon.html" with icon="stats" %}
         </span>
         <span>Statistics</span>
     </a>
@@ -46,11 +46,43 @@
             class="{% if '/properties/' in request.path %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='property' %}
+                {% include "shared/nav_icon.html" with icon="property" %}
             </span>
             <span>Properties</span>
         </a>
     {% endif %}
+
+    <a
+        href="{% url 'notifications' %}"
+        class="{% if request.resolver_match.url_name == 'notifications' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include "shared/nav_icon.html" with icon="notification" %}
+        </span>
+
+        <span>Notifications</span>
+
+        {% if unread_notification_count %}
+            <span
+                style="
+                    margin-left:auto;
+                    min-width:20px;
+                    height:20px;
+                    padding:0 6px;
+                    border-radius:999px;
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    background:#c7a541;
+                    color:#fff;
+                    font-size:10px;
+                    font-weight:800;
+                "
+            >
+                {{ unread_notification_count }}
+            </span>
+        {% endif %}
+    </a>
 
     {% if portal_access.settings %}
         <a
@@ -58,11 +90,12 @@
             class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='settings' %}
+                {% include "shared/nav_icon.html" with icon="settings" %}
             </span>
             <span>Settings</span>
         </a>
     {% endif %}
+
 
 {% else %}
 
@@ -72,7 +105,7 @@
             class="{% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='dashboard' %}
+                {% include "shared/nav_icon.html" with icon="dashboard" %}
             </span>
             <span>Dashboard</span>
         </a>
@@ -84,7 +117,7 @@
             class="{% if '/properties/' in request.path %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='property' %}
+                {% include "shared/nav_icon.html" with icon="property" %}
             </span>
             <span>Properties</span>
         </a>
@@ -96,7 +129,7 @@
             class="{% if '/billing/' in request.path %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='bill' %}
+                {% include "shared/nav_icon.html" with icon="bill" %}
             </span>
             <span>Billing &amp; Payments</span>
         </a>
@@ -108,7 +141,7 @@
             class="{% if '/field-operations/' in request.path %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='field' %}
+                {% include "shared/nav_icon.html" with icon="field" %}
             </span>
             <span>Field Officers</span>
         </a>
@@ -120,7 +153,7 @@
             class="{% if request.resolver_match.url_name == 'reports-analytics' %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='report' %}
+                {% include "shared/nav_icon.html" with icon="report" %}
             </span>
             <span>Reports</span>
         </a>
@@ -132,11 +165,43 @@
             class="{% if request.resolver_match.url_name == 'assembly-management' %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='assembly' %}
+                {% include "shared/nav_icon.html" with icon="assembly" %}
             </span>
             <span>Assembly</span>
         </a>
     {% endif %}
+
+    <a
+        href="{% url 'notifications' %}"
+        class="{% if request.resolver_match.url_name == 'notifications' %}active{% endif %}"
+    >
+        <span class="nav-icon">
+            {% include "shared/nav_icon.html" with icon="notification" %}
+        </span>
+
+        <span>Notifications</span>
+
+        {% if unread_notification_count %}
+            <span
+                style="
+                    margin-left:auto;
+                    min-width:20px;
+                    height:20px;
+                    padding:0 6px;
+                    border-radius:999px;
+                    display:inline-flex;
+                    align-items:center;
+                    justify-content:center;
+                    background:#c7a541;
+                    color:#fff;
+                    font-size:10px;
+                    font-weight:800;
+                "
+            >
+                {{ unread_notification_count }}
+            </span>
+        {% endif %}
+    </a>
 
     {% if portal_access.settings %}
         <a
@@ -144,7 +209,7 @@
             class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
         >
             <span class="nav-icon">
-                {% include 'shared/nav_icon.html' with icon='settings' %}
+                {% include "shared/nav_icon.html" with icon="settings" %}
             </span>
             <span>Settings</span>
         </a>

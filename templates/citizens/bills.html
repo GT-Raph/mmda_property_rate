@@ -594,42 +594,8 @@
         {% endif %}
     </main>
 
-    <nav class="bottom-nav">
-        <a href="{% url 'citizens:dashboard' %}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard" class="nav-icon-img">
-            </span>
-            Dashboard
-        </a>
-
-        <a href="{% url 'citizens:properties' %}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/property.png' %}" alt="Properties">
-            </span>
-            Properties
-        </a>
-
-        <a href="{% url 'citizens:bills' %}" class="active">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/bill.png' %}" alt="Bills">
-            </span>
-            Bills
-        </a>
-
-        <a href="{% url 'citizens:certificates' %}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
-            </span>
-            Certificates
-        </a>
-
-        <a href="{% url 'citizens:profile' %}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/settings.png' %}" alt="Profile">
-            </span>
-            Profile
-        </a>
-    </nav>
+    {% include "citizens/_bottom_nav.html" %}
     {% include "citizens/_payment_verification_modal.html" %}
+    {% include "shared/message_modal.html" %}
 </body>
 </html>

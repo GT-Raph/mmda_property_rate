@@ -962,13 +962,7 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="message-box {% if message.tags == 'success' %}message-success{% elif message.tags == 'info' %}message-info{% else %}message-error{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
+           
 
             <section class="card tabs-card">
                 <a href="?tab=profile" class="tab-link {% if active_tab == 'profile' %}active{% endif %}">
@@ -1288,5 +1282,6 @@
         document.getElementById("mobileOverlay").classList.remove("show");
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

@@ -946,20 +946,6 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
-            {% if messages %}
-                <div class="message-stack">
-                    {% for message in messages %}
-                        <div class="message-box
-                            {% if message.tags == 'success' %}message-success
-                            {% elif message.tags == 'info' %}message-info
-                            {% elif message.tags == 'warning' %}message-warning
-                            {% else %}message-error{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
             <section class="cards-grid">
                 {% for stat in stats %}
                     <div class="card stat-card">
@@ -1084,5 +1070,6 @@
         document.getElementById("mobileOverlay").classList.remove("show");
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

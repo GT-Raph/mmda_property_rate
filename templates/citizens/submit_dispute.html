@@ -560,42 +560,7 @@
         </section>
     </main>
 
-    <nav class="bottom-nav">
-        <a href="{{ section_links.dashboard }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/icons/dashboard.png' %}" alt="Dashboard">
-            </span>
-            Dashboard
-        </a>
-
-        <a href="{{ section_links.properties }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/property.png' %}" alt="Properties">
-            </span>
-            Properties
-        </a>
-
-        <a href="{{ section_links.bills }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/bill.png' %}" alt="Bills">
-            </span>
-            Bills
-        </a>
-
-        <a href="{{ section_links.certificates }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/qr-code.png' %}" alt="Certificates">
-            </span>
-            Certificates
-        </a>
-
-        <a href="{{ section_links.profile }}">
-            <span class="nav-ico nav-img">
-                <img src="{% static 'images/settings.png' %}" alt="Profile">
-            </span>
-            Profile
-        </a>
-    </nav>
+    {% include "shared/message_modal.html" %}
 
     <script>
         const menuOpen = document.getElementById("menuOpen");

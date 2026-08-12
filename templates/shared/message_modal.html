@@ -1,0 +1,242 @@
+{% if messages or latest_unread_notification %}
+
+<style>
+    .system-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: grid;
+        place-items: center;
+        padding: 20px;
+    }
+
+    .system-modal[hidden] {
+        display: none;
+    }
+
+    .system-modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,.58);
+    }
+
+    .system-modal-dialog {
+        position: relative;
+        width: min(470px, 100%);
+        max-height: 80vh;
+        overflow-y: auto;
+        padding: 26px;
+        border-radius: 16px;
+        background: #ffffff;
+        color: #171717;
+        box-shadow:
+            0 24px 70px
+            rgba(0,0,0,.25);
+    }
+
+    .system-modal-icon {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 14px;
+        border-radius: 50%;
+        background: #fff5d6;
+        color: #765a00;
+        font-size: 22px;
+        font-weight: 900;
+    }
+
+    .system-modal-dialog h2 {
+        margin: 0 0 15px;
+        font-size: 21px;
+    }
+
+    .system-message-item {
+        padding: 13px 0;
+        border-bottom: 1px solid #eeeeee;
+    }
+
+    .system-message-item:last-child {
+        border-bottom: 0;
+    }
+
+    .system-message-item strong {
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .system-message-item p {
+        margin: 0;
+        color: #5f5f5f;
+        line-height: 1.55;
+        white-space: pre-line;
+    }
+
+    .system-modal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        margin-top: 20px;
+    }
+
+    .system-modal-button {
+        min-height: 41px;
+        padding: 0 15px;
+        border: 0;
+        border-radius: 9px;
+        background: #c7a541;
+        color: #ffffff;
+        font-weight: 800;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .system-modal-button.secondary {
+        border: 1px solid #dddddd;
+        background: #ffffff;
+        color: #333333;
+    }
+</style>
+
+
+<div
+    id="systemNotificationModal"
+    class="system-modal"
+>
+    <div
+        class="system-modal-backdrop"
+    ></div>
+
+    <div
+        class="system-modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="systemModalTitle"
+    >
+        <div class="system-modal-icon">
+            !
+        </div>
+
+        <h2 id="systemModalTitle">
+            Notification
+        </h2>
+
+        {% for message in messages %}
+
+            <div class="system-message-item">
+
+                <strong>
+                    {% if "credentials" in message.tags %}
+                        Citizen Login Credentials
+
+                    {% elif "success" in message.tags %}
+                        Success
+
+                    {% elif "warning" in message.tags %}
+                        Attention
+
+                    {% elif "error" in message.tags %}
+                        Error
+
+                    {% else %}
+                        Information
+                    {% endif %}
+                </strong>
+
+                <p>{{ message }}</p>
+
+            </div>
+
+        {% endfor %}
+
+
+        {% if latest_unread_notification %}
+
+            <div class="system-message-item">
+
+                <strong>
+                    {{ latest_unread_notification.title }}
+                </strong>
+
+                <p>
+                    {{ latest_unread_notification.message }}
+                </p>
+
+            </div>
+
+        {% endif %}
+
+
+        <div class="system-modal-actions">
+
+            {% if latest_unread_notification %}
+
+                {% if latest_unread_notification.action_url %}
+
+                    <form
+                        method="post"
+                        action="{% url 'notification-mark-read' latest_unread_notification.id %}"
+                    >
+                        {% csrf_token %}
+
+                        <input
+                            type="hidden"
+                            name="next"
+                            value="{{ latest_unread_notification.action_url }}"
+                        >
+
+                        <button
+                            type="submit"
+                            class="system-modal-button"
+                        >
+                            View
+                        </button>
+                    </form>
+
+                {% endif %}
+
+                <form
+                    method="post"
+                    action="{% url 'notification-mark-read' latest_unread_notification.id %}"
+                >
+                    {% csrf_token %}
+
+                    <input
+                        type="hidden"
+                        name="next"
+                        value="{{ request.path }}"
+                    >
+
+                    <button
+                        type="submit"
+                        class="system-modal-button secondary"
+                    >
+                        Dismiss
+                    </button>
+                </form>
+
+            {% else %}
+
+                <button
+                    type="button"
+                    class="system-modal-button"
+                    onclick="
+                        document.getElementById(
+                            'systemNotificationModal'
+                        ).hidden = true;
+                    "
+                >
+                    Okay
+                </button>
+
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+{% endif %}

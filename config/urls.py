@@ -17,29 +17,124 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.auth.views import LogoutView
+from django.contrib.auth.views import (
+    LogoutView,
+)
 from django.urls import include, path
-from django.views.generic import RedirectView
+from django.views.generic import (
+    RedirectView,
+)
 
-from admins.views import AdminLoginView, CitizenLoginView, PortalLoginView
+from admins.views import (
+    AdminLoginView,
+    CitizenLoginView,
+    PortalLoginView,
+    mark_all_notifications_read,
+    mark_notification_read,
+    notifications_center,
+)
+
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(
+        "admin/",
+        admin.site.urls,
+    ),
 
-    # Separate authentication entry points.
-    path("", RedirectView.as_view(pattern_name="admin-login", permanent=False), name="portal-root"),
-    path("login/", PortalLoginView.as_view(), name="portal-login"),  # backwards-compatible admin login alias
-    path("admin-login/", AdminLoginView.as_view(), name="admin-login"),
-    path("owner/login/", CitizenLoginView.as_view(), name="owner-login"),
-    path("logout/", LogoutView.as_view(), name="logout"),
+    path(
+        "",
+        RedirectView.as_view(
+            pattern_name="admin-login",
+            permanent=False,
+        ),
+        name="portal-root",
+    ),
 
-    path("dashboard/", include("admins.urls")),
-    path("properties/", include("properties.urls")),
-    path("billing/", include("billing.urls")),
-    path("payments/", include("payments.urls")),
-    path("field-operations/", include("field_operations.urls")),
-    path("owner/", include("citizens.urls")),
+    path(
+        "login/",
+        PortalLoginView.as_view(),
+        name="portal-login",
+    ),
+
+    path(
+        "admin-login/",
+        AdminLoginView.as_view(),
+        name="admin-login",
+    ),
+
+    path(
+        "owner/login/",
+        CitizenLoginView.as_view(),
+        name="owner-login",
+    ),
+
+    path(
+        "logout/",
+        LogoutView.as_view(),
+        name="logout",
+    ),
+
+    # Notifications - available to every
+    # authenticated user.
+    path(
+        "notifications/",
+        notifications_center,
+        name="notifications",
+    ),
+
+    path(
+        (
+            "notifications/"
+            "<int:notification_id>/read/"
+        ),
+        mark_notification_read,
+        name="notification-mark-read",
+    ),
+
+    path(
+        "notifications/read-all/",
+        mark_all_notifications_read,
+        name="notifications-read-all",
+    ),
+
+    path(
+        "dashboard/",
+        include("admins.urls"),
+    ),
+
+    path(
+        "properties/",
+        include("properties.urls"),
+    ),
+
+    path(
+        "billing/",
+        include("billing.urls"),
+    ),
+
+    path(
+        "payments/",
+        include("payments.urls"),
+    ),
+
+    path(
+        "field-operations/",
+        include(
+            "field_operations.urls"
+        ),
+    ),
+
+    path(
+        "owner/",
+        include("citizens.urls"),
+    ),
 ]
 
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.MEDIA_URL,
+        document_root=(
+            settings.MEDIA_ROOT
+        ),
+    )

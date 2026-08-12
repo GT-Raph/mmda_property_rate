@@ -86,7 +86,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "admins.apps.AdminsConfig",
-    "properties",
+    "properties.apps.PropertiesConfig",
     "billing.apps.BillingConfig",
     "payments.apps.PaymentsConfig",
     "field_operations",

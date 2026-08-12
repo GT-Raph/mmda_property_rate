@@ -1,0 +1,342 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Notifications</title>
+
+    <style>
+        :root {
+            --gold: #c7a541;
+            --gold-hover: #b89432;
+            --bg: #f5f5f5;
+            --surface: #ffffff;
+            --border: #e5e5e5;
+            --text: #171717;
+            --muted: #747474;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .page {
+            width: min(
+                880px,
+                calc(100% - 30px)
+            );
+            margin: auto;
+            padding: 30px 0 110px;
+        }
+
+        .back {
+            display: inline-flex;
+            margin-bottom: 18px;
+            color: #755b10;
+            font-weight: 800;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            margin: 7px 0 0;
+            color: var(--muted);
+        }
+
+        .mark-all {
+            min-height: 41px;
+            padding: 0 14px;
+            border: 0;
+            border-radius: 9px;
+            background: var(--gold);
+            color: #ffffff;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .notification-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .notification-card {
+            padding: 17px;
+            border: 1px solid var(--border);
+            border-radius: 13px;
+            background: var(--surface);
+        }
+
+        .notification-card.unread {
+            border-left:
+                4px solid var(--gold);
+        }
+
+        .notification-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .notification-title {
+            font-weight: 900;
+        }
+
+        .notification-time {
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .notification-message {
+            margin: 8px 0 0;
+            color: #606060;
+            line-height: 1.55;
+        }
+
+        .notification-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 13px;
+        }
+
+        .button {
+            min-height: 36px;
+            padding: 0 12px;
+            border: 0;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .button.secondary {
+            border: 1px solid #dddddd;
+            background: #ffffff;
+            color: #333333;
+        }
+
+        .empty {
+            padding: 40px 20px;
+            border: 1px dashed #cccccc;
+            border-radius: 13px;
+            background: #ffffff;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                display: block;
+            }
+
+            .mark-all {
+                margin-top: 15px;
+            }
+
+            .notification-top {
+                display: block;
+            }
+
+            .notification-time {
+                display: block;
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="page">
+
+        <a
+            href="{{ back_url }}"
+            class="back"
+        >
+            ← Back
+        </a>
+
+        <header class="header">
+
+            <div>
+                <h1>Notifications</h1>
+
+                <p class="subtitle">
+                    {% if unread_count %}
+                        {{ unread_count }}
+                        unread notification{{ unread_count|pluralize }}
+                    {% else %}
+                        You are all caught up.
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if unread_count %}
+                <form
+                    method="post"
+                    action="{% url 'notifications-read-all' %}"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="mark-all"
+                    >
+                        Mark All Read
+                    </button>
+                </form>
+            {% endif %}
+
+        </header>
+
+
+        <section class="notification-list">
+
+            {% for notification in notifications %}
+
+                <article
+                    class="
+                        notification-card
+                        {% if not notification.is_read %}
+                            unread
+                        {% endif %}
+                    "
+                >
+
+                    <div class="notification-top">
+
+                        <div class="notification-title">
+                            {{ notification.title }}
+                        </div>
+
+                        <div class="notification-time">
+                            {{ notification.created_at|timesince }}
+                            ago
+                        </div>
+
+                    </div>
+
+                    <p class="notification-message">
+                        {{ notification.message }}
+                    </p>
+
+                    {% if not notification.is_read or notification.action_url %}
+
+                        <div class="notification-actions">
+
+                            {% if notification.action_url %}
+
+                                <form
+                                    method="post"
+                                    action="{% url 'notification-mark-read' notification.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="{{ notification.action_url }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="button"
+                                    >
+                                        View
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+
+                            {% if not notification.is_read %}
+
+                                <form
+                                    method="post"
+                                    action="{% url 'notification-mark-read' notification.id %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="{% url 'notifications' %}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="button secondary"
+                                    >
+                                        Mark Read
+                                    </button>
+                                </form>
+
+                            {% endif %}
+
+                        </div>
+
+                    {% endif %}
+
+                </article>
+
+            {% empty %}
+
+                <div class="empty">
+                    You do not have any
+                    notifications yet.
+                </div>
+
+            {% endfor %}
+
+        </section>
+
+    </main>
+
+
+    {% if is_citizen %}
+        {% include "citizens/_bottom_nav.html" %}
+    {% endif %}
+
+
+    {% include "shared/message_modal.html" %}
+
+</body>
+</html>

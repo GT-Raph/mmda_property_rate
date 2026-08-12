@@ -770,90 +770,17 @@
 <div class="layout">
     <aside class="sidebar" id="sidebar">
         <div class="brand">
-            <h2>Admin Portal</h2>
-            <p>MMDA Management</p>
+            {% if portal_role == "field_officer" %}
+                <h2>Field Officer</h2>
+                <p>Field Operations</p>
+            {% else %}
+                <h2>Admin Portal</h2>
+                <p>MMDA Management</p>
+            {% endif %}
         </div>
 
         <nav class="nav">
             {% include "shared/portal_nav.html" %}
-            {% if portal_access.dashboard %}
-                <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='dashboard' %}</span>
-                    <span>Dashboard</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.properties %}
-                <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='property' %}</span>
-                    <span>Properties</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
-                    <span>Billing & Payments</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}" class="{% if request.resolver_match.url_name == 'field-operations' %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
-                    <span>
-                        {% if is_field_officer or request.user.profile.role == 'field_officer' %}
-                            Dashboard
-                        {% else %}
-                            Field Officers
-                        {% endif %}
-                    </span>
-                </a>
-
-                {% if is_field_officer or request.user.profile.role == 'field_officer' %}
-                    <a href="{% url 'field_operations:field-officer-verify' %}" class="{% if request.resolver_match.url_name == 'field-officer-verify' or request.resolver_match.url_name == 'field-officer-verify-property' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"></circle>
-                                <path d="M8.5 12.2L10.8 14.5L15.8 9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-                            </svg>
-                        </span>
-                        <span>Verify</span>
-                    </a>
-
-                    <a href="{% url 'field_operations:field-officer-stats' %}" class="{% if request.resolver_match.url_name == 'field-officer-stats' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                <path d="M5 19V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                                <path d="M12 19V5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                                <path d="M19 19V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                                <path d="M4 19H20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                            </svg>
-                        </span>
-                        <span>Stats</span>
-                    </a>
-                {% endif %}
-            {% endif %}
-
-            {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
-                    <span>Reports</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}" class="{% if '/dashboard/assembly/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='assembly' %}</span>
-                    <span>Assembly</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='settings' %}</span>
-                    <span>Settings</span>
-                </a>
-            {% endif %}
         </nav>
 
         <div class="sidebar-footer">
@@ -955,15 +882,7 @@
                 </a>
             </div>
 
-            {% if messages %}
-                <div class="message-stack">
-                    {% for message in messages %}
-                        <div class="message {% if message.tags == 'success' %}success{% else %}error{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            
 
             <section class="card registry-card">
                 <form method="get" class="toolbar">
@@ -1145,5 +1064,6 @@
         document.getElementById("mobileOverlay").classList.remove("show");
     }
 </script>
+{% include "shared/message_modal.html" %}
 </body>
 </html>

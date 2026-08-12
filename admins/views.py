@@ -8,7 +8,20 @@ from django import forms
 import qrcode
 from django import forms
 from django.contrib import messages
-from django.contrib.auth import authenticate, get_user_model, update_session_auth_hash
+from django.contrib.auth import (
+    authenticate,
+    get_user_model,
+    update_session_auth_hash,
+)
+from django.contrib.auth.decorators import (
+    login_required,
+)
+from django.utils.http import (
+    url_has_allowed_host_and_scheme,
+)
+from django.views.decorators.http import (
+    require_POST,
+)
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
@@ -32,7 +45,14 @@ from admins.forms import (
     ProfileSettingsForm,
     TotpVerifyForm,
 )
-from admins.models import AdminPreference, Assembly, LoginAudit, ReportRun, UserProfile
+from admins.models import (
+    AdminPreference,
+    Assembly,
+    LoginAudit,
+    ReportRun,
+    UserNotification,
+    UserProfile,
+)
 from billing.models import Bill, BillDispute
 from field_operations.models import FieldVisit
 from payments.models import Payment
@@ -1802,3 +1822,108 @@ def revoke_session(request, audit_id):
         messages.success(request, "Session revoked successfully.")
 
     return redirect(_settings_url("security"))
+
+
+@login_required
+def notifications_center(request):
+    notifications = (
+        UserNotification.objects
+        .filter(
+            user=request.user,
+        )
+        .order_by(
+            "-created_at",
+        )
+    )
+
+    role = get_user_role(
+        request.user
+    )
+
+    context = {
+        "page_title": "Notifications",
+        "notifications": notifications,
+        "unread_count": (
+            notifications.filter(
+                is_read=False,
+            ).count()
+        ),
+        "portal_access": (
+            get_allowed_modules(
+                request.user
+            )
+        ),
+        "portal_role": role,
+        "is_field_officer": (
+            role == "field_officer"
+        ),
+        "is_citizen": (
+            role == "citizen"
+        ),
+        "back_url": (
+            landing_url_for_user(
+                request.user
+            )
+        ),
+    }
+
+    return render(
+        request,
+        "shared/notifications.html",
+        context,
+    )
+
+
+@login_required
+@require_POST
+def mark_notification_read(
+    request,
+    notification_id,
+):
+    notification = get_object_or_404(
+        UserNotification,
+        id=notification_id,
+        user=request.user,
+    )
+
+    notification.mark_read()
+
+    next_url = (
+        request.POST.get("next")
+        or ""
+    ).strip()
+
+    if not url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={
+            request.get_host()
+        },
+        require_https=(
+            request.is_secure()
+        ),
+    ):
+        next_url = reverse(
+            "notifications"
+        )
+
+    return redirect(
+        next_url
+    )
+
+
+@login_required
+@require_POST
+def mark_all_notifications_read(
+    request,
+):
+    UserNotification.objects.filter(
+        user=request.user,
+        is_read=False,
+    ).update(
+        is_read=True,
+        read_at=timezone.now(),
+    )
+
+    return redirect(
+        "notifications"
+    )
