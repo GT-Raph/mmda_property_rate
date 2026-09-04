@@ -857,8 +857,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="portal-shell">
 <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
 <div class="layout">
@@ -868,55 +870,8 @@
             <p>MMDA Management</p>
         </div>
 
-        <nav class="nav">
-            {% if portal_access.dashboard %}
-                <a href="{% url 'admins:admin-dashboard' %}" class="{% if request.path == '/dashboard/' %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='dashboard' %}</span>
-                    <span>Dashboard</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.properties %}
-                <a href="{% url 'properties:property-registry' %}" class="{% if '/properties/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='property' %}</span>
-                    <span>Properties</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.billing %}
-                <a href="{% url 'billing:billing-management' %}" class="{% if '/billing/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='bill' %}</span>
-                    <span>Billing & Payments</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.field_operations %}
-                <a href="{% url 'field_operations:field-operations' %}" class="{% if '/field-operations/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='field' %}</span>
-                    <span>Field Officers</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.reports %}
-                <a href="{% url 'admins:reports-analytics' %}" class="{% if '/dashboard/reports/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='report' %}</span>
-                    <span>Reports</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.assembly %}
-                <a href="{% url 'admins:assembly-management' %}" class="active">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='assembly' %}</span>
-                    <span>Assembly</span>
-                </a>
-            {% endif %}
-
-            {% if portal_access.settings %}
-                <a href="{% url 'admins:settings' %}" class="{% if '/dashboard/settings/' in request.path %}active{% endif %}">
-                    <span class="nav-icon">{% include 'shared/nav_icon.html' with icon='settings' %}</span>
-                    <span>Settings</span>
-                </a>
-            {% endif %}
+        <nav class="nav" aria-label="Primary navigation">
+            {% include "shared/portal_nav.html" %}
         </nav>
 
         <div class="sidebar-footer">
@@ -932,24 +887,19 @@
                     <span class="menu-bars"><span></span><span></span><span></span></span>
                 </button>
 
-                <div class="search-wrap">
-                    <span class="search-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none">
-                            <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"></circle>
-                            <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <input type="text" placeholder="Search properties, bills, payments...">
+                <div class="topbar-context">
+                    <span class="context-eyebrow">Administration</span>
+                    <span class="context-title">Assembly management</span>
                 </div>
             </div>
 
             <div class="topbar-right">
-                <button class="notification-btn" type="button" aria-label="Notifications">
-                    <svg viewBox="0 0 24 24" fill="none">
+                <a href="{% url 'notifications' %}" class="notification-btn{% if unread_notification_count %} has-unread{% endif %}" aria-label="Notifications{% if unread_notification_count %}, {{ unread_notification_count }} unread{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M12 3C9.239 3 7 5.239 7 8V10.2C7 11.26 6.579 12.277 5.828 13.028L4.757 14.1C4.127 14.73 4.573 15.8 5.464 15.8H18.536C19.427 15.8 19.873 14.73 19.243 14.1L18.172 13.028C17.421 12.277 17 11.26 17 10.2V8C17 5.239 14.761 3 12 3Z" stroke="currentColor" stroke-width="1.8"/>
                         <path d="M10 18C10.35 19.05 11.1 19.6 12 19.6C12.9 19.6 13.65 19.05 14 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                     </svg>
-                </button>
+                </a>
 
                 <div class="user-box" id="userMenu">
                     <button class="user-trigger" type="button" id="userMenuButton" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">

@@ -1,35 +1,6 @@
 {% load static %}
 
-<style>
-    .bottom-nav {
-        grid-template-columns:
-            repeat(6, 1fr) !important;
-    }
-
-    .notification-nav-wrap {
-        position: relative;
-    }
-
-    .notification-nav-badge {
-        position: absolute;
-        top: 4px;
-        right: calc(50% - 20px);
-        min-width: 17px;
-        height: 17px;
-        padding: 0 4px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #b42318;
-        color: #ffffff;
-        font-size: 9px;
-        font-weight: 800;
-    }
-</style>
-
-
-<nav class="bottom-nav">
+<nav class="bottom-nav" aria-label="Owner portal navigation">
 
     <a
         href="{% url 'citizens:dashboard' %}"
@@ -38,8 +9,9 @@
         <span class="nav-ico nav-img">
             <img
                 src="{% static 'images/icons/dashboard.png' %}"
-                alt="Dashboard"
+                alt=""
                 class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
         Dashboard
@@ -48,12 +20,14 @@
 
     <a
         href="{% url 'citizens:properties' %}"
-        class="{% if request.resolver_match.url_name == 'properties' %}active{% endif %}"
+        class="{% if request.resolver_match.url_name == 'properties' or request.resolver_match.url_name == 'property-bills' or request.resolver_match.url_name == 'property-certificate' %}active{% endif %}"
     >
         <span class="nav-ico nav-img">
             <img
-                src="{% static 'images/property.png' %}"
-                alt="Properties"
+                src="{% static 'images/icons/property.png' %}"
+                alt=""
+                class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
         Properties
@@ -66,8 +40,10 @@
     >
         <span class="nav-ico nav-img">
             <img
-                src="{% static 'images/bill.png' %}"
-                alt="Bills"
+                src="{% static 'images/icons/bill.png' %}"
+                alt=""
+                class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
         Bills
@@ -80,8 +56,10 @@
     >
         <span class="nav-ico nav-img">
             <img
-                src="{% static 'images/qr-code.png' %}"
-                alt="Certificates"
+                src="{% static 'images/icons/qr-code.png' %}"
+                alt=""
+                class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
         Certificates
@@ -100,7 +78,9 @@
         <span class="nav-ico nav-img">
             <img
                 src="{% static 'images/icons/notification.png' %}"
-                alt="Notifications"
+                alt=""
+                class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
 
@@ -109,6 +89,7 @@
         {% if unread_notification_count %}
             <span class="notification-nav-badge">
                 {{ unread_notification_count }}
+                <span class="visually-hidden"> unread</span>
             </span>
         {% endif %}
     </a>
@@ -120,8 +101,10 @@
     >
         <span class="nav-ico nav-img">
             <img
-                src="{% static 'images/settings.png' %}"
-                alt="Profile"
+                src="{% static 'images/icons/settings.png' %}"
+                alt=""
+                class="nav-icon-img"
+                aria-hidden="true"
             >
         </span>
         Profile

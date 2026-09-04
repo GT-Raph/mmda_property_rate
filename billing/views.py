@@ -270,6 +270,7 @@ def billing_management(request):
             {
                 "id": bill.id,
                 "bill_no": bill.bill_number,
+                "property_id": getattr(property_record, "id", None),
                 "property_ref": getattr(property_record, "property_reference", "—"),
                 "owner_name": getattr(owner, "full_name", "—"),
                 "rateable_value": _money(_get_rateable_value(bill)),

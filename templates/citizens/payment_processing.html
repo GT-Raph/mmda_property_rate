@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,8 +14,10 @@
         h1{margin:0 0 12px;font-size:28px;font-weight:800}.sub{color:#737887;font-size:16px;max-width:420px;margin:0 auto}
         @keyframes spin{to{transform:rotate(360deg)}}
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
 <header class="topbar">
     <div class="topbar-left">
         <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
@@ -27,10 +30,10 @@
 </header>
 
 <main class="page">
-    <div>
-        <div class="spinner"></div>
+    <div role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
         <h1>Processing Payment...</h1>
-        <p class="sub">Please wait while we process your transaction</p>
+        <p class="sub">Please keep this page open while we confirm your transaction.</p>
     </div>
 </main>
 

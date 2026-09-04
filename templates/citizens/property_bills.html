@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +15,7 @@
         .page {
             max-width: 900px;
             margin: 0 auto;
-            padding: 24px 18px 40px;
+            padding: 24px 18px 120px;
         }
         .back-link {
             display: inline-block;
@@ -107,8 +108,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
     <main class="page">
         <a href="{% url 'citizens:properties' %}" class="back-link">Back to My Properties</a>
 
@@ -149,5 +152,7 @@
             {% endif %}
         </section>
     </main>
+    {% include "citizens/_bottom_nav.html" %}
+    {% include "shared/message_modal.html" %}
 </body>
 </html>

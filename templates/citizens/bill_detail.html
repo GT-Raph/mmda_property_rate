@@ -25,7 +25,7 @@
 
         body {
             margin: 0;
-            padding: 30px 15px;
+            padding: 30px 15px 110px;
             background: #f5f5f5;
             font-family:
                 Arial,
@@ -155,9 +155,11 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
 
-<body>
+<body class="citizen-shell">
 
     <main class="page">
 
@@ -320,5 +322,6 @@
 
     {% include "citizens/_payment_verification_modal.html" %}
     {% include "shared/message_modal.html" %}
+    {% include "citizens/_bottom_nav.html" %}
 </body>
 </html>

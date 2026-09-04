@@ -188,8 +188,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
     <header class="topbar">
         <div class="topbar-left">
             <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
@@ -262,7 +264,7 @@
 
             <div class="actions">
                 <a href="{{ download_url }}" class="btn btn-gold">Download Certificate</a>
-                <a href="{{ verify_url }}" class="btn btn-white" target="_blank">Open Verification Page</a>
+                <a href="{{ verify_url }}" class="btn btn-white" target="_blank" rel="noopener">Open Verification Page</a>
             </div>
         </section>
     </main>

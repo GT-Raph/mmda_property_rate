@@ -63,23 +63,9 @@
         <span>Notifications</span>
 
         {% if unread_notification_count %}
-            <span
-                style="
-                    margin-left:auto;
-                    min-width:20px;
-                    height:20px;
-                    padding:0 6px;
-                    border-radius:999px;
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    background:#c7a541;
-                    color:#fff;
-                    font-size:10px;
-                    font-weight:800;
-                "
-            >
+            <span class="portal-nav-badge">
                 {{ unread_notification_count }}
+                <span class="visually-hidden"> unread</span>
             </span>
         {% endif %}
     </a>
@@ -182,23 +168,9 @@
         <span>Notifications</span>
 
         {% if unread_notification_count %}
-            <span
-                style="
-                    margin-left:auto;
-                    min-width:20px;
-                    height:20px;
-                    padding:0 6px;
-                    border-radius:999px;
-                    display:inline-flex;
-                    align-items:center;
-                    justify-content:center;
-                    background:#c7a541;
-                    color:#fff;
-                    font-size:10px;
-                    font-weight:800;
-                "
-            >
+            <span class="portal-nav-badge">
                 {{ unread_notification_count }}
+                <span class="visually-hidden"> unread</span>
             </span>
         {% endif %}
     </a>

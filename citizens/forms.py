@@ -99,11 +99,18 @@ class CitizenPaymentForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["network"].widget.attrs.update({"class": "form-select"})
+        self.fields["network"].widget.attrs.update(
+            {
+                "class": "form-select",
+                "autocomplete": "off",
+            }
+        )
         self.fields["mobile_number"].widget.attrs.update(
             {
                 "class": "form-input",
                 "placeholder": "0XX XXX XXXX",
+                "autocomplete": "tel",
+                "inputmode": "tel",
             }
         )
 

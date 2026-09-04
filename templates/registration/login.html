@@ -340,13 +340,15 @@
         }
 
         .forgot-link {
-            color: #d4a018;
-            font-size: 14px;
-            text-decoration: none;
+            max-width: 230px;
+            color: #667085;
+            font-size: 13px;
+            line-height: 1.35;
+            text-align: right;
         }
 
         .forgot-link:hover {
-            text-decoration: underline;
+            text-decoration: none;
         }
 
         .note-box {
@@ -462,9 +464,11 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
 
-<body>
+<body class="auth-shell">
     <main class="page">
         <section class="card">
             <div class="logo-wrap">
@@ -702,12 +706,9 @@
                             <span>Remember me</span>
                         </label>
 
-                        <a
-                            href="#"
-                            class="forgot-link"
-                        >
-                            Forgot Password
-                        </a>
+                        <span class="forgot-link" title="Contact your MMDA administrator for a password reset">
+                            Password help: contact your administrator
+                        </span>
                     </div>
                 </form>
 

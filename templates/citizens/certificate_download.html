@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -114,8 +115,10 @@
             .card { border: 0; }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
     <main class="page">
         <section class="card">
             <div class="head">
@@ -183,7 +186,7 @@
 
             <div class="actions">
                 <a href="{% url 'citizens:certificates' %}" class="btn btn-white">Back</a>
-                <button class="btn btn-gold" onclick="window.print()">Download / Print</button>
+                <button type="button" class="btn btn-gold" onclick="window.print()">Print / Save PDF</button>
             </div>
         </section>
     </main>

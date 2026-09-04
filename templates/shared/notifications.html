@@ -181,9 +181,11 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
 
-<body>
+<body class="notification-shell{% if is_citizen %} citizen-shell{% endif %}">
 
     <main class="page">
 
@@ -220,7 +222,7 @@
                         type="submit"
                         class="mark-all"
                     >
-                        Mark All Read
+                        Mark all as read
                     </button>
                 </form>
             {% endif %}

@@ -34,6 +34,28 @@
             rgba(0,0,0,.25);
     }
 
+    .system-modal-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: transparent;
+        color: #667085;
+        font-size: 25px;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .system-modal-close:hover {
+        background: #f2f4f7;
+        color: #1d2939;
+    }
+
     .system-modal-icon {
         width: 48px;
         height: 48px;
@@ -106,6 +128,7 @@
 <div
     id="systemNotificationModal"
     class="system-modal"
+    data-dismissible="{% if latest_unread_notification %}false{% else %}true{% endif %}"
 >
     <div
         class="system-modal-backdrop"
@@ -116,8 +139,20 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="systemModalTitle"
+        aria-describedby="systemModalContent"
+        tabindex="-1"
     >
-        <div class="system-modal-icon">
+        {% if not latest_unread_notification %}
+            <button
+                type="button"
+                class="system-modal-close system-modal-dismiss"
+                aria-label="Close notification"
+            >
+                <span aria-hidden="true">&times;</span>
+            </button>
+        {% endif %}
+
+        <div class="system-modal-icon" aria-hidden="true">
             !
         </div>
 
@@ -125,6 +160,7 @@
             Notification
         </h2>
 
+        <div id="systemModalContent">
         {% for message in messages %}
 
             <div class="system-message-item">
@@ -169,6 +205,7 @@
             </div>
 
         {% endif %}
+        </div>
 
 
         <div class="system-modal-actions">
@@ -223,12 +260,7 @@
 
                 <button
                     type="button"
-                    class="system-modal-button"
-                    onclick="
-                        document.getElementById(
-                            'systemNotificationModal'
-                        ).hidden = true;
-                    "
+                    class="system-modal-button system-modal-dismiss"
                 >
                     Okay
                 </button>
@@ -238,5 +270,64 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        var modal = document.getElementById("systemNotificationModal");
+        if (!modal) return;
+
+        var dialog = modal.querySelector(".system-modal-dialog");
+        var previousFocus = document.activeElement;
+        var previousOverflow = document.body.style.overflow;
+        var canDismiss = modal.dataset.dismissible === "true";
+
+        function closeModal() {
+            if (!canDismiss) return;
+            modal.hidden = true;
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener("keydown", handleKeydown);
+            if (previousFocus && typeof previousFocus.focus === "function") {
+                previousFocus.focus();
+            }
+        }
+
+        function handleKeydown(event) {
+            if (event.key === "Escape") {
+                closeModal();
+                return;
+            }
+
+            if (event.key !== "Tab") return;
+            var focusable = Array.from(modal.querySelectorAll(
+                "a[href], button:not([disabled]), input:not([type='hidden']):not([disabled])"
+            ));
+            if (!focusable.length) return;
+
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+
+        modal.querySelectorAll(".system-modal-dismiss").forEach(function (button) {
+            button.addEventListener("click", closeModal);
+        });
+
+        var backdrop = modal.querySelector(".system-modal-backdrop");
+        if (backdrop) backdrop.addEventListener("click", closeModal);
+
+        document.body.style.overflow = "hidden";
+        document.addEventListener("keydown", handleKeydown);
+        window.requestAnimationFrame(function () {
+            var firstAction = modal.querySelector("button, a[href]");
+            (firstAction || dialog).focus();
+        });
+    })();
+</script>
 
 {% endif %}

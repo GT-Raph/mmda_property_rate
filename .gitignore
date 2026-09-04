@@ -4,3 +4,8 @@ __pycache__/
 db.sqlite3 
 media/ 
 staticfiles/
+.github/
+.github/workflows/
+.vscode/
+*.pyc
+.qodo/

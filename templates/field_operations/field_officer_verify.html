@@ -427,8 +427,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="field-task-shell">
 <header class="topbar">
     <div class="officer-box">
         <button class="menu-btn" type="button" aria-label="Go back" onclick="goBack()">
@@ -444,13 +446,13 @@
         </div>
     </div>
 
-    <button class="menu-btn" type="button" aria-label="Menu">
+    <a class="menu-btn" href="{% url 'field_operations:field-operations' %}" aria-label="Field operations dashboard">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M5 7H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
             <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
             <path d="M5 17H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
         </svg>
-    </button>
+    </a>
 </header>
 
 <main class="page">

@@ -211,8 +211,9 @@
             height:36px;
             padding:0 14px;
             border-radius:10px;
-            background:var(--gold);
-            color:#111;
+            border:1px solid #b7e3c4;
+            background:#eaf8ee;
+            color:#137a3a;
             font-weight:700;
             text-decoration:none;
             font-size:14px;
@@ -340,8 +341,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
     <header class="topbar">
         <div class="topbar-left">
             <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
@@ -397,15 +400,12 @@
                         </div>
 
                         <div class="receipt-wrap">
-                            <a href="#" class="receipt-btn">Receipt</a>
+                            <span class="receipt-btn" aria-label="Payment confirmed">Recorded</span>
                         </div>
                     </div>
                 </section>
             {% endfor %}
 
-            <div class="export-wrap">
-                <a href="#" class="export-btn">Export All Receipts as PDF</a>
-            </div>
         {% else %}
             <div class="empty">No successful payments found yet.</div>
         {% endif %}

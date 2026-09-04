@@ -1358,17 +1358,20 @@ def dashboard(request):
         alerts = [
             {
                 "message": f"{_number(overdue_90_count)} overdue payment record(s) in the assembly",
-                "action": "View List",
+                "action": "View properties",
+                "url": reverse("properties:property-registry"),
                 "alert_class": "alert-warning",
             },
             {
                 "message": f"You completed {_number(weekly_field_visits)} field visit(s) this week",
                 "action": "Review",
+                "url": reverse("field_operations:field-officer-stats"),
                 "alert_class": "alert-success",
             },
             {
                 "message": f"{_number(properties_this_month)} property record(s) added by you this month",
                 "action": "Open",
+                "url": reverse("properties:property-registry"),
                 "alert_class": "alert-info",
             },
         ]
@@ -1377,16 +1380,19 @@ def dashboard(request):
             {
                 "message": f"{_number(overdue_90_count)} properties have overdue payments (>90 days)",
                 "action": "View List",
+                "url": reverse("billing:billing-management"),
                 "alert_class": "alert-warning",
             },
             {
                 "message": f"Monthly billing cycle starts in {days_until_next_cycle} day{'s' if days_until_next_cycle != 1 else ''}",
                 "action": "Prepare",
+                "url": reverse("billing:billing-management"),
                 "alert_class": "alert-info",
             },
             {
                 "message": f"Field verification completed for {_number(weekly_field_visits)} properties",
                 "action": "Review",
+                "url": reverse("field_operations:field-operations"),
                 "alert_class": "alert-success",
             },
         ]

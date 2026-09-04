@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -20,8 +21,10 @@
         .info{margin-top:16px;background:#edf4ff;border:1px solid #b8d0ff;border-radius:10px;padding:12px;color:#2a63f6;font-size:14px}
         .submit{width:100%;height:48px;border:none;border-radius:12px;background:#e5d29a;color:#111;font-size:16px;font-weight:800}
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
 <header class="topbar">
     <div class="topbar-left">
         <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
@@ -91,18 +94,28 @@
                 <input type="hidden" name="bill_ids" value="{{ bill.id }}">
             {% endfor %}
 
+            {% if form.non_field_errors %}
+                <div class="form-error" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
             <label class="form-label" for="{{ form.network.id_for_label }}">Network</label>
             {{ form.network }}
+            {% if form.network.errors %}
+                <div class="field-error" role="alert">{{ form.network.errors }}</div>
+            {% endif %}
 
             <label class="form-label" for="{{ form.mobile_number.id_for_label }}">Mobile Number</label>
             {{ form.mobile_number }}
+            {% if form.mobile_number.errors %}
+                <div class="field-error" role="alert">{{ form.mobile_number.errors }}</div>
+            {% endif %}
 
             <div class="info">
                 You will receive a prompt on your phone to approve this payment. Please have your phone ready.
             </div>
 
             <div style="margin-top:24px;">
-                <button type="submit" class="submit">Confirm & Pay {{ total_amount }}</button>
+                <button type="submit" class="submit">Confirm &amp; Pay {{ total_amount }}</button>
             </div>
         </form>
     </section>

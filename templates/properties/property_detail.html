@@ -3,10 +3,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} - {{ property_obj.property_reference }}</title>
     {% include 'properties/_action_common.css' %}
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="document-shell">
 <div class="page">
     <div class="page-head">
         <div>

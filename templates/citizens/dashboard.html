@@ -834,8 +834,10 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
+    <script defer src="{% static 'js/prms_ui.js' %}"></script>
 </head>
-<body>
+<body class="citizen-shell">
     <header class="topbar">
         <div class="topbar-left">
             <div class="avatar">{{ owner_short_name|slice:":1"|upper }}</div>
@@ -1013,7 +1015,7 @@
 
                                 <div>
                                     <div class="payment-amount">{{ payment.amount }}</div>
-                                    <a href="{{ payment.receipt_url }}" class="download-link">Download</a>
+                                    <a href="{{ payment.receipt_url }}" class="download-link">View</a>
                                 </div>
                             </div>
                         {% endfor %}
