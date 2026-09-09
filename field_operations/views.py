@@ -1,6 +1,8 @@
 from datetime import timedelta
 from io import BytesIO
 import logging
+import math
+from decimal import Decimal, InvalidOperation
 
 from django.core.files.base import ContentFile
 from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
@@ -2752,8 +2754,6 @@ def _prms_property_outstanding_amount(property_obj):
 
 
 def _prms_parse_coordinate(value, coordinate_name):
-    from decimal import Decimal, InvalidOperation
-
     from django.core.exceptions import ValidationError
 
     value = (value or "").strip()
@@ -2787,6 +2787,67 @@ def _prms_parse_coordinate(value, coordinate_name):
     return coordinate
 
 
+def _prms_parse_gps_accuracy(value):
+    from django.core.exceptions import ValidationError
+
+    value = (value or "").strip()
+
+    if not value:
+        return None
+
+    try:
+        accuracy = Decimal(value)
+    except InvalidOperation as exc:
+        raise ValidationError(
+            "The captured GPS accuracy is invalid. Capture your location again."
+        ) from exc
+
+    if accuracy < 0:
+        raise ValidationError(
+            "The captured GPS accuracy is invalid. Capture your location again."
+        )
+
+    return accuracy.quantize(Decimal("0.01"))
+
+
+def _prms_gps_distance_meters(
+    start_latitude,
+    start_longitude,
+    end_latitude,
+    end_longitude,
+):
+    """Calculate great-circle distance using the Haversine formula."""
+    coordinates = (
+        start_latitude,
+        start_longitude,
+        end_latitude,
+        end_longitude,
+    )
+
+    if any(value is None for value in coordinates):
+        return None
+
+    start_lat = math.radians(float(start_latitude))
+    start_lng = math.radians(float(start_longitude))
+    end_lat = math.radians(float(end_latitude))
+    end_lng = math.radians(float(end_longitude))
+
+    latitude_delta = end_lat - start_lat
+    longitude_delta = end_lng - start_lng
+    haversine = (
+        math.sin(latitude_delta / 2) ** 2
+        + math.cos(start_lat)
+        * math.cos(end_lat)
+        * math.sin(longitude_delta / 2) ** 2
+    )
+    central_angle = 2 * math.atan2(
+        math.sqrt(haversine),
+        math.sqrt(1 - haversine),
+    )
+    distance = Decimal(str(6371000 * central_angle))
+    return distance.quantize(Decimal("0.01"))
+
+
 def _prms_create_field_visit(
     request,
     property_obj,
@@ -2796,6 +2857,9 @@ def _prms_create_field_visit(
     notes,
     latitude,
     longitude,
+    gps_accuracy,
+    gps_distance,
+    gps_validation_status,
 ):
     visit_type_map = {
         "property_verification": "verification",
@@ -2860,6 +2924,11 @@ def _prms_create_field_visit(
 
         latitude=latitude,
         longitude=longitude,
+        gps_accuracy_meters=gps_accuracy,
+        gps_distance_meters=gps_distance,
+        gps_validation_status=(
+            gps_validation_status
+        ),
     )
 
 def _prms_save_property_photos(
@@ -3409,22 +3478,11 @@ def field_officer_verify_property(
         ),
         "owner_present": "yes",
         "notes": "",
-        "latitude": (
-            str(property_obj.latitude)
-            if (
-                property_obj
-                and property_obj.latitude is not None
-            )
-            else ""
-        ),
-        "longitude": (
-            str(property_obj.longitude)
-            if (
-                property_obj
-                and property_obj.longitude is not None
-            )
-            else ""
-        ),
+        # These are the officer's fresh visit coordinates. They must never
+        # be pre-filled with, or overwrite, the registration coordinates.
+        "latitude": "",
+        "longitude": "",
+        "gps_accuracy": "",
     }
 
     if request.method == "POST":
@@ -3468,6 +3526,10 @@ def field_officer_verify_property(
                 ).strip(),
                 "longitude": (
                     request.POST.get("longitude")
+                    or ""
+                ).strip(),
+                "gps_accuracy": (
+                    request.POST.get("gps_accuracy")
                     or ""
                 ).strip(),
             }
@@ -3531,6 +3593,14 @@ def field_officer_verify_property(
                 "Longitude",
             )
 
+            gps_accuracy = _prms_parse_gps_accuracy(
+                form_values["gps_accuracy"]
+            )
+
+            gps_validation_status = "disabled"
+            gps_distance = None
+            gps_radius = None
+
             with transaction.atomic():
                 assignment_queryset = (
                     FieldAssignment.objects
@@ -3593,10 +3663,76 @@ def field_officer_verify_property(
                 property_obj = (
                     Property.objects
                     .select_for_update()
+                    .select_related("assembly")
                     .get(
                         pk=assignment.property_id
                     )
                 )
+
+                gps_enabled = bool(
+                    property_obj.assembly
+                    .field_gps_validation_enabled
+                )
+                gps_radius = (
+                    property_obj.assembly
+                    .field_gps_radius_meters
+                )
+
+                if gps_enabled:
+                    if latitude is None or longitude is None:
+                        raise ValidationError(
+                            "Capture your current GPS location before submitting this verification."
+                        )
+
+                    if (
+                        property_obj.latitude is None
+                        or property_obj.longitude is None
+                    ):
+                        gps_validation_status = "unavailable"
+
+                        if (
+                            form_values[
+                                "verification_status"
+                            ]
+                            == "verified"
+                        ):
+                            raise ValidationError(
+                                "This property has no registered GPS coordinates to compare. Submit it as Under Review or Flagged and ask an administrator to correct the registered location."
+                            )
+                    else:
+                        gps_distance = (
+                            _prms_gps_distance_meters(
+                                property_obj.latitude,
+                                property_obj.longitude,
+                                latitude,
+                                longitude,
+                            )
+                        )
+
+                        if gps_distance <= Decimal(
+                            gps_radius
+                        ):
+                            gps_validation_status = (
+                                "matched"
+                            )
+                        else:
+                            gps_validation_status = (
+                                "outside_radius"
+                            )
+
+                            if (
+                                form_values[
+                                    "verification_status"
+                                ]
+                                == "verified"
+                            ):
+                                raise ValidationError(
+                                    (
+                                        "GPS mismatch: you are approximately "
+                                        f"{gps_distance:.0f} metres from the registered property location. "
+                                        f"Move within {gps_radius} metres, or submit the property as Under Review or Flagged."
+                                    )
+                                )
 
                 property_obj.verification_status = (
                     form_values[
@@ -3622,14 +3758,6 @@ def field_officer_verify_property(
                 update_fields.append(
                     "last_verified_at"
                 )
-
-                if latitude is not None:
-                    property_obj.latitude = latitude
-                    update_fields.append("latitude")
-
-                if longitude is not None:
-                    property_obj.longitude = longitude
-                    update_fields.append("longitude")
 
                 property_obj.save(
                     update_fields=list(
@@ -3660,6 +3788,11 @@ def field_officer_verify_property(
                     notes=form_values["notes"],
                     latitude=latitude,
                     longitude=longitude,
+                    gps_accuracy=gps_accuracy,
+                    gps_distance=gps_distance,
+                    gps_validation_status=(
+                        gps_validation_status
+                    ),
                 )
 
                 photo_count = (
@@ -3712,6 +3845,17 @@ def field_officer_verify_property(
                     f" {photo_count} photo(s) uploaded."
                 )
 
+            if gps_validation_status == "matched":
+                message += (
+                    " GPS location matched"
+                    f" within {gps_distance:.0f} metres."
+                )
+
+            elif gps_validation_status == "outside_radius":
+                message += (
+                    " GPS mismatch recorded for administrative review."
+                )
+
             messages.success(
                 request,
                 message,
@@ -3743,6 +3887,28 @@ def field_officer_verify_property(
 
     officer_name = _prms_user_display_name(
         request.user
+    )
+
+    gps_settings_assembly = (
+        property_obj.assembly
+        if property_obj
+        else assembly
+    )
+    gps_validation_enabled = bool(
+        gps_settings_assembly
+        and gps_settings_assembly
+        .field_gps_validation_enabled
+    )
+    gps_radius_meters = (
+        gps_settings_assembly
+        .field_gps_radius_meters
+        if gps_settings_assembly
+        else 100
+    )
+    registered_gps_available = bool(
+        property_obj
+        and property_obj.latitude is not None
+        and property_obj.longitude is not None
     )
 
     context = {
@@ -3777,6 +3943,23 @@ def field_officer_verify_property(
         ),
         "verification_status_choices": (
             verification_status_choices
+        ),
+        "gps_validation_enabled": (
+            gps_validation_enabled
+        ),
+        "gps_radius_meters": gps_radius_meters,
+        "registered_gps_available": (
+            registered_gps_available
+        ),
+        "registered_latitude": (
+            str(property_obj.latitude)
+            if registered_gps_available
+            else ""
+        ),
+        "registered_longitude": (
+            str(property_obj.longitude)
+            if registered_gps_available
+            else ""
         ),
         "form_error": form_error,
         "dashboard_url": reverse(

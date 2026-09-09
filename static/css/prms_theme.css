@@ -122,6 +122,8 @@ textarea:disabled,
 .pay-all,
 .upload-label,
 .submit,
+.submit-btn,
+.cta-btn,
 .mark-all,
 .system-modal-button,
 .button:not(.secondary) {
@@ -140,6 +142,8 @@ textarea:disabled,
 .pay-all:hover,
 .upload-label:hover,
 .submit:hover,
+.submit-btn:hover,
+.cta-btn:hover,
 .mark-all:hover,
 .system-modal-button:hover,
 .button:not(.secondary):hover {
@@ -157,6 +161,8 @@ textarea:disabled,
 .pay-all:active,
 .upload-label:active,
 .submit:active,
+.submit-btn:active,
+.cta-btn:active,
 .mark-all:active,
 .system-modal-button:active,
 .button:not(.secondary):active {
@@ -442,6 +448,67 @@ textarea:disabled,
     border-color: var(--prms-border-strong) !important;
 }
 
+/*
+ * Bottom navigation base layout. This is the single source of truth for the
+ * fixed bottom bar rendered by templates/citizens/_bottom_nav.html — it used
+ * to be copy-pasted into every page's own <style> block, and a few pages
+ * (bill_detail, property_bills, shared/notifications) never got the copy,
+ * so the nav fell back to an unstyled inline list on mobile. Keeping it here
+ * guarantees every page that includes the partial gets the same fixed bar.
+ */
+.bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    background: #ffffff;
+    border-top: 1px solid var(--prms-border);
+}
+
+.bottom-nav a {
+    padding: 12px 8px 14px;
+    text-align: center;
+    text-decoration: none;
+    color: #707784;
+    font-size: 12px;
+    transition: color 160ms ease;
+}
+
+.bottom-nav a.active {
+    color: var(--prms-primary-hover);
+    font-weight: 700;
+}
+
+.nav-ico {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.nav-img {
+    width: 20px;
+    height: 20px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-img img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+}
+
+.bottom-nav a.active .nav-img img {
+    filter: sepia(1) saturate(4) hue-rotate(350deg) brightness(0.95);
+}
+
 .citizen-shell .bottom-nav {
     left: 50% !important;
     right: auto !important;
@@ -620,6 +687,73 @@ textarea:disabled,
     line-height: 1.5;
 }
 
+.empty,
+.empty-box,
+.empty-state {
+    padding: 36px 20px !important;
+    border: 1px dashed var(--prms-border-strong) !important;
+    border-radius: var(--prms-radius-md) !important;
+    background: var(--prms-surface-subtle) !important;
+    color: var(--prms-muted) !important;
+    font-size: 14px;
+    text-align: center !important;
+}
+
+/* Typography rhythm shared by every shell's primary page heading and
+   supporting subtitle, whatever their local class name happens to be. */
+.portal-shell .page h1,
+.portal-shell .page-title,
+.portal-shell .page-head h1,
+.citizen-shell .page h1,
+.citizen-shell .page-title,
+.document-shell .page h1,
+.notification-shell .page h1,
+.public-shell .page h1,
+.auth-shell h1,
+.field-task-shell .page h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.portal-shell .page-subtitle,
+.citizen-shell .page-subtitle,
+.citizen-shell .subtitle,
+.citizen-shell .sub,
+.document-shell .subtitle,
+.document-shell .sub,
+.notification-shell .subtitle,
+.public-shell .subtitle,
+.field-task-shell .page-subtitle {
+    margin: 0 0 22px;
+    color: var(--prms-muted) !important;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Form field rhythm — .field-group is used consistently across every form
+   in the system, so this reaches property, dispute, billing and settings
+   forms alike without needing page-specific overrides. */
+.field-group {
+    margin-bottom: 18px;
+}
+
+.field-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.field-group .hint {
+    margin-top: 6px;
+    color: var(--prms-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
 .error-text,
 .field-error,
 .errorlist {
@@ -747,6 +881,19 @@ textarea:disabled,
 @media (max-width: 640px) {
     :root {
         --prms-radius-lg: 14px;
+    }
+
+    .portal-shell .page h1,
+    .portal-shell .page-title,
+    .portal-shell .page-head h1,
+    .citizen-shell .page h1,
+    .citizen-shell .page-title,
+    .document-shell .page h1,
+    .notification-shell .page h1,
+    .public-shell .page h1,
+    .auth-shell h1,
+    .field-task-shell .page h1 {
+        font-size: 23px;
     }
 
     .portal-shell .topbar {

@@ -114,6 +114,13 @@
             .page { padding: 0; }
             .card { border: 0; }
         }
+        @media (max-width: 560px) {
+            .grid { grid-template-columns: 1fr; gap: 14px; }
+            .card { padding: 20px; }
+            .qr-row img { width: 150px; height: 150px; }
+            .actions { flex-direction: column; }
+            .btn { width: 100%; }
+        }
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
     <script defer src="{% static 'js/prms_ui.js' %}"></script>

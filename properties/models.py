@@ -48,16 +48,51 @@ class Property(TimeStampedModel):
     ]
 
     BUILDING_TYPE_CHOICES = [
-        ("compound", "Compound House"),
-        ("self_contained", "Self Contained"),
-        ("detached", "Detached"),
-        ("semi_detached", "Semi Detached"),
         ("apartment", "Apartment"),
-        ("shop", "Shop"),
+        ("detached", "Detached"),
+        ("semi_detached", "Semi-Detached"),
+        ("self_contained", "Self-Contained"),
+        ("compound", "Compound House"),
         ("office", "Office"),
+        ("shop", "Shop"),
         ("warehouse", "Warehouse"),
+        ("school", "School"),
         ("other", "Other"),
     ]
+
+    BUILDING_TYPES_BY_PROPERTY_USE = {
+        "residential": (
+            "apartment",
+            "detached",
+            "semi_detached",
+            "self_contained",
+            "compound",
+        ),
+        "commercial": (
+            "office",
+            "shop",
+        ),
+        "industrial": (
+            "warehouse",
+        ),
+        "mixed_use": (
+            "other",
+        ),
+        "institutional": (
+            "school",
+            "other",
+        ),
+    }
+
+    @classmethod
+    def valid_building_types_for_use(
+        cls,
+        property_use,
+    ):
+        return cls.BUILDING_TYPES_BY_PROPERTY_USE.get(
+            property_use,
+            (),
+        )
 
     OCCUPANCY_STATUS_CHOICES = [
         ("occupied", "Occupied"),

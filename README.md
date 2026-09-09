@@ -2476,6 +2476,19 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DBNAME
 # --------------------------------------------------
 
 SITE_PUBLIC_URL=http://127.0.0.1:8000
+
+
+# --------------------------------------------------
+# Citizen password-reset email
+# --------------------------------------------------
+
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-smtp-username
+EMAIL_HOST_PASSWORD=your-smtp-password
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=PRMS Support <no-reply@example.com>
 ```
 
 Production example:
@@ -2492,6 +2505,13 @@ ALLOWED_HOSTS=your-domain.example
 CSRF_TRUSTED_ORIGINS=https://your-domain.example
 
 SITE_PUBLIC_URL=https://your-domain.example
+
+EMAIL_HOST=<production-smtp-host>
+EMAIL_PORT=587
+EMAIL_HOST_USER=<production-smtp-username>
+EMAIL_HOST_PASSWORD=<production-smtp-password>
+EMAIL_USE_TLS=True
+DEFAULT_FROM_EMAIL=PRMS Support <no-reply@your-domain.example>
 ```
 
 ---
@@ -3286,6 +3306,8 @@ Correct CSRF_TRUSTED_ORIGINS
 Valid DATABASE_URL
 
 SITE_PUBLIC_URL configured
+
+SMTP settings configured and password-reset email tested
 
 Supabase SSL connection validated
 

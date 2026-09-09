@@ -1,5 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+)
 from django.db import models
 from django.utils import timezone
 
@@ -61,6 +65,24 @@ class Assembly(TimeStampedModel):
     contact_phone = models.CharField(max_length=20, blank=True)
     contact_email = models.EmailField(blank=True)
     active_billing_year = models.PositiveIntegerField(null=True, blank=True)
+    field_gps_validation_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Require a field officer's live GPS location to be checked "
+            "against the property's registered coordinates."
+        ),
+    )
+    field_gps_radius_meters = models.PositiveIntegerField(
+        default=100,
+        validators=[
+            MinValueValidator(25),
+            MaxValueValidator(5000),
+        ],
+        help_text=(
+            "Maximum distance from the registered property location "
+            "for a verification to count as an on-site GPS match."
+        ),
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:

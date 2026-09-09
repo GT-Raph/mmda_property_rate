@@ -24,11 +24,18 @@ class CitizenPhoneLookupTests(TestCase):
             password="secret123",
             is_active=True,
         )
-        UserProfile.objects.create(
+        profile, _created = UserProfile.objects.get_or_create(
             user=user,
-            role="citizen",
-            assembly=self.assembly,
-            phone_number=phone_number,
+        )
+        profile.role = "citizen"
+        profile.assembly = self.assembly
+        profile.phone_number = phone_number
+        profile.save(
+            update_fields=[
+                "role",
+                "assembly",
+                "phone_number",
+            ]
         )
         return user
 
@@ -68,11 +75,18 @@ class PortalLoginViewAccessTests(TestCase):
             password="secret123",
             is_active=True,
         )
-        UserProfile.objects.create(
+        profile, _created = UserProfile.objects.get_or_create(
             user=user,
-            role="citizen",
-            assembly=assigned_assembly,
-            phone_number="0241234567",
+        )
+        profile.role = "citizen"
+        profile.assembly = assigned_assembly
+        profile.phone_number = "0241234567"
+        profile.save(
+            update_fields=[
+                "role",
+                "assembly",
+                "phone_number",
+            ]
         )
 
         allowed, message = PortalLoginView().user_can_access_selected_assembly(

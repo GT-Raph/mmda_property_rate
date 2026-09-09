@@ -294,6 +294,22 @@
             line-height: 1.4;
         }
 
+        .gps-validation-card {
+            margin: 0 0 14px;
+            padding: 13px 14px;
+            border: 1px solid var(--blue-border);
+            border-radius: 10px;
+            background: var(--blue-soft);
+            color: #1e40af;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .gps-validation-card strong { display: block; margin-bottom: 2px; }
+        .gps-validation-card.is-match { border-color: #86d49a; background: #eefbf1; color: #166534; }
+        .gps-validation-card.is-mismatch { border-color: #f3b1b1; background: var(--red-soft); color: #b42318; }
+        .gps-validation-card.is-warning { border-color: var(--yellow-border); background: var(--yellow-soft); color: #8a5700; }
+
         .upload-box {
             border: 1px dashed #cfcfcf;
             border-radius: 12px;
@@ -405,7 +421,7 @@
         }
 
         .btn-primary {
-            background: var(--blue);
+            background: var(--gold);
             color: #fff;
         }
 
@@ -525,6 +541,27 @@
 
             <input type="hidden" id="latitude" name="latitude" value="{{ latitude }}">
             <input type="hidden" id="longitude" name="longitude" value="{{ longitude }}">
+            <input type="hidden" id="gps_accuracy" name="gps_accuracy" value="{{ gps_accuracy }}">
+
+            <div
+                class="gps-validation-card"
+                id="gpsValidationCard"
+                data-enabled="{{ gps_validation_enabled|yesno:'true,false' }}"
+                data-target-latitude="{{ registered_latitude }}"
+                data-target-longitude="{{ registered_longitude }}"
+                data-radius="{{ gps_radius_meters }}"
+            >
+                <strong>On-site GPS validation</strong>
+                <span id="gpsValidationText">
+                    {% if not gps_validation_enabled %}
+                        GPS comparison is disabled for this assembly.
+                    {% elif registered_gps_available %}
+                        Capture your live location. You must be within {{ gps_radius_meters }} metres to mark this property as Verified.
+                    {% else %}
+                        This property has no registered coordinates. Capture your location and submit it as Under Review or Flagged.
+                    {% endif %}
+                </span>
+            </div>
 
             <button type="button" class="gps-btn" onclick="captureLocation()">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -535,7 +572,7 @@
             </button>
             <div class="gps-status" id="gpsStatus">
                 {% if latitude and longitude %}
-                    GPS captured: {{ latitude }}, {{ longitude }}
+                    GPS captured: {{ latitude }}, {{ longitude }}{% if gps_accuracy %} (accuracy ±{{ gps_accuracy }} m){% endif %}
                 {% else %}
                     GPS location not captured yet.
                 {% endif %}
@@ -614,6 +651,7 @@
         const status = document.getElementById("gpsStatus");
         const latInput = document.getElementById("latitude");
         const lngInput = document.getElementById("longitude");
+        const accuracyInput = document.getElementById("gps_accuracy");
 
         if (!navigator.geolocation) {
             status.textContent = "GPS is not supported on this device.";
@@ -626,10 +664,13 @@
             function(position) {
                 const latitude = position.coords.latitude.toFixed(7);
                 const longitude = position.coords.longitude.toFixed(7);
+                const accuracy = Number(position.coords.accuracy || 0).toFixed(2);
 
                 latInput.value = latitude;
                 lngInput.value = longitude;
-                status.textContent = `GPS captured: ${latitude}, ${longitude}`;
+                accuracyInput.value = accuracy;
+                status.textContent = `GPS captured: ${latitude}, ${longitude} (accuracy ±${Math.round(Number(accuracy))} m)`;
+                updateGpsValidation(latitude, longitude);
             },
             function(error) {
                 status.textContent = "Unable to capture GPS. Please allow location permission and try again.";
@@ -641,6 +682,73 @@
             }
         );
     }
+
+    function gpsDistanceMeters(startLat, startLng, endLat, endLng) {
+        const earthRadius = 6371000;
+        const toRadians = value => value * Math.PI / 180;
+        const latitudeDelta = toRadians(endLat - startLat);
+        const longitudeDelta = toRadians(endLng - startLng);
+        const startLatitude = toRadians(startLat);
+        const endLatitude = toRadians(endLat);
+        const haversine = (
+            Math.sin(latitudeDelta / 2) ** 2
+            + Math.cos(startLatitude)
+            * Math.cos(endLatitude)
+            * Math.sin(longitudeDelta / 2) ** 2
+        );
+        return earthRadius * 2 * Math.atan2(
+            Math.sqrt(haversine),
+            Math.sqrt(1 - haversine)
+        );
+    }
+
+    function updateGpsValidation(latitude, longitude) {
+        const card = document.getElementById("gpsValidationCard");
+        const text = document.getElementById("gpsValidationText");
+
+        if (!card || !text) return;
+
+        card.classList.remove("is-match", "is-mismatch", "is-warning");
+
+        if (card.dataset.enabled !== "true") {
+            text.textContent = "Location captured. GPS comparison is disabled for this assembly.";
+            return;
+        }
+
+        const targetLatitude = Number(card.dataset.targetLatitude);
+        const targetLongitude = Number(card.dataset.targetLongitude);
+        const radius = Number(card.dataset.radius || 100);
+
+        if (!card.dataset.targetLatitude || !card.dataset.targetLongitude) {
+            card.classList.add("is-warning");
+            text.textContent = "Location captured, but the property has no registered GPS baseline. Submit as Under Review or Flagged.";
+            return;
+        }
+
+        const distance = gpsDistanceMeters(
+            targetLatitude,
+            targetLongitude,
+            Number(latitude),
+            Number(longitude)
+        );
+
+        if (distance <= radius) {
+            card.classList.add("is-match");
+            text.textContent = `GPS match confirmed: approximately ${Math.round(distance)} metres from the registered location.`;
+        } else {
+            card.classList.add("is-mismatch");
+            text.textContent = `GPS mismatch: approximately ${Math.round(distance)} metres away. Move within ${radius} metres, or submit as Under Review or Flagged.`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const latitude = document.getElementById("latitude")?.value;
+        const longitude = document.getElementById("longitude")?.value;
+
+        if (latitude && longitude) {
+            updateGpsValidation(latitude, longitude);
+        }
+    });
 
     function showSelectedFiles() {
         const input = document.getElementById("photos");

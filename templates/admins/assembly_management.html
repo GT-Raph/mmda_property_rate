@@ -733,7 +733,7 @@
             padding-top: 4px;
         }
 
-        .form-check-input {
+        .modal-body .form-check-input {
             width: 18px;
             height: 18px;
             accent-color: #d2ad4e;
@@ -743,6 +743,13 @@
             font-size: 13px;
             color: #b42318;
             margin-top: -2px;
+        }
+
+        .field-help {
+            margin-top: 7px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.4;
         }
 
         .modal-actions {
@@ -1021,6 +1028,16 @@
                             <label>Assembly ID</label>
                             <div class="info-value">{{ assembly.short_code|default:"—" }}</div>
                         </div>
+
+                        <div class="info-item">
+                            <label>Field GPS Validation</label>
+                            <div class="info-value">{% if assembly.field_gps_validation_enabled %}Enabled{% else %}Disabled{% endif %}</div>
+                        </div>
+
+                        <div class="info-item">
+                            <label>Allowed GPS Radius</label>
+                            <div class="info-value">{{ assembly.field_gps_radius_meters }} metres</div>
+                        </div>
                     </div>
                 </section>
 
@@ -1058,17 +1075,21 @@
                     <div class="form-grid">
                         {% for field in form.visible_fields %}
                             {% if field.field.widget.input_type == 'checkbox' %}
-                                <div class="check-row">
-                                    {{ field }}
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div class="form-group full">
+                                    <div class="check-row">
+                                        {{ field }}
+                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    </div>
+                                    {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+                                    {% for error in field.errors %}
+                                        <div class="field-error">{{ error }}</div>
+                                    {% endfor %}
                                 </div>
-                                {% for error in field.errors %}
-                                    <div class="field-error">{{ error }}</div>
-                                {% endfor %}
                             {% else %}
                                 <div class="form-group {% if field.name == 'address' %}full{% endif %}">
                                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                     {{ field }}
+                                    {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
                                     {% for error in field.errors %}
                                         <div class="field-error">{{ error }}</div>
                                     {% endfor %}

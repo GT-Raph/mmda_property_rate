@@ -23,12 +23,36 @@ from .views import (
     citizen_certificate_download,
     citizen_certificate_qr,
     certificate_verify,
+    CitizenPasswordResetView,
+    CitizenPasswordResetDoneView,
+    CitizenPasswordResetConfirmView,
+    CitizenPasswordResetCompleteView,
 )
 
 app_name = "citizens"
 
 urlpatterns = [
     path("", citizen_dashboard, name="dashboard"),
+    path(
+        "password-reset/",
+        CitizenPasswordResetView.as_view(),
+        name="password-reset",
+    ),
+    path(
+        "password-reset/done/",
+        CitizenPasswordResetDoneView.as_view(),
+        name="password-reset-done",
+    ),
+    path(
+        "password-reset/<uidb64>/<token>/",
+        CitizenPasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
+    path(
+        "password-reset/complete/",
+        CitizenPasswordResetCompleteView.as_view(),
+        name="password-reset-complete",
+    ),
     path("properties/", citizen_properties, name="properties"),
     path("properties/<int:property_id>/bills/", citizen_property_bills, name="property-bills"),
 

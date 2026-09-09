@@ -6,12 +6,13 @@ import qrcode
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q
 from django.http import Http404, HttpResponse, request
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import NoReverseMatch, reverse
+from django.urls import NoReverseMatch, reverse, reverse_lazy
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -29,6 +30,7 @@ from .forms import (
     CitizenNameForm,
     CitizenNotificationForm,
     CitizenPasswordForm,
+    CitizenPasswordResetForm,
     CitizenPaymentForm,
     CitizenPhoneForm,
 )
@@ -38,6 +40,70 @@ from .models import (
     CitizenPreference,
     PropertyCertificate,
 )
+
+
+class CitizenPasswordResetView(
+    auth_views.PasswordResetView
+):
+    template_name = (
+        "registration/citizen_password_reset_form.html"
+    )
+    form_class = CitizenPasswordResetForm
+    email_template_name = (
+        "registration/citizen_password_reset_email.txt"
+    )
+    subject_template_name = (
+        "registration/citizen_password_reset_subject.txt"
+    )
+    success_url = reverse_lazy(
+        "citizens:password-reset-done"
+    )
+
+
+class CitizenPasswordResetDoneView(
+    auth_views.PasswordResetDoneView
+):
+    template_name = (
+        "registration/citizen_password_reset_done.html"
+    )
+
+
+class CitizenPasswordResetConfirmView(
+    auth_views.PasswordResetConfirmView
+):
+    template_name = (
+        "registration/citizen_password_reset_confirm.html"
+    )
+    success_url = reverse_lazy(
+        "citizens:password-reset-complete"
+    )
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        profile = getattr(
+            form.user,
+            "profile",
+            None,
+        )
+
+        if profile and profile.must_change_password:
+            profile.must_change_password = False
+            profile.save(
+                update_fields=[
+                    "must_change_password",
+                    "updated_at",
+                ]
+            )
+
+        return response
+
+
+class CitizenPasswordResetCompleteView(
+    auth_views.PasswordResetCompleteView
+):
+    template_name = (
+        "registration/citizen_password_reset_complete.html"
+    )
 
 
 def _account_number_for_property(prop):
@@ -1966,7 +2032,10 @@ def _build_citizen_profile_context(request, *, active_modal="", form_overrides=N
 
     forms = {
         "name_form": CitizenNameForm(initial={"full_name": owner_name}),
-        "email_form": CitizenEmailForm(initial={"email": display_email}),
+        "email_form": CitizenEmailForm(
+            initial={"email": display_email},
+            user=request.user,
+        ),
         "phone_form": CitizenPhoneForm(initial={"phone_number": display_phone}),
         "address_form": CitizenAddressForm(initial={"address": display_address}),
         "password_form": CitizenPasswordForm(request.user),
@@ -2063,7 +2132,10 @@ def citizen_update_email(request):
         return redirect_response
 
     owner = _citizen_owner_or_none(request)
-    form = CitizenEmailForm(request.POST)
+    form = CitizenEmailForm(
+        request.POST,
+        user=request.user,
+    )
 
     if form.is_valid():
         email = form.cleaned_data["email"].strip().lower()

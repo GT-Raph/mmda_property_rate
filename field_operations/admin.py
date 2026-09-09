@@ -49,6 +49,8 @@ class FieldVisitAdmin(admin.ModelAdmin):
         "visit_type",
         "payment_status_seen",
         "outcome",
+        "gps_validation_status",
+        "gps_distance_meters",
         "amount_outstanding_snapshot",
         "visited_at",
     )
@@ -57,6 +59,7 @@ class FieldVisitAdmin(admin.ModelAdmin):
         "visit_type",
         "payment_status_seen",
         "outcome",
+        "gps_validation_status",
         "visited_at",
     )
     search_fields = (
@@ -64,7 +67,13 @@ class FieldVisitAdmin(admin.ModelAdmin):
         "property__owner__full_name",
         "notes",
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = (
+        "gps_accuracy_meters",
+        "gps_distance_meters",
+        "gps_validation_status",
+        "created_at",
+        "updated_at",
+    )
     autocomplete_fields = ("assembly", "property", "officer")
 
 

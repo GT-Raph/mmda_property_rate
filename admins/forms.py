@@ -120,6 +120,8 @@ ASSEMBLY_FIELD_CANDIDATES = [
     "contact_email",
     "contact_phone",
     "address",
+    "field_gps_validation_enabled",
+    "field_gps_radius_meters",
     "is_active",
 ]
 
@@ -148,9 +150,22 @@ class AssemblyEditForm(forms.ModelForm):
             "contact_email": "Enter contact email",
             "contact_phone": "Enter contact phone",
             "address": "Enter address",
+            "field_gps_radius_meters": "100",
+        }
+
+        labels = {
+            "field_gps_validation_enabled": (
+                "Enable Field GPS Validation"
+            ),
+            "field_gps_radius_meters": (
+                "Allowed GPS Radius (metres)"
+            ),
         }
 
         for name, field in self.fields.items():
+            if name in labels:
+                field.label = labels[name]
+
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs["class"] = "form-check-input"
             elif isinstance(field.widget, forms.Textarea):
@@ -162,3 +177,29 @@ class AssemblyEditForm(forms.ModelForm):
                 existing = field.widget.attrs.get("class", "")
                 field.widget.attrs["class"] = f"{existing} form-input".strip()
                 field.widget.attrs["placeholder"] = placeholders.get(name, "")
+
+        if "field_gps_radius_meters" in self.fields:
+            self.fields[
+                "field_gps_radius_meters"
+            ].widget.attrs.update(
+                {
+                    "min": "25",
+                    "max": "5000",
+                    "step": "25",
+                }
+            )
+
+    def clean_field_gps_radius_meters(self):
+        radius = self.cleaned_data.get(
+            "field_gps_radius_meters"
+        )
+
+        if radius is None:
+            return radius
+
+        if not 25 <= radius <= 5000:
+            raise forms.ValidationError(
+                "Enter an allowed radius between 25 and 5,000 metres."
+            )
+
+        return radius

@@ -71,106 +71,6 @@
             margin-top:2px;
         }
 
-        .menu-btn{
-            background:transparent;
-            border:0;
-            color:#fff;
-            font-size:28px;
-            cursor:pointer;
-            line-height:1;
-        }
-
-        .drawer-backdrop{
-            position:fixed;
-            inset:0;
-            background:rgba(0,0,0,0.45);
-            display:none;
-            z-index:120;
-        }
-
-        .drawer-backdrop.show{
-            display:block;
-        }
-
-        .drawer{
-            position:absolute;
-            top:0;
-            right:0;
-            width:300px;
-            max-width:90vw;
-            height:100%;
-            background:#000;
-            color:#fff;
-            padding:18px 16px;
-            display:flex;
-            flex-direction:column;
-        }
-
-        .drawer-top{
-            display:flex;
-            align-items:flex-start;
-            justify-content:space-between;
-            gap:12px;
-            margin-bottom:16px;
-        }
-
-        .drawer h3{
-            margin:0 0 6px;
-            font-size:18px;
-            font-weight:800;
-        }
-
-        .drawer-email{
-            color:#bdbdbd;
-            font-size:14px;
-            line-height:1.45;
-            word-break:break-word;
-        }
-
-        .drawer-close{
-            background:transparent;
-            border:0;
-            color:#fff;
-            font-size:28px;
-            cursor:pointer;
-            line-height:1;
-        }
-
-        .drawer-nav{
-            border-top:1px solid rgba(255,255,255,0.08);
-            border-bottom:1px solid rgba(255,255,255,0.08);
-            padding:18px 0;
-            margin-bottom:18px;
-        }
-
-        .drawer-link{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            color:#fff;
-            text-decoration:none;
-            padding:14px 10px;
-            border-radius:12px;
-            margin-bottom:6px;
-        }
-
-        .drawer-link:hover{
-            background:#191919;
-        }
-
-        .drawer-logout{
-            margin-top:auto;
-            background:transparent;
-            border:0;
-            color:#fff;
-            font-size:16px;
-            display:flex;
-            align-items:center;
-            gap:10px;
-            cursor:pointer;
-            padding:12px 10px;
-        }
-
         .page{
             max-width:900px;
             margin:0 auto;
@@ -387,49 +287,6 @@
             color:#111;
         }
 
-        .bottom-nav{
-            position:fixed;
-            left:0;
-            right:0;
-            bottom:0;
-            background:#fff;
-            border-top:1px solid var(--line);
-            display:grid;
-            grid-template-columns:repeat(5, 1fr);
-            z-index:100;
-        }
-
-        .bottom-nav a{
-            padding:12px 8px 14px;
-            text-align:center;
-            text-decoration:none;
-            color:#707784;
-            font-size:12px;
-        }
-
-        .nav-ico{
-            display:block;
-            font-size:18px;
-            margin-bottom:6px;
-            line-height:1;
-        }
-
-        .nav-img{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            width:20px;
-            height:20px;
-            margin:0 auto 6px;
-        }
-
-        .nav-img img{
-            width:18px;
-            height:18px;
-            object-fit:contain;
-            display:block;
-        }
-
         @media (max-width:560px){
             .page{
                 padding:20px 14px 118px;
@@ -460,11 +317,7 @@
                 <small>{{ owner_role|default:"Property Owner" }}</small>
             </div>
         </div>
-
-        
     </header>
-
-    
 
     <main class="page">
         <h1 class="page-title">Submit Dispute</h1>
@@ -562,33 +415,10 @@
         </section>
     </main>
 
+    {% include "citizens/_bottom_nav.html" %}
     {% include "shared/message_modal.html" %}
 
     <script>
-        const menuOpen = document.getElementById("menuOpen");
-        const menuClose = document.getElementById("menuClose");
-        const drawerBackdrop = document.getElementById("drawerBackdrop");
-
-        if (menuOpen && drawerBackdrop) {
-            menuOpen.addEventListener("click", function () {
-                drawerBackdrop.classList.add("show");
-            });
-        }
-
-        if (menuClose && drawerBackdrop) {
-            menuClose.addEventListener("click", function () {
-                drawerBackdrop.classList.remove("show");
-            });
-        }
-
-        if (drawerBackdrop) {
-            drawerBackdrop.addEventListener("click", function (event) {
-                if (event.target === drawerBackdrop) {
-                    drawerBackdrop.classList.remove("show");
-                }
-            });
-        }
-
         const fileInput = document.getElementById("id_supporting_documents");
         const fileList = document.getElementById("fileList");
 

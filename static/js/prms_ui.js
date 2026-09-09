@@ -129,12 +129,73 @@
         });
     }
 
+    function prepareBuildingTypeFilters() {
+        var choicesByUse = {
+            residential: [
+                ["apartment", "Apartment"],
+                ["detached", "Detached"],
+                ["semi_detached", "Semi-Detached"],
+                ["self_contained", "Self-Contained"],
+                ["compound", "Compound House"]
+            ],
+            commercial: [
+                ["office", "Office"],
+                ["shop", "Shop"]
+            ],
+            industrial: [["warehouse", "Warehouse"]],
+            mixed_use: [["other", "Other"]],
+            institutional: [
+                ["school", "School"],
+                ["other", "Other"]
+            ]
+        };
+
+        document.querySelectorAll("select[name$='property_use']").forEach(function (propertyUse) {
+            var form = propertyUse.closest("form") || document;
+            var buildingType = form.querySelector("select[name$='building_type']");
+
+            if (!buildingType) return;
+
+            function updateBuildingTypes() {
+                var previousValue = buildingType.value;
+                var allowedChoices = choicesByUse[propertyUse.value] || [];
+
+                buildingType.replaceChildren();
+
+                var placeholder = document.createElement("option");
+                placeholder.value = "";
+                placeholder.textContent = propertyUse.value
+                    ? "Select building type"
+                    : "Select property use first";
+                buildingType.appendChild(placeholder);
+
+                allowedChoices.forEach(function (choice) {
+                    var option = document.createElement("option");
+                    option.value = choice[0];
+                    option.textContent = choice[1];
+                    buildingType.appendChild(option);
+                });
+
+                var previousStillAllowed = allowedChoices.some(function (choice) {
+                    return choice[0] === previousValue;
+                });
+
+                buildingType.value = previousStillAllowed ? previousValue : "";
+                buildingType.disabled = !propertyUse.value;
+            }
+
+            propertyUse.addEventListener("change", updateBuildingTypes);
+            updateBuildingTypes();
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         prepareNavigation();
         prepareSidebar();
         prepareDrawer();
         prepareTables();
         prepareIconButtons();
+        prepareBuildingTypeFilters();
 
         document.addEventListener("keydown", function (event) {
             if (event.key !== "Escape") return;

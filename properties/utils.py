@@ -1,6 +1,5 @@
 import re
 import secrets
-import string
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -40,10 +39,11 @@ def split_full_name(full_name):
     return parts[0], " ".join(parts[1:])
 
 
-def generate_temporary_password(length=8):
-    alphabet = string.ascii_uppercase + string.digits
-    token = "".join(secrets.choice(alphabet) for _ in range(length))
-    return f"PRMS-{token}"
+def generate_temporary_password(length=6):
+    """Return an easy-to-type, unique temporary credential."""
+    safe_length = max(6, int(length or 6))
+    token = secrets.randbelow(10 ** safe_length)
+    return f"Prms-{token:0{safe_length}d}"
 
 
 def build_unique_citizen_username(owner):

@@ -108,6 +108,13 @@ class EnumerationRecord(TimeStampedModel):
 
 
 class FieldVisit(TimeStampedModel):
+    GPS_VALIDATION_STATUS_CHOICES = [
+        ("matched", "Matched"),
+        ("outside_radius", "Outside Allowed Radius"),
+        ("unavailable", "Registered Location Unavailable"),
+        ("disabled", "Validation Disabled"),
+    ]
+
     VISIT_TYPE_CHOICES = [
         ("verification", "Property Verification"),
         ("enforcement", "Enforcement"),
@@ -204,6 +211,23 @@ class FieldVisit(TimeStampedModel):
         decimal_places=6,
         null=True,
         blank=True,
+    )
+    gps_accuracy_meters = models.DecimalField(
+        max_digits=9,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    gps_distance_meters = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    gps_validation_status = models.CharField(
+        max_length=20,
+        choices=GPS_VALIDATION_STATUS_CHOICES,
+        default="disabled",
     )
 
     notes = models.TextField(blank=True)

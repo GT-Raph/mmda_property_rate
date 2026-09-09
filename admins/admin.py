@@ -10,7 +10,15 @@ User = get_user_model()
 
 @admin.register(Assembly)
 class AssemblyAdmin(admin.ModelAdmin):
-    list_display = ("name", "short_code", "assembly_type", "region", "is_active")
+    list_display = (
+        "name",
+        "short_code",
+        "assembly_type",
+        "region",
+        "field_gps_validation_enabled",
+        "field_gps_radius_meters",
+        "is_active",
+    )
     search_fields = ("name", "short_code", "region")
 
 

@@ -1,7 +1,14 @@
 from django import forms
-from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import (
+    PasswordChangeForm,
+    PasswordResetForm,
+)
 
 from .models import CitizenPreference, CitizenDispute
+
+
+User = get_user_model()
 
 
 class CitizenDisputeForm(forms.ModelForm):
@@ -131,14 +138,32 @@ class CitizenNameForm(forms.Form):
 class CitizenEmailForm(forms.Form):
     email = forms.EmailField()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user
         self.fields["email"].widget.attrs.update(
             {
                 "class": "modal-input",
                 "placeholder": "Enter email address",
+                "autocomplete": "email",
             }
         )
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        users = User.objects.filter(
+            email__iexact=email
+        )
+
+        if self.user:
+            users = users.exclude(pk=self.user.pk)
+
+        if users.exists():
+            raise forms.ValidationError(
+                "This email address is already used by another account."
+            )
+
+        return email
 
 
 class CitizenPhoneForm(forms.Form):
@@ -217,4 +242,32 @@ class CitizenPasswordForm(PasswordChangeForm):
                 "class": "modal-input",
                 "placeholder": "Confirm new password",
             }
+        )
+
+
+class CitizenPasswordResetForm(PasswordResetForm):
+    """Password recovery limited to active citizen accounts."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].label = "Registered Email Address"
+        self.fields["email"].widget.attrs.update(
+            {
+                "class": "input-field",
+                "placeholder": "Enter your registered email",
+                "autocomplete": "email",
+            }
+        )
+
+    def get_users(self, email):
+        users = User._default_manager.filter(
+            email__iexact=email,
+            is_active=True,
+            profile__role="citizen",
+        ).distinct()
+
+        return (
+            user
+            for user in users
+            if user.has_usable_password()
         )

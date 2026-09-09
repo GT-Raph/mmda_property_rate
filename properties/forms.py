@@ -187,6 +187,42 @@ def _validate_ghana_card_number(value):
     return normalized_value
 
 
+def _validate_building_type_for_property_use(
+    form,
+    cleaned_data,
+):
+    property_use = cleaned_data.get(
+        "property_use"
+    )
+    building_type = cleaned_data.get(
+        "building_type"
+    )
+
+    if not property_use or not building_type:
+        return
+
+    allowed_types = (
+        Property.valid_building_types_for_use(
+            property_use
+        )
+    )
+
+    if building_type in allowed_types:
+        return
+
+    property_use_label = dict(
+        Property.PROPERTY_USE_CHOICES
+    ).get(property_use, property_use)
+
+    form.add_error(
+        "building_type",
+        (
+            "Select a building type that belongs "
+            f"to {property_use_label}."
+        ),
+    )
+
+
 class PropertyCreateForm(PropertyBaseForm):
     class Meta(PropertyBaseForm.Meta):
         fields = PROPERTY_FORM_FIELDS
@@ -904,6 +940,11 @@ class PropertyCreateForm(PropertyBaseForm):
     def clean(self):
         cleaned_data = super().clean()
 
+        _validate_building_type_for_property_use(
+            self,
+            cleaned_data,
+        )
+
         existing_owner = (
             cleaned_data.get(
                 "existing_owner"
@@ -1431,6 +1472,11 @@ class PropertyUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        _validate_building_type_for_property_use(
+            self,
+            cleaned_data,
+        )
 
         is_exempt = cleaned_data.get("is_exempt")
         property_use = cleaned_data.get("property_use")
