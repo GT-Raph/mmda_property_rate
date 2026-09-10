@@ -189,6 +189,68 @@
         });
     }
 
+    function prepareGhanaCardInputs() {
+        document.querySelectorAll("[data-ghana-card-input='true']").forEach(function (input) {
+            function formatGhanaCard() {
+                var valueWithoutPrefix = input.value
+                    .toUpperCase()
+                    .replace(/^GHA-?/i, "");
+                var digits = valueWithoutPrefix
+                    .replace(/\D/g, "")
+                    .slice(0, 11);
+                var mainNumber = digits.slice(0, 10);
+                var checkDigit = digits.slice(10, 11);
+
+                input.value = "GHA-" + mainNumber + (checkDigit ? "-" + checkDigit : "");
+            }
+
+            function keepCursorAfterPrefix() {
+                if (input.selectionStart !== null && input.selectionStart < 4) {
+                    input.setSelectionRange(4, 4);
+                }
+            }
+
+            input.addEventListener("input", function () {
+                formatGhanaCard();
+                input.setSelectionRange(input.value.length, input.value.length);
+            });
+            input.addEventListener("focus", function () {
+                formatGhanaCard();
+                keepCursorAfterPrefix();
+            });
+            input.addEventListener("click", keepCursorAfterPrefix);
+            input.addEventListener("keydown", function (event) {
+                if (
+                    (event.key === "Backspace" || event.key === "Delete")
+                    && input.selectionStart !== null
+                    && input.selectionStart <= 4
+                    && input.selectionEnd <= 4
+                ) {
+                    event.preventDefault();
+                }
+            });
+
+            formatGhanaCard();
+        });
+    }
+
+    function preparePasswordToggles() {
+        document.querySelectorAll(".password-toggle").forEach(function (toggle) {
+            var input = document.getElementById(toggle.getAttribute("data-target"));
+            if (!input) return;
+
+            toggle.setAttribute("aria-pressed", "false");
+            toggle.setAttribute("aria-label", "Show password");
+
+            toggle.addEventListener("click", function () {
+                var willShow = input.type === "password";
+                input.type = willShow ? "text" : "password";
+                toggle.setAttribute("aria-pressed", String(willShow));
+                toggle.setAttribute("aria-label", willShow ? "Hide password" : "Show password");
+            });
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         prepareNavigation();
         prepareSidebar();
@@ -196,6 +258,8 @@
         prepareTables();
         prepareIconButtons();
         prepareBuildingTypeFilters();
+        prepareGhanaCardInputs();
+        preparePasswordToggles();
 
         document.addEventListener("keydown", function (event) {
             if (event.key !== "Escape") return;

@@ -754,6 +754,59 @@ textarea:disabled,
     line-height: 1.45;
 }
 
+/* Password visibility toggle — shared by every password field via
+   prms_ui.js's preparePasswordToggles(). Markup: wrap the input in
+   .password-field and add a .password-toggle button with
+   data-target="<input id>" and two child SVGs (.icon-eye / .icon-eye-off). */
+.password-field {
+    position: relative;
+}
+
+.password-field .input-field,
+.password-field input {
+    padding-right: 46px !important;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #8a8f98;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #344054;
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+.password-toggle .icon-eye-off {
+    display: none;
+}
+
+.password-toggle[aria-pressed="true"] .icon-eye {
+    display: none;
+}
+
+.password-toggle[aria-pressed="true"] .icon-eye-off {
+    display: block;
+}
+
 .error-text,
 .field-error,
 .errorlist {

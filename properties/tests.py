@@ -78,6 +78,28 @@ class PropertyBuildingTypeValidationTests(TestCase):
 
         self.assertEqual(all_mapped_types, available_types)
 
+    def test_new_owner_ghana_card_starts_with_prefix(self):
+        form = PropertyCreateForm(
+            assembly=self.assembly
+        )
+
+        self.assertEqual(
+            form["owner_ghana_card_number"].value(),
+            "GHA-",
+        )
+
+    def test_existing_owner_blank_ghana_card_starts_with_prefix(self):
+        from .forms import OwnerUpdateForm
+
+        form = OwnerUpdateForm(
+            instance=self.owner
+        )
+
+        self.assertEqual(
+            form["ghana_card_number"].value(),
+            "GHA-",
+        )
+
 
 class TemporaryPasswordTests(TestCase):
     @patch(

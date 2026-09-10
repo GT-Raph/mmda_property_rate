@@ -499,8 +499,10 @@ class PropertyCreateForm(PropertyBaseForm):
                 field.widget.attrs.update(
                     {
                         "autocomplete": "off",
-                        "inputmode": "text",
+                        "inputmode": "numeric",
                         "pattern": "GHA-\\d{10}-\\d",
+                        "maxlength": "16",
+                        "data-ghana-card-input": "true",
                         "title": (
                             "Use the format GHA-XXXXXXXXXX-X"
                         ),
@@ -512,6 +514,13 @@ class PropertyCreateForm(PropertyBaseForm):
                         ),
                     }
                 )
+
+                if not self.is_bound:
+                    field.initial = "GHA-"
+                    self.initial.setdefault(
+                        field_name,
+                        "GHA-",
+                    )
 
         labels = {
             "address_line": "Address",
@@ -1372,13 +1381,25 @@ class OwnerUpdateForm(forms.ModelForm):
         self.fields["ghana_card_number"].widget.attrs.update(
             {
                 "autocomplete": "off",
-                "inputmode": "text",
+                "inputmode": "numeric",
                 "pattern": "GHA-\\d{10}-\\d",
+                "maxlength": "16",
+                "data-ghana-card-input": "true",
                 "title": "Use the format GHA-XXXXXXXXXX-X",
                 "placeholder": "GHA-XXXXXXXXXX-X",
                 "style": "text-transform: uppercase;",
             }
         )
+
+        if (
+            not self.is_bound
+            and not self.initial.get(
+                "ghana_card_number"
+            )
+        ):
+            self.initial[
+                "ghana_card_number"
+            ] = "GHA-"
 
     def clean_ghana_card_number(self):
         return _validate_ghana_card_number(

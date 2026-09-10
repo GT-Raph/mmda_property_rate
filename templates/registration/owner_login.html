@@ -103,7 +103,20 @@
 
                 <div class="field-group">
                     <label for="id_password">Password</label>
-                    <input type="password" id="id_password" name="password" class="input-field" placeholder="Enter your password" autocomplete="current-password" required>
+                    <div class="password-field">
+                        <input type="password" id="id_password" name="password" class="input-field" placeholder="Enter your password" autocomplete="current-password" required>
+                        <button type="button" class="password-toggle" data-target="id_password" aria-pressed="false" aria-label="Show password">
+                            <svg class="icon-eye" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M2 12C3.8 8.5 7.2 6 12 6C16.8 6 20.2 8.5 22 12C20.2 15.5 16.8 18 12 18C7.2 18 3.8 15.5 2 12Z" stroke="currentColor" stroke-width="1.8"></path>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M2 12C3.8 8.5 7.2 6 12 6C16.8 6 20.2 8.5 22 12C20.2 15.5 16.8 18 12 18C7.2 18 3.8 15.5 2 12Z" stroke="currentColor" stroke-width="1.8"></path>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"></circle>
+                                <path d="M3 3L21 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                            </svg>
+                        </button>
+                    </div>
                     {% for error in form.password.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
                 </div>
 
