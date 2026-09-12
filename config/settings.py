@@ -284,7 +284,9 @@ if not DEBUG:
     X_FRAME_OPTIONS = "DENY"
     SESSION_COOKIE_HTTPONLY = True
     CSRF_COOKIE_HTTPONLY = False
-    SECURE_REFERRER_POLICY = "same-origin"
+    # OSM tiles and Nominatim require an identifiable web origin. This keeps
+    # paths and query strings private while allowing the origin cross-site.
+    SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 else:
     # Safer local dev defaults
     SESSION_COOKIE_SECURE = False
