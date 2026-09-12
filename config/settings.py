@@ -241,6 +241,16 @@ SITE_PUBLIC_URL = os.environ.get(
     "https://mmda-property-rate.onrender.com",
 )
 
+# Temporary presentation mode: keep GPS evidence when supplied, but do not
+# prevent a field officer from completing a remote demonstration. Set this
+# environment variable to False to restore strict on-site enforcement.
+FIELD_GPS_DEMO_MODE = (
+    os.getenv("FIELD_GPS_DEMO_MODE", "True")
+    .strip()
+    .lower()
+    == "true"
+)
+
 # =========================================================
 # EMAIL / CITIZEN PASSWORD RECOVERY
 # =========================================================

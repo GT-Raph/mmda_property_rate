@@ -544,17 +544,20 @@
             <input type="hidden" id="gps_accuracy" name="gps_accuracy" value="{{ gps_accuracy }}">
 
             <div
-                class="gps-validation-card"
+                class="gps-validation-card{% if gps_demo_mode and gps_validation_enabled %} is-warning{% endif %}"
                 id="gpsValidationCard"
                 data-enabled="{{ gps_validation_enabled|yesno:'true,false' }}"
+                data-demo-mode="{{ gps_demo_mode|yesno:'true,false' }}"
                 data-target-latitude="{{ registered_latitude }}"
                 data-target-longitude="{{ registered_longitude }}"
                 data-radius="{{ gps_radius_meters }}"
             >
-                <strong>On-site GPS validation</strong>
+                <strong>{% if gps_demo_mode and gps_validation_enabled %}GPS validation — demonstration mode{% else %}On-site GPS validation{% endif %}</strong>
                 <span id="gpsValidationText">
                     {% if not gps_validation_enabled %}
                         GPS comparison is disabled for this assembly.
+                    {% elif gps_demo_mode %}
+                        GPS capture is optional for this demonstration. A remote location will be recorded but will not block verification.
                     {% elif registered_gps_available %}
                         Capture your live location. You must be within {{ gps_radius_meters }} metres to mark this property as Verified.
                     {% else %}
@@ -625,7 +628,11 @@
             </div>
             <ul>
                 <li>Ensure all required photos are uploaded</li>
-                <li>GPS location has been captured</li>
+                {% if gps_demo_mode or not gps_validation_enabled %}
+                    <li>GPS capture is optional during this demonstration</li>
+                {% else %}
+                    <li>GPS location has been captured</li>
+                {% endif %}
                 <li>All discrepancies are documented</li>
             </ul>
         </div>
@@ -715,13 +722,16 @@
             return;
         }
 
+        const demoMode = card.dataset.demoMode === "true";
         const targetLatitude = Number(card.dataset.targetLatitude);
         const targetLongitude = Number(card.dataset.targetLongitude);
         const radius = Number(card.dataset.radius || 100);
 
         if (!card.dataset.targetLatitude || !card.dataset.targetLongitude) {
             card.classList.add("is-warning");
-            text.textContent = "Location captured, but the property has no registered GPS baseline. Submit as Under Review or Flagged.";
+            text.textContent = demoMode
+                ? "Location captured, but the property has no registered GPS baseline. Demonstration mode still allows verification."
+                : "Location captured, but the property has no registered GPS baseline. Submit as Under Review or Flagged.";
             return;
         }
 
@@ -737,7 +747,9 @@
             text.textContent = `GPS match confirmed: approximately ${Math.round(distance)} metres from the registered location.`;
         } else {
             card.classList.add("is-mismatch");
-            text.textContent = `GPS mismatch: approximately ${Math.round(distance)} metres away. Move within ${radius} metres, or submit as Under Review or Flagged.`;
+            text.textContent = demoMode
+                ? `Remote GPS location recorded: approximately ${Math.round(distance)} metres away. Demonstration mode allows verification.`
+                : `GPS mismatch: approximately ${Math.round(distance)} metres away. Move within ${radius} metres, or submit as Under Review or Flagged.`;
         }
     }
 

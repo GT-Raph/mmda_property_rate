@@ -27,7 +27,10 @@ class GpsDistanceTests(TestCase):
         self.assertLess(distance, Decimal("112"))
 
 
-@override_settings(SECURE_SSL_REDIRECT=False)
+@override_settings(
+    SECURE_SSL_REDIRECT=False,
+    FIELD_GPS_DEMO_MODE=False,
+)
 class FieldVerificationGpsTests(TestCase):
     def setUp(self):
         self.assembly = Assembly.objects.create(
@@ -165,4 +168,60 @@ class FieldVerificationGpsTests(TestCase):
         self.assertEqual(
             visit.gps_validation_status,
             "outside_radius",
+        )
+
+    @override_settings(FIELD_GPS_DEMO_MODE=True)
+    def test_demo_mode_allows_remote_verification_and_records_mismatch(self):
+        response = self._post(
+            "5.610000",
+            "-0.180000",
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "field_operations:field-officer-stats"
+            ),
+        )
+        self.property.refresh_from_db()
+        self.assignment.refresh_from_db()
+        self.assertEqual(
+            self.property.verification_status,
+            "verified",
+        )
+        self.assertEqual(
+            self.assignment.status,
+            "completed",
+        )
+        visit = FieldVisit.objects.get(
+            property=self.property
+        )
+        self.assertEqual(
+            visit.gps_validation_status,
+            "outside_radius",
+        )
+
+    @override_settings(FIELD_GPS_DEMO_MODE=True)
+    def test_demo_mode_allows_verification_without_gps_capture(self):
+        response = self._post("", "")
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "field_operations:field-officer-stats"
+            ),
+        )
+        self.property.refresh_from_db()
+        self.assertEqual(
+            self.property.verification_status,
+            "verified",
+        )
+        visit = FieldVisit.objects.get(
+            property=self.property
+        )
+        self.assertIsNone(visit.latitude)
+        self.assertIsNone(visit.longitude)
+        self.assertEqual(
+            visit.gps_validation_status,
+            "disabled",
         )

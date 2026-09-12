@@ -4,6 +4,7 @@ import logging
 import math
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
 from django.http import request
@@ -3677,21 +3678,34 @@ def field_officer_verify_property(
                     property_obj.assembly
                     .field_gps_radius_meters
                 )
+                gps_demo_mode = bool(
+                    getattr(
+                        settings,
+                        "FIELD_GPS_DEMO_MODE",
+                        False,
+                    )
+                )
+                gps_enforcement_enabled = (
+                    gps_enabled
+                    and not gps_demo_mode
+                )
 
                 if gps_enabled:
                     if latitude is None or longitude is None:
-                        raise ValidationError(
-                            "Capture your current GPS location before submitting this verification."
-                        )
+                        if gps_enforcement_enabled:
+                            raise ValidationError(
+                                "Capture your current GPS location before submitting this verification."
+                            )
 
-                    if (
+                    elif (
                         property_obj.latitude is None
                         or property_obj.longitude is None
                     ):
                         gps_validation_status = "unavailable"
 
                         if (
-                            form_values[
+                            gps_enforcement_enabled
+                            and form_values[
                                 "verification_status"
                             ]
                             == "verified"
@@ -3721,7 +3735,8 @@ def field_officer_verify_property(
                             )
 
                             if (
-                                form_values[
+                                gps_enforcement_enabled
+                                and form_values[
                                     "verification_status"
                                 ]
                                 == "verified"
@@ -3899,6 +3914,13 @@ def field_officer_verify_property(
         and gps_settings_assembly
         .field_gps_validation_enabled
     )
+    gps_demo_mode = bool(
+        getattr(
+            settings,
+            "FIELD_GPS_DEMO_MODE",
+            False,
+        )
+    )
     gps_radius_meters = (
         gps_settings_assembly
         .field_gps_radius_meters
@@ -3947,6 +3969,7 @@ def field_officer_verify_property(
         "gps_validation_enabled": (
             gps_validation_enabled
         ),
+        "gps_demo_mode": gps_demo_mode,
         "gps_radius_meters": gps_radius_meters,
         "registered_gps_available": (
             registered_gps_available
