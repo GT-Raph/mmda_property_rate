@@ -1,11 +1,28 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from admins.models import Assembly, UserProfile
 from admins.views import PortalLoginView, _find_citizen_user_by_phone
 from properties.models import Owner
 
 User = get_user_model()
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class AdminPasswordVisibilityTests(TestCase):
+    def test_admin_login_loads_password_visibility_control(self):
+        response = self.client.get(reverse("admin:login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "css/password_visibility.css",
+        )
+        self.assertContains(
+            response,
+            "js/password_visibility.js",
+        )
 
 
 class CitizenPhoneLookupTests(TestCase):
