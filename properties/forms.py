@@ -345,7 +345,6 @@ class PropertyCreateForm(PropertyBaseForm):
                 )
 
         for required_owner_field in [
-            "owner_email",
             "owner_ghana_card_number",
         ]:
             if (
@@ -423,7 +422,7 @@ class PropertyCreateForm(PropertyBaseForm):
                 "Enter alternate phone number"
             ),
             "owner_email": (
-                "Enter email address"
+                "Enter email address (optional)"
             ),
             "owner_postal_address": (
                 "Enter postal address"
@@ -552,6 +551,11 @@ class PropertyCreateForm(PropertyBaseForm):
                 self.fields[
                     field_name
                 ].label = label
+
+        if "owner_email" in self.fields:
+            self.fields[
+                "owner_email"
+            ].label = "Email Address (Optional)"
 
         if "rateable_value" in self.fields:
             self.fields[
@@ -1375,8 +1379,8 @@ class OwnerUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["full_name"].required = True
         self.fields["primary_phone"].required = True
-        self.fields["email"].required = True
         self.fields["ghana_card_number"].required = True
+        self.fields["email"].label = "Email Address (Optional)"
 
         self.fields["ghana_card_number"].widget.attrs.update(
             {

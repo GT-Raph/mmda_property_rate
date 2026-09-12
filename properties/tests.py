@@ -100,6 +100,54 @@ class PropertyBuildingTypeValidationTests(TestCase):
             "GHA-",
         )
 
+    def test_new_owner_email_is_optional(self):
+        form = PropertyCreateForm(
+            data={
+                "create_new_owner": "on",
+                "owner_full_name": "Owner Without Email",
+                "owner_primary_phone": "0245551234",
+                "owner_email": "",
+                "owner_ghana_card_number": "GHA-1234567890-1",
+                "property_use": "residential",
+                "building_type": "apartment",
+                "occupancy_status": "occupied",
+                "number_of_floors": 1,
+                "number_of_units": 1,
+                "address_line": "2 Test Street",
+                "area_town": "Accra",
+                "rateable_value": "100.00",
+                "verification_status": "pending",
+                "is_active": "on",
+            },
+            assembly=self.assembly,
+        )
+
+        self.assertFalse(form.fields["owner_email"].required)
+        self.assertNotIn(
+            "owner_email",
+            form.owner_required_field_names,
+        )
+        self.assertTrue(form.is_valid(), form.errors.as_json())
+
+    def test_existing_owner_can_remain_without_email(self):
+        from .forms import OwnerUpdateForm
+
+        form = OwnerUpdateForm(
+            data={
+                "full_name": self.owner.full_name,
+                "primary_phone": self.owner.primary_phone,
+                "alternate_phone": "",
+                "email": "",
+                "ghana_card_number": "GHA-1234567890-1",
+                "postal_address": "",
+                "residential_address": "",
+            },
+            instance=self.owner,
+        )
+
+        self.assertFalse(form.fields["email"].required)
+        self.assertTrue(form.is_valid(), form.errors.as_json())
+
 
 class TemporaryPasswordTests(TestCase):
     @patch(
