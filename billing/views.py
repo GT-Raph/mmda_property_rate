@@ -2,13 +2,14 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Max, Q
+from django.db.models import Exists, F, Max, OuterRef, Q
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from admins.decorators import module_required
 from admins.models import Assembly
 from billing.models import Bill, RatePolicy
+from payments.models import Payment
 from properties.models import Property
 
 
@@ -185,6 +186,10 @@ def billing_management(request):
 
     selected_year_raw = (request.GET.get("year") or request.POST.get("year") or str(default_year)).strip()
     search = (request.GET.get("q") or "").strip()
+    bill_status = (request.GET.get("status") or "").strip()
+    property_type = (request.GET.get("type") or "").strip()
+    location = (request.GET.get("location") or "").strip()
+    payment_filter = (request.GET.get("payment") or "").strip()
     page_number = request.GET.get("page", 1)
 
     try:
@@ -234,6 +239,13 @@ def billing_management(request):
         "assembly",
         "property_record__owner",
         "rate_policy",
+    ).annotate(
+        has_successful_payment=Exists(
+            Payment.objects.filter(
+                bill_id=OuterRef("pk"),
+                status="successful",
+            )
+        )
     ).order_by("-created_at")
 
     if context_assembly:
@@ -248,6 +260,34 @@ def billing_management(request):
             | Q(property_record__property_reference__icontains=search)
             | Q(property_record__owner__full_name__icontains=search)
         )
+
+    if bill_status == "outstanding":
+        bills_qs = bills_qs.exclude(
+            status="cancelled"
+        ).filter(
+            amount_due__gt=F("amount_paid")
+        )
+    elif bill_status:
+        bills_qs = bills_qs.filter(status=bill_status)
+
+    if property_type:
+        bills_qs = bills_qs.filter(
+            property_record__property_use=property_type
+        )
+
+    if location:
+        bills_qs = bills_qs.filter(
+            Q(property_record__area_town__icontains=location)
+            | Q(property_record__suburb__icontains=location)
+            | Q(property_record__address_line__icontains=location)
+            | Q(property_record__digital_address__icontains=location)
+            | Q(property_record__community_area__name__icontains=location)
+        )
+
+    if payment_filter == "recorded":
+        bills_qs = bills_qs.filter(has_successful_payment=True)
+    elif payment_filter == "none":
+        bills_qs = bills_qs.filter(has_successful_payment=False)
 
     active_policy_qs = RatePolicy.objects.filter(year=selected_year, is_active=True)
     if context_assembly:
@@ -283,6 +323,8 @@ def billing_management(request):
 
     start_index = page_obj.start_index() if paginator.count else 0
     end_index = page_obj.end_index() if paginator.count else 0
+    filter_query_params = request.GET.copy()
+    filter_query_params.pop("page", None)
 
     context = {
         "page_title": "Billing Management",
@@ -298,6 +340,13 @@ def billing_management(request):
         "start_index": start_index,
         "end_index": end_index,
         "search": search,
+        "location": location,
+        "selected_status": bill_status,
+        "selected_type": property_type,
+        "selected_payment": payment_filter,
+        "status_choices": list(Bill.STATUS_CHOICES),
+        "type_choices": list(Property.PROPERTY_USE_CHOICES),
+        "filter_query": filter_query_params.urlencode(),
         "messages": messages.get_messages(request),
         "chart_labels": month_labels,
         "collected_values": collected_values,

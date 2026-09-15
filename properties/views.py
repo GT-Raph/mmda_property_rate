@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Exists, F, OuterRef, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,6 +14,7 @@ from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
 from admins.models import Assembly
 from billing.models import Bill, CommunityArea, RatePolicy
+from payments.models import Payment
 from properties.forms import PropertyCreateForm, PropertyUpdateForm, OwnerUpdateForm
 from properties.models import Property
 from properties.utils import link_or_create_citizen_for_owner
@@ -184,15 +185,49 @@ def property_registry(request):
     user_role = get_user_role(request.user)
 
     search = (request.GET.get("q") or "").strip()
+    location = (request.GET.get("location") or "").strip()
     property_type = (request.GET.get("type") or "").strip()
-    status = (request.GET.get("status") or "").strip()
+    record_status = (request.GET.get("status") or "").strip()
+    verification = (request.GET.get("verification") or "").strip()
+    billing_filter = (request.GET.get("billing") or "").strip()
+    payment_filter = (request.GET.get("payment") or "").strip()
     page_number = request.GET.get("page", 1)
+
+    property_bills = Bill.objects.filter(
+        property_record_id=OuterRef("pk")
+    )
+    paid_property_bills = property_bills.exclude(
+        status="cancelled"
+    ).filter(
+        amount_due__gt=0,
+        amount_paid__gte=F("amount_due"),
+    )
+    outstanding_property_bills = property_bills.exclude(
+        status="cancelled"
+    ).filter(
+        amount_due__gt=F("amount_paid")
+    )
+    successful_property_payments = Payment.objects.filter(
+        status="successful"
+    ).filter(
+        Q(property_id=OuterRef("pk"))
+        | Q(bill__property_record_id=OuterRef("pk"))
+    )
 
     properties_qs = Property.objects.select_related(
         "owner",
         "assembly",
         "community_area",
         "applied_rate_policy",
+    ).annotate(
+        has_bill=Exists(property_bills),
+        has_paid_bill=Exists(paid_property_bills),
+        has_outstanding_bill=Exists(
+            outstanding_property_bills
+        ),
+        has_successful_payment=Exists(
+            successful_property_payments
+        ),
     ).order_by("-created_at")
     
 
@@ -213,17 +248,58 @@ def property_registry(request):
             | Q(community_area__name__icontains=search)
         )
 
+    if location:
+        properties_qs = properties_qs.filter(
+            Q(area_town__icontains=location)
+            | Q(suburb__icontains=location)
+            | Q(address_line__icontains=location)
+            | Q(digital_address__icontains=location)
+            | Q(community_area__name__icontains=location)
+        )
+
     if property_type:
         properties_qs = properties_qs.filter(property_use=property_type)
 
-    if status == "active":
-        properties_qs = properties_qs.filter(is_active=True).exclude(
-            verification_status__in=["pending", "under_review", "unverified"]
-        )
-    elif status == "pending":
-        properties_qs = properties_qs.filter(Q(verification_status__in=["pending", "under_review", "unverified"]))
-    elif status == "inactive":
+    if record_status == "active":
+        properties_qs = properties_qs.filter(is_active=True)
+    elif record_status == "inactive":
         properties_qs = properties_qs.filter(is_active=False)
+    elif record_status == "pending":
+        # Preserve older bookmarked links that used status=pending.
+        verification = verification or "pending"
+
+    if verification == "unverified":
+        properties_qs = properties_qs.exclude(
+            verification_status="verified"
+        )
+    elif verification == "awaiting_review":
+        properties_qs = properties_qs.filter(
+            verification_status__in=["pending", "under_review"]
+        )
+    elif verification:
+        properties_qs = properties_qs.filter(
+            verification_status=verification
+        )
+
+    if billing_filter == "billed":
+        properties_qs = properties_qs.filter(has_bill=True)
+    elif billing_filter == "unbilled":
+        properties_qs = properties_qs.filter(has_bill=False)
+    elif billing_filter == "paid":
+        properties_qs = properties_qs.filter(has_paid_bill=True)
+    elif billing_filter == "outstanding":
+        properties_qs = properties_qs.filter(
+            has_outstanding_bill=True
+        )
+
+    if payment_filter == "recorded":
+        properties_qs = properties_qs.filter(
+            has_successful_payment=True
+        )
+    elif payment_filter == "none":
+        properties_qs = properties_qs.filter(
+            has_successful_payment=False
+        )
 
     paginator = Paginator(properties_qs, 6)
     page_obj = paginator.get_page(page_number)
@@ -257,6 +333,8 @@ def property_registry(request):
         )
 
     type_choices = list(Property.PROPERTY_USE_CHOICES)
+    filter_query_params = request.GET.copy()
+    filter_query_params.pop("page", None)
 
     context = {
         "page_title": "Property Registry" if user_role != "field_officer" else "My Registered Properties",
@@ -272,9 +350,24 @@ def property_registry(request):
         "start_index": page_obj.start_index() if paginator.count else 0,
         "end_index": page_obj.end_index() if paginator.count else 0,
         "search": search,
+        "location": location,
         "selected_type": property_type,
-        "selected_status": status,
+        "selected_status": record_status,
+        "selected_verification": verification,
+        "selected_billing": billing_filter,
+        "selected_payment": payment_filter,
         "type_choices": type_choices,
+        "verification_choices": [
+            ("verified", "Verified"),
+            ("unverified", "All Unverified"),
+            ("awaiting_review", "Pending / Under Review"),
+            ("pending", "Pending"),
+            ("under_review", "Under Review"),
+            ("flagged", "Flagged"),
+            ("possible_duplicate", "Possible Duplicate"),
+            ("rejected", "Rejected"),
+        ],
+        "filter_query": filter_query_params.urlencode(),
         "portal_access": portal_access,
     }
     return render(request, "properties/property_registry.html", context)

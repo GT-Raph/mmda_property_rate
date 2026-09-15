@@ -26,7 +26,13 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models.functions import (
+    Coalesce,
+    ExtractMonth,
+    ExtractQuarter,
+    ExtractYear,
+    TruncMonth,
+)
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -585,16 +591,6 @@ def _number(value):
     return f"{int(value or 0):,}"
 
 
-def _percent(numerator, denominator):
-    numerator = Decimal(numerator or 0)
-    denominator = Decimal(denominator or 0)
-
-    if denominator <= 0:
-        return Decimal("0.0")
-
-    return round((numerator / denominator) * 100, 1)
-
-
 def _pct_change(current, previous):
     current = float(current or 0)
     previous = float(previous or 0)
@@ -609,22 +605,6 @@ def _time_ago(dt):
     if not dt:
         return "just now"
     return f"{timesince(dt, timezone.now()).split(',')[0]} ago"
-
-
-def _month_range(month_count=6):
-    today = timezone.localdate()
-    current_month_start = today.replace(day=1)
-    months = []
-
-    for offset in range(month_count - 1, -1, -1):
-        month = current_month_start.month - offset
-        year = current_month_start.year
-        while month <= 0:
-            month += 12
-            year -= 1
-        months.append(date(year, month, 1))
-
-    return months
 
 
 def _display_report_date(dt):
@@ -1005,6 +985,7 @@ def dashboard(request):
     }
 
     properties_qs = Property.objects.select_related("owner")
+    owners_qs = Owner.objects.all()
     bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
     payments_qs = Payment.objects.select_related("property__owner", "bill")
     field_visits_qs = FieldVisit.objects.select_related("property__owner", "officer")
@@ -1098,6 +1079,28 @@ def dashboard(request):
     revenue_change = _pct_change(revenue_this_month, revenue_previous_month)
     outstanding_change = _pct_change(outstanding_total, outstanding_previous)
 
+    verified_properties = work_properties_qs.filter(
+        is_active=True,
+        verification_status="verified",
+    ).count()
+    pending_properties = work_properties_qs.filter(
+        is_active=True,
+        verification_status__in=["pending", "under_review"],
+    ).count()
+    owner_count = owners_qs.count()
+    total_bills_count = finance_bills_qs.exclude(status="cancelled").count()
+    successful_payments_qs = finance_payments_qs.filter(status="successful")
+    payments_recorded_count = successful_payments_qs.count()
+    total_collected = successful_payments_qs.aggregate(
+        total=Coalesce(
+            Sum("amount"),
+            Value(Decimal("0.00"), output_field=MONEY_FIELD),
+        )
+    )["total"]
+    outstanding_bill_count = open_bills.filter(
+        amount_due__gt=F("amount_paid")
+    ).count()
+
     if user_role == "field_officer":
         summary_cards = [
             {
@@ -1108,6 +1111,7 @@ def dashboard(request):
                 "change_prefix": "+" if property_change >= 0 else "-",
                 "change_class": "green" if property_change >= 0 else "red",
                 "icon_key": "property",
+                "url": reverse("properties:property-registry"),
             },
             {
                 "title": "Assembly Bills",
@@ -1142,38 +1146,70 @@ def dashboard(request):
             {
                 "title": "Total Properties",
                 "value": _number(total_properties),
-                "meta": "vs last month",
+                "meta": "new registrations vs last month",
                 "change": abs(property_change),
                 "change_prefix": "+" if property_change >= 0 else "-",
                 "change_class": "green" if property_change >= 0 else "red",
                 "icon_key": "property",
+                "url": reverse("properties:property-registry"),
+            },
+            {
+                "title": "Verified Properties",
+                "value": _number(verified_properties),
+                "meta": "active and verified",
+                "badge": "Current",
+                "icon_key": "mark",
+                "url": f'{reverse("properties:property-registry")}?verification=verified',
+            },
+            {
+                "title": "Pending Verification",
+                "value": _number(pending_properties),
+                "meta": "pending or under review",
+                "badge": "Needs review",
+                "icon_key": "alert",
+                "url": f'{reverse("properties:property-registry")}?verification=awaiting_review',
+            },
+            {
+                "title": "Property Owners",
+                "value": _number(owner_count),
+                "meta": "owners in the registry",
+                "badge": "Citizens",
+                "icon_key": "assembly",
+                "url": reverse("properties:property-registry"),
             },
             {
                 "title": "Bills Generated",
-                "value": _number(bills_this_month),
-                "meta": "this month",
-                "change": abs(bills_change),
-                "change_prefix": "+" if bills_change >= 0 else "-",
-                "change_class": "green" if bills_change >= 0 else "red",
+                "value": _number(total_bills_count),
+                "meta": f"{_number(bills_this_month)} generated this month",
+                "badge": "All time",
                 "icon_key": "bill",
+                "url": reverse("billing:billing-management"),
+            },
+            {
+                "title": "Payments Recorded",
+                "value": _number(payments_recorded_count),
+                "meta": f"{_money(total_collected)} collected",
+                "badge": "Successful",
+                "icon_key": "paid",
+                "url": f'{reverse("billing:billing-management")}?payment=recorded',
             },
             {
                 "title": "Revenue Collected",
                 "value": _money(revenue_this_month),
-                "meta": "this month",
+                "meta": "successful payments this month",
                 "change": abs(revenue_change),
                 "change_prefix": "+" if revenue_change >= 0 else "-",
                 "change_class": "green" if revenue_change >= 0 else "red",
-                "icon_key": "paid",
+                "icon_key": "money",
+                "url": reverse("billing:billing-management"),
             },
             {
-                "title": "Outstanding",
+                "title": "Outstanding Payments",
                 "value": _money(outstanding_total),
-                "meta": "vs last month",
-                "change": abs(outstanding_change),
-                "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
-                "change_class": "green" if outstanding_total <= outstanding_previous else "red",
+                "meta": f"{_number(outstanding_bill_count)} open bill(s)",
+                "badge": "Action needed",
                 "icon_key": "alert",
+                "url": f'{reverse("billing:billing-management")}?status=outstanding',
             },
         ]
 
@@ -1433,127 +1469,219 @@ def reports_analytics(request):
             return _download_report(request, report_key, assembly=context_assembly)
 
     today = timezone.localdate()
-    current_month_start = today.replace(day=1)
-    previous_month_end = current_month_start - timedelta(days=1)
-    previous_month_start = previous_month_end.replace(day=1)
-    week_start = today - timedelta(days=today.weekday())
+    try:
+        selected_year = int(request.GET.get("year") or today.year)
+    except (TypeError, ValueError):
+        selected_year = today.year
+    if selected_year < 2000 or selected_year > today.year + 1:
+        selected_year = today.year
 
+    year_options = list(range(today.year, today.year - 5, -1))
+    if selected_year not in year_options:
+        year_options.append(selected_year)
+        year_options.sort(reverse=True)
+
+    properties_qs = Property.objects.all()
+    owners_qs = Owner.objects.all()
     bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
     payments_qs = Payment.objects.filter(status="successful", paid_at__isnull=False)
 
     if context_assembly:
+        properties_qs = properties_qs.filter(assembly=context_assembly)
+        owners_qs = owners_qs.filter(assembly=context_assembly)
+        owners_qs = owners_qs.filter(assembly=context_assembly)
         bills_qs = bills_qs.filter(assembly=context_assembly)
         payments_qs = payments_qs.filter(assembly=context_assembly)
 
-    current_month_bills = bills_qs.filter(created_at__date__gte=current_month_start)
-    previous_month_bills = bills_qs.filter(
-        created_at__date__gte=previous_month_start,
-        created_at__date__lte=previous_month_end,
+    year_bills_qs = bills_qs.filter(billing_year=selected_year).exclude(status="cancelled")
+    year_payments_qs = payments_qs.filter(paid_at__year=selected_year)
+    balance_expr = ExpressionWrapper(
+        F("amount_due") - F("amount_paid"),
+        output_field=MONEY_FIELD,
     )
-
-    current_due = current_month_bills.aggregate(
-        total=Coalesce(Sum("amount_due"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"] or Decimal("0.00")
-
-    current_paid = current_month_bills.aggregate(
-        total=Coalesce(Sum("amount_paid"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"] or Decimal("0.00")
-
-    previous_due = previous_month_bills.aggregate(
-        total=Coalesce(Sum("amount_due"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"] or Decimal("0.00")
-
-    previous_paid = previous_month_bills.aggregate(
-        total=Coalesce(Sum("amount_paid"), Value(Decimal("0.00"), output_field=MONEY_FIELD))
-    )["total"] or Decimal("0.00")
-
-    collection_rate = _percent(current_paid, current_due)
-    previous_collection_rate = _percent(previous_paid, previous_due)
-
-    bills_generated_this_month = current_month_bills.count()
-
-    reports_run_qs = ReportRun.objects.all()
-    if context_assembly:
-        reports_run_qs = reports_run_qs.filter(generated_by__profile__assembly=context_assembly)
-
-    reports_generated_this_week = reports_run_qs.filter(created_at__date__gte=week_start).count()
+    outstanding_bills_qs = year_bills_qs.filter(amount_due__gt=F("amount_paid"))
+    outstanding_total = outstanding_bills_qs.aggregate(
+        total=Coalesce(
+            Sum(balance_expr),
+            Value(Decimal("0.00"), output_field=MONEY_FIELD),
+        )
+    )["total"]
 
     stats = [
         {
-            "icon_key": "collection",
+            "icon_key": "property",
+            "icon_class": "icon-gold",
+            "title": "Total Properties",
+            "value": _number(properties_qs.count()),
+            "meta": "all registry records",
+        },
+        {
+            "icon_key": "mark",
             "icon_class": "icon-green",
-            "title": "Collection Rate",
-            "value": f"{collection_rate}%",
-            "meta": f"vs {previous_collection_rate}% last month",
+            "title": "Verified Properties",
+            "value": _number(properties_qs.filter(is_active=True, verification_status="verified").count()),
+            "meta": "active and verified",
+        },
+        {
+            "icon_key": "alert",
+            "icon_class": "icon-gold",
+            "title": "Pending Verification",
+            "value": _number(properties_qs.filter(is_active=True, verification_status__in=["pending", "under_review"]).count()),
+            "meta": "pending or under review",
+        },
+        {
+            "icon_key": "assembly",
+            "icon_class": "icon-blue",
+            "title": "Citizens / Owners",
+            "value": _number(owners_qs.count()),
+            "meta": "registered property owners",
         },
         {
             "icon_key": "bill",
             "icon_class": "icon-blue",
             "title": "Bills Generated",
-            "value": f"{bills_generated_this_month:,}",
-            "meta": "this month",
+            "value": _number(year_bills_qs.count()),
+            "meta": f"for {selected_year}",
         },
         {
-            "icon_key": "report-download",
+            "icon_key": "paid",
+            "icon_class": "icon-green",
+            "title": "Payments Recorded",
+            "value": _number(year_payments_qs.count()),
+            "meta": f"successful in {selected_year}",
+        },
+        {
+            "icon_key": "reciept",
             "icon_class": "icon-gold",
-            "title": "Reports Generated",
-            "value": f"{reports_generated_this_week:,}",
-            "meta": "this week",
+            "title": "Outstanding Bills",
+            "value": _number(outstanding_bills_qs.count()),
+            "meta": f"open balances in {selected_year}",
+        },
+        {
+            "icon_key": "money",
+            "icon_class": "icon-gold",
+            "title": "Outstanding Amount",
+            "value": _money(outstanding_total),
+            "meta": f"balance due for {selected_year}",
         },
     ]
 
-    month_starts = _month_range(6)
-
-    collected_rows = (
-        payments_qs.filter(paid_at__date__gte=month_starts[0])
-        .annotate(month=TruncMonth("paid_at"))
+    property_month_rows = (
+        properties_qs.filter(created_at__year=selected_year)
+        .annotate(month=ExtractMonth("created_at"))
         .values("month")
-        .annotate(total=Coalesce(Sum("amount"), Value(Decimal("0.00"), output_field=MONEY_FIELD)))
+        .annotate(total=Count("id"))
+        .order_by("month")
+    )
+    bill_month_rows = (
+        bills_qs.filter(created_at__year=selected_year).exclude(status="cancelled")
+        .annotate(month=ExtractMonth("created_at"))
+        .values("month")
+        .annotate(total=Count("id"))
+        .order_by("month")
+    )
+    payment_month_rows = (
+        year_payments_qs.annotate(month=ExtractMonth("paid_at"))
+        .values("month")
+        .annotate(total=Count("id"))
         .order_by("month")
     )
 
-    target_rows = (
-        bills_qs.filter(created_at__date__gte=month_starts[0])
-        .annotate(month=TruncMonth("created_at"))
-        .values("month")
-        .annotate(total=Coalesce(Sum("amount_due"), Value(Decimal("0.00"), output_field=MONEY_FIELD)))
-        .order_by("month")
-    )
+    def period_map(rows, key):
+        return {int(row[key]): row["total"] for row in rows if row[key] is not None}
 
-    collected_map = {}
-    for row in collected_rows:
-        month_value = row["month"]
-        if month_value:
-            collected_map[month_value.date().replace(day=1)] = row["total"]
+    property_month_map = period_map(property_month_rows, "month")
+    bill_month_map = period_map(bill_month_rows, "month")
+    payment_month_map = period_map(payment_month_rows, "month")
 
-    target_map = {}
-    for row in target_rows:
-        month_value = row["month"]
-        if month_value:
-            target_map[month_value.date().replace(day=1)] = row["total"]
-
-    max_value = Decimal("1.00")
-    for month_start in month_starts:
-        max_value = max(max_value, collected_map.get(month_start, Decimal("0.00")))
-        max_value = max(max_value, target_map.get(month_start, Decimal("0.00")))
-
-    chart_months = []
-    for month_start in month_starts:
-        collected = collected_map.get(month_start, Decimal("0.00"))
-        target = target_map.get(month_start, Decimal("0.00"))
-
-        collected_height = max(8, int((collected / max_value) * 240)) if collected > 0 else 8
-        target_height = max(8, int((target / max_value) * 240)) if target > 0 else 8
-
-        chart_months.append(
-            {
-                "label": month_start.strftime("%b"),
-                "collected_display": f"GH₵ {collected:,.0f}",
-                "target_display": f"GH₵ {target:,.0f}",
-                "collected_height": collected_height,
-                "target_height": target_height,
-            }
+    quarterly_bills = (
+        bills_qs.filter(issued_at__year=selected_year).exclude(status="cancelled")
+        .annotate(quarter=ExtractQuarter("issued_at"))
+        .values("quarter")
+        .annotate(
+            billed=Coalesce(
+                Sum("amount_due"),
+                Value(Decimal("0.00"), output_field=MONEY_FIELD),
+            ),
+            outstanding=Coalesce(
+                Sum(balance_expr, filter=Q(amount_due__gt=F("amount_paid"))),
+                Value(Decimal("0.00"), output_field=MONEY_FIELD),
+            ),
         )
+        .order_by("quarter")
+    )
+    quarterly_payments = (
+        year_payments_qs.annotate(quarter=ExtractQuarter("paid_at"))
+        .values("quarter")
+        .annotate(
+            total=Coalesce(
+                Sum("amount"),
+                Value(Decimal("0.00"), output_field=MONEY_FIELD),
+            )
+        )
+        .order_by("quarter")
+    )
+    billed_quarter_map = {
+        int(row["quarter"]): row["billed"]
+        for row in quarterly_bills
+        if row["quarter"] is not None
+    }
+    outstanding_quarter_map = {
+        int(row["quarter"]): row["outstanding"]
+        for row in quarterly_bills
+        if row["quarter"] is not None
+    }
+    payment_quarter_map = period_map(quarterly_payments, "quarter")
+
+    first_year = selected_year - 4
+    years = list(range(first_year, selected_year + 1))
+    property_year_map = period_map(
+        properties_qs.filter(created_at__year__range=(first_year, selected_year))
+        .annotate(year=ExtractYear("created_at"))
+        .values("year")
+        .annotate(total=Count("id"))
+        .order_by("year"),
+        "year",
+    )
+    bill_year_map = {
+        int(row["billing_year"]): row["total"]
+        for row in bills_qs.filter(billing_year__range=(first_year, selected_year))
+        .exclude(status="cancelled")
+        .values("billing_year")
+        .annotate(total=Count("id"))
+        .order_by("billing_year")
+    }
+    payment_year_map = period_map(
+        payments_qs.filter(paid_at__year__range=(first_year, selected_year))
+        .annotate(year=ExtractYear("paid_at"))
+        .values("year")
+        .annotate(total=Count("id"))
+        .order_by("year"),
+        "year",
+    )
+
+    month_numbers = range(1, 13)
+    quarter_numbers = range(1, 5)
+    analytics_charts = {
+        "monthly": {
+            "labels": [date(2000, month, 1).strftime("%b") for month in month_numbers],
+            "properties": [property_month_map.get(month, 0) for month in month_numbers],
+            "bills": [bill_month_map.get(month, 0) for month in month_numbers],
+            "payments": [payment_month_map.get(month, 0) for month in month_numbers],
+        },
+        "quarterly": {
+            "labels": [f"Q{quarter}" for quarter in quarter_numbers],
+            "billed": [float(billed_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
+            "collected": [float(payment_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
+            "outstanding": [float(outstanding_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
+        },
+        "yearly": {
+            "labels": [str(year) for year in years],
+            "properties": [property_year_map.get(year, 0) for year in years],
+            "bills": [bill_year_map.get(year, 0) for year in years],
+            "payments": [payment_year_map.get(year, 0) for year in years],
+        },
+    }
 
     latest_runs = _latest_report_run_map(context_assembly)
     reports = []
@@ -1573,10 +1701,12 @@ def reports_analytics(request):
 
     context = {
         "page_title": "Reports & Analytics",
-        "page_subtitle": "Generate and export system reports",
+        "page_subtitle": "Review operational trends and export system reports",
         "context_assembly": context_assembly,
         "stats": stats,
-        "chart_months": chart_months,
+        "selected_year": selected_year,
+        "year_options": year_options,
+        "analytics_charts": analytics_charts,
         "reports": reports,
         "portal_access": portal_access,
         "allowed_modules": portal_access,

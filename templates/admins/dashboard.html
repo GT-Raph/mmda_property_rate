@@ -419,7 +419,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 14px;
             margin-bottom: 18px;
         }
@@ -432,8 +432,20 @@
         }
 
         .stat-card {
+            display: block;
             padding: 18px 18px 16px;
             min-height: 140px;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        a.stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+
+        a.stat-card:focus-visible {
+            outline: 3px solid rgba(199, 165, 65, 0.42);
+            outline-offset: 2px;
         }
 
         .stat-head {
@@ -470,6 +482,17 @@
 
         .trend.green { color: var(--green); }
         .trend.red { color: var(--red); }
+
+        .stat-badge {
+            max-width: 105px;
+            border-radius: 999px;
+            background: #f4f4f4;
+            color: #686868;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+        }
 
         .stat-title {
             font-size: 14px;
@@ -897,7 +920,11 @@
 
             <section class="stats-grid">
                 {% for card in summary_cards %}
+                {% if card.url %}
+                <a class="card stat-card" href="{{ card.url }}" aria-label="View {{ card.title }} records">
+                {% else %}
                 <div class="card stat-card">
+                {% endif %}
                     <div class="stat-head">
                         <div class="icon-chip
                             {% if 'Bills' in card.title %}soft-blue
@@ -907,15 +934,19 @@
                             <img src="{% static 'images/icons/' %}{{ card.icon_key }}.png" alt="{{ card.title }}">
                         </div>
 
-                        <div class="trend {{ card.change_class }}">
-                            {{ card.change_prefix }} {{ card.change }}%
-                        </div>
+                        {% if card.badge %}
+                            <div class="stat-badge">{{ card.badge }}</div>
+                        {% else %}
+                            <div class="trend {{ card.change_class }}">
+                                {{ card.change_prefix }} {{ card.change }}%
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="stat-title">{{ card.title }}</div>
                     <div class="stat-value">{{ card.value }}</div>
                     <div class="stat-meta">{{ card.meta }}</div>
-                </div>
+                {% if card.url %}</a>{% else %}</div>{% endif %}
                 {% endfor %}
             </section>
 

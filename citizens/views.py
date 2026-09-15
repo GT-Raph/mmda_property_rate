@@ -685,6 +685,7 @@ def citizen_dashboard(request):
                 "properties_count": 0,
                 "outstanding_total": "GH₵ 0",
                 "paid_total": "GH₵ 0",
+                "payments_count": 0,
                 "bills_count": 0,
             },
             "quick_links": {
@@ -814,6 +815,7 @@ def citizen_dashboard(request):
             "properties_count": properties_qs.count(),
             "outstanding_total": _money(outstanding_total),
             "paid_total": _money(paid_total),
+            "payments_count": payments_qs.count(),
             "bills_count": bills_qs.count(),
         },
         "quick_links": {

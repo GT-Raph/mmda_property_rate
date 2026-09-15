@@ -1,10 +1,16 @@
 import re
+from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
 from admins.models import Assembly
+from billing.models import Bill
+from payments.models import Payment
 
 from .forms import PropertyCreateForm
 from .models import Owner, Property
@@ -163,3 +169,108 @@ class TemporaryPasswordTests(TestCase):
 
         self.assertRegex(first, re.compile(r"^Prms-\d{6}$"))
         self.assertNotEqual(first, second)
+
+
+class AdminRecordFilteringTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser(
+            username="filter-admin",
+            email="admin@example.com",
+            password="Admin-pass-123",
+        )
+        self.assembly = Assembly.objects.create(
+            name="Filter Assembly",
+            short_code="FA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.owner = Owner.objects.create(
+            assembly=self.assembly,
+            full_name="Filter Owner",
+            primary_phone="0240000000",
+        )
+        self.verified_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="1 Independence Avenue",
+            area_town="Accra Central",
+            property_use="residential",
+            building_type="apartment",
+            verification_status="verified",
+            is_exempt=True,
+        )
+        self.pending_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="2 Harbour Road",
+            area_town="Tema",
+            property_use="commercial",
+            building_type="shop",
+            verification_status="pending",
+            is_exempt=True,
+        )
+        self.bill, _created = Bill.objects.get_or_create(
+            assembly=self.assembly,
+            property_record=self.verified_property,
+            billing_year=timezone.localdate().year,
+            defaults={
+                "arrears_brought_forward": Decimal("100.00"),
+                "amount_paid": Decimal("25.00"),
+                "due_date": timezone.localdate() + timedelta(days=30),
+            },
+        )
+        self.bill.arrears_brought_forward = Decimal("100.00")
+        self.bill.amount_paid = Decimal("25.00")
+        self.bill.due_date = timezone.localdate() + timedelta(days=30)
+        self.bill.save()
+        Payment.objects.create(
+            assembly=self.assembly,
+            property=self.verified_property,
+            bill=self.bill,
+            amount=Decimal("25.00"),
+            payment_method="cash",
+            transaction_reference="FILTER-PAYMENT-1",
+            status="successful",
+        )
+
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_assembly_id"] = self.assembly.pk
+        session.save()
+
+    def test_property_registry_combines_operational_filters(self):
+        response = self.client.get(
+            reverse("properties:property-registry"),
+            {
+                "location": "Accra",
+                "type": "residential",
+                "verification": "verified",
+                "billing": "outstanding",
+                "payment": "recorded",
+            },
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 1)
+        self.assertEqual(
+            response.context["properties"][0]["reference"],
+            self.verified_property.property_reference,
+        )
+
+    def test_billing_filters_preserve_selected_year_and_payment_state(self):
+        response = self.client.get(
+            reverse("billing:billing-management"),
+            {
+                "year": timezone.localdate().year,
+                "location": "Accra",
+                "type": "residential",
+                "status": "outstanding",
+                "payment": "recorded",
+            },
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 1)
+        self.assertEqual(response.context["bills"][0]["id"], self.bill.pk)

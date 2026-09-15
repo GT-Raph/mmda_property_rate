@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from admins.models import Assembly, UserProfile
 from admins.views import PortalLoginView, _find_citizen_user_by_phone
@@ -121,3 +122,59 @@ class PortalLoginViewAccessTests(TestCase):
                 "and is not included in its allowed assemblies."
             ),
         )
+
+
+class AdminAnalyticsViewTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Analytics Assembly",
+            short_code="AN",
+            assembly_type="municipal",
+            region="Greater Accra",
+            is_active=True,
+        )
+        self.user = User.objects.create_superuser(
+            username="analytics-admin",
+            email="analytics@example.com",
+            password="Admin-pass-123",
+        )
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_assembly_id"] = self.assembly.pk
+        session.save()
+
+    def test_dashboard_exposes_complete_operational_summary(self):
+        response = self.client.get(
+            reverse("admins:admin-dashboard"),
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        titles = {card["title"] for card in response.context["summary_cards"]}
+        self.assertTrue(
+            {
+                "Total Properties",
+                "Verified Properties",
+                "Pending Verification",
+                "Property Owners",
+                "Bills Generated",
+                "Payments Recorded",
+                "Outstanding Payments",
+            }.issubset(titles)
+        )
+
+    def test_reports_exposes_monthly_quarterly_and_yearly_datasets(self):
+        response = self.client.get(
+            reverse("admins:reports-analytics"),
+            {"year": timezone.localdate().year},
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        charts = response.context["analytics_charts"]
+        self.assertEqual(len(charts["monthly"]["labels"]), 12)
+        self.assertEqual(len(charts["quarterly"]["labels"]), 4)
+        self.assertEqual(len(charts["yearly"]["labels"]), 5)
+        self.assertContains(response, "Monthly Activity")
+        self.assertContains(response, "Quarterly Finance")
+        self.assertContains(response, "Yearly Activity")

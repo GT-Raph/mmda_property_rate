@@ -45,6 +45,18 @@
             text-decoration: none;
         }
 
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         .layout { min-height: 100vh; }
 
         .sidebar {
@@ -416,7 +428,7 @@
 
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 14px;
             margin-bottom: 18px;
         }
@@ -469,6 +481,43 @@
             font-size: 14px;
             color: #8a8a8a;
         }
+
+        .period-card {
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .period-copy strong { display: block; margin-bottom: 4px; }
+        .period-copy span { color: var(--muted); font-size: 13px; }
+
+        .period-form { display: flex; align-items: center; gap: 8px; }
+        .period-form select,
+        .period-form button {
+            height: 42px;
+            border-radius: 9px;
+            padding: 0 14px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .period-form select { border: 1px solid #d9d9d9; background: #fff; }
+        .period-form button { border: 0; background: #171717; color: #fff; cursor: pointer; }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-chart-card { padding: 18px; min-width: 0; }
+        .analytics-chart-card.yearly { grid-column: 1 / -1; }
+        .analytics-chart-card .section-title { margin-bottom: 5px; }
+        .chart-subtitle { color: var(--muted); font-size: 13px; }
+        .canvas-wrap { position: relative; height: 310px; margin-top: 18px; }
 
         .chart-card {
             padding: 18px 18px 14px;
@@ -695,7 +744,7 @@
 
         @media (max-width: 1024px) {
             .cards-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
 
@@ -767,6 +816,11 @@
             .page h1 {
                 font-size: 24px;
             }
+
+            .cards-grid,
+            .analytics-grid { grid-template-columns: 1fr; }
+            .analytics-chart-card.yearly { grid-column: auto; }
+            .period-card { align-items: flex-start; flex-direction: column; }
 
             .chart-box {
                     gap: 10px;
@@ -895,6 +949,22 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
+            <section class="card period-card" aria-label="Analytics period">
+                <div class="period-copy">
+                    <strong>Reporting period</strong>
+                    <span>Summary cards and monthly/quarterly charts use the selected year.</span>
+                </div>
+                <form method="get" class="period-form">
+                    <label for="analyticsYear" class="sr-only">Reporting year</label>
+                    <select id="analyticsYear" name="year">
+                        {% for year in year_options %}
+                            <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit">Update</button>
+                </form>
+            </section>
+
             <section class="cards-grid">
                 {% for stat in stats %}
                     <div class="card stat-card">
@@ -908,44 +978,24 @@
                 {% endfor %}
             </section>
 
-            <section class="card chart-card">
-                <h2 class="section-title">Collection vs Target</h2>
+            <section class="analytics-grid" aria-label="Operational charts">
+                <article class="card analytics-chart-card">
+                    <h2 class="section-title">Monthly Activity</h2>
+                    <div class="chart-subtitle">Properties, bills and payments recorded in {{ selected_year }}</div>
+                    <div class="canvas-wrap"><canvas id="monthlyActivityChart"></canvas></div>
+                </article>
 
-                <div class="chart-box">
-                    <div class="chart-grid-line grid-1"></div>
-                    <div class="chart-grid-line grid-2"></div>
-                    <div class="chart-grid-line grid-3"></div>
-                    <div class="chart-grid-line grid-4"></div>
+                <article class="card analytics-chart-card">
+                    <h2 class="section-title">Quarterly Finance</h2>
+                    <div class="chart-subtitle">Amount billed, collected and outstanding in {{ selected_year }} (GH₵)</div>
+                    <div class="canvas-wrap"><canvas id="quarterlyFinanceChart"></canvas></div>
+                </article>
 
-                    <div class="y-labels">
-                        800000<br>
-                        600000<br>
-                        400000<br>
-                        200000<br>
-                        0
-                    </div>
-
-                    {% for month in chart_months %}
-                        <div class="month-group">
-                            <div class="bars" title="Collected: {{ month.collected_display }} | Target: {{ month.target_display }}">
-                                <div class="bar bar-collected" style="height: {{ month.collected_height }}px;"></div>
-                                <div class="bar bar-target" style="height: {{ month.target_height }}px;"></div>
-                            </div>
-                            <div class="month-label">{{ month.label }}</div>
-                        </div>
-                    {% endfor %}
-                </div>
-
-                <div class="chart-legend">
-                    <div class="legend-item">
-                        <span class="legend-box" style="background: var(--gold);"></span>
-                        <span>Collected</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-box" style="background: var(--gold-light);"></span>
-                        <span>Target</span>
-                    </div>
-                </div>
+                <article class="card analytics-chart-card yearly">
+                    <h2 class="section-title">Yearly Activity</h2>
+                    <div class="chart-subtitle">Five-year registration, billing and payment record trend</div>
+                    <div class="canvas-wrap"><canvas id="yearlyActivityChart"></canvas></div>
+                </article>
             </section>
 
             <section class="card reports-card">
@@ -978,6 +1028,8 @@
     </main>
 </div>
 
+{{ analytics_charts|json_script:"analyticsChartData" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const userMenu = document.getElementById("userMenu");
     const userMenuButton = document.getElementById("userMenuButton");
@@ -1017,6 +1069,72 @@
     function closeSidebar() {
         document.getElementById("sidebar").classList.remove("open");
         document.getElementById("mobileOverlay").classList.remove("show");
+    }
+
+    const chartDataElement = document.getElementById("analyticsChartData");
+    if (chartDataElement && window.Chart) {
+        const chartData = JSON.parse(chartDataElement.textContent);
+        const sharedOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
+                tooltip: { padding: 11 }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
+        };
+
+        new Chart(document.getElementById("monthlyActivityChart"), {
+            type: "bar",
+            data: {
+                labels: chartData.monthly.labels,
+                datasets: [
+                    { label: "Properties", data: chartData.monthly.properties, backgroundColor: "#c7a541", borderRadius: 5 },
+                    { label: "Bills", data: chartData.monthly.bills, backgroundColor: "#2563eb", borderRadius: 5 },
+                    { label: "Payments", data: chartData.monthly.payments, backgroundColor: "#16a34a", borderRadius: 5 }
+                ]
+            },
+            options: sharedOptions
+        });
+
+        new Chart(document.getElementById("quarterlyFinanceChart"), {
+            type: "bar",
+            data: {
+                labels: chartData.quarterly.labels,
+                datasets: [
+                    { label: "Billed", data: chartData.quarterly.billed, backgroundColor: "#2563eb", borderRadius: 5 },
+                    { label: "Collected", data: chartData.quarterly.collected, backgroundColor: "#16a34a", borderRadius: 5 },
+                    { label: "Outstanding", data: chartData.quarterly.outstanding, backgroundColor: "#d9a92c", borderRadius: 5 }
+                ]
+            },
+            options: {
+                ...sharedOptions,
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: value => "GH₵ " + Number(value).toLocaleString() }
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById("yearlyActivityChart"), {
+            type: "line",
+            data: {
+                labels: chartData.yearly.labels,
+                datasets: [
+                    { label: "Properties", data: chartData.yearly.properties, borderColor: "#c7a541", backgroundColor: "#c7a541", tension: 0.3 },
+                    { label: "Bills", data: chartData.yearly.bills, borderColor: "#2563eb", backgroundColor: "#2563eb", tension: 0.3 },
+                    { label: "Payments", data: chartData.yearly.payments, borderColor: "#16a34a", backgroundColor: "#16a34a", tension: 0.3 }
+                ]
+            },
+            options: sharedOptions
+        });
     }
 </script>
 {% include "shared/message_modal.html" %}

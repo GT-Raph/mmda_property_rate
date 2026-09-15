@@ -482,14 +482,19 @@
 
         .toolbar {
             padding: 16px;
-            display: grid;
-            grid-template-columns: minmax(320px, 1fr) 155px 130px;
+            display: flex;
+            flex-wrap: wrap;
             gap: 14px;
             border-bottom: 1px solid var(--line);
         }
 
         .toolbar-search {
             position: relative;
+            flex: 2 1 300px;
+        }
+
+        .toolbar-filter {
+            flex: 1 1 155px;
         }
 
         .toolbar-search-icon {
@@ -511,6 +516,7 @@
         }
 
         .toolbar-search input,
+        .toolbar > input,
         .toolbar select {
             width: 100%;
             height: 46px;
@@ -526,9 +532,39 @@
             padding: 0 14px 0 40px;
         }
 
+        .toolbar > input {
+            padding: 0 14px;
+        }
+
         .toolbar select {
             padding: 0 14px;
             appearance: none;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            flex: 0 0 auto;
+        }
+
+        .filter-btn {
+            min-height: 46px;
+            padding: 0 16px;
+            border: 1px solid #dddddd;
+            border-radius: 10px;
+            background: #111111;
+            color: #ffffff;
+            font-weight: 800;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .filter-btn.secondary {
+            background: #ffffff;
+            color: #333333;
         }
 
         .table-wrap {
@@ -754,8 +790,13 @@
             }
 
             .toolbar {
-                grid-template-columns: 1fr;
+                gap: 10px;
             }
+
+            .toolbar-search,
+            .toolbar-filter,
+            .filter-actions { flex: 1 1 100%; }
+            .filter-actions .filter-btn { flex: 1; }
 
             .table-footer {
                 flex-direction: column;
@@ -899,19 +940,53 @@
                         >
                     </div>
 
-                    <select name="type" onchange="this.form.submit()">
+                    <input
+                        class="toolbar-filter"
+                        type="search"
+                        name="location"
+                        value="{{ location }}"
+                        placeholder="Location or digital address"
+                        aria-label="Filter by location"
+                    >
+
+                    <select class="toolbar-filter" name="type" aria-label="Filter by property type">
                         <option value="">All Types</option>
                         {% for value, label in type_choices %}
                             <option value="{{ value }}" {% if selected_type == value %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
 
-                    <select name="status" onchange="this.form.submit()">
-                        <option value="">All Status</option>
+                    <select class="toolbar-filter" name="verification" aria-label="Filter by verification status">
+                        <option value="">All Verification</option>
+                        {% for value, label in verification_choices %}
+                            <option value="{{ value }}" {% if selected_verification == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select class="toolbar-filter" name="billing" aria-label="Filter by billing status">
+                        <option value="">All Billing</option>
+                        <option value="billed" {% if selected_billing == 'billed' %}selected{% endif %}>Bill Generated</option>
+                        <option value="unbilled" {% if selected_billing == 'unbilled' %}selected{% endif %}>No Bill Generated</option>
+                        <option value="paid" {% if selected_billing == 'paid' %}selected{% endif %}>Fully Paid Bill</option>
+                        <option value="outstanding" {% if selected_billing == 'outstanding' %}selected{% endif %}>Outstanding Bill</option>
+                    </select>
+
+                    <select class="toolbar-filter" name="payment" aria-label="Filter by payment records">
+                        <option value="">All Payments</option>
+                        <option value="recorded" {% if selected_payment == 'recorded' %}selected{% endif %}>Payment Recorded</option>
+                        <option value="none" {% if selected_payment == 'none' %}selected{% endif %}>No Payment Recorded</option>
+                    </select>
+
+                    <select class="toolbar-filter" name="status" aria-label="Filter by record status">
+                        <option value="">All Records</option>
                         <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
                         <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>Inactive</option>
                     </select>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="filter-btn">Apply Filters</button>
+                        <a href="{% url 'properties:property-registry' %}" class="filter-btn secondary">Clear</a>
+                    </div>
                 </form>
 
                 <div class="table-wrap">
@@ -996,7 +1071,7 @@
 
                     <div class="pagination">
                         {% if page_obj.has_previous %}
-                            <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.previous_page_number }}">Prev</a>
+                            <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Prev</a>
                         {% else %}
                             <span class="page-btn">Prev</span>
                         {% endif %}
@@ -1005,12 +1080,12 @@
                             {% if num == page_obj.number %}
                                 <span class="page-btn active">{{ num }}</span>
                             {% elif num >= page_obj.number|add:-1 and num <= page_obj.number|add:1 %}
-                                <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ num }}">{{ num }}</a>
+                                <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ num }}">{{ num }}</a>
                             {% endif %}
                         {% endfor %}
 
                         {% if page_obj.has_next %}
-                            <a class="page-btn" href="?q={{ search|urlencode }}&type={{ selected_type|urlencode }}&status={{ selected_status|urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
+                            <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
                         {% else %}
                             <span class="page-btn">Next</span>
                         {% endif %}

@@ -352,6 +352,13 @@
             line-height:1.2;
         }
 
+        .stat-note{
+            margin-top:5px;
+            color:var(--muted);
+            font-size:12px;
+            line-height:1.35;
+        }
+
         .green-text{color:var(--green)}
         .red-text{color:var(--red)}
 
@@ -828,10 +835,11 @@
 
             <div class="stat-card">
                 <div class="stat-icon soft-blue">
-                    <img src="{% static 'images/paid.png' %}" alt="Paid">
+                    <img src="{% static 'images/paid.png' %}" alt="Payments">
                 </div>
-                <div class="stat-label">Paid ({{ current_year }})</div>
-                <div class="stat-value green-text">{{ stats.paid_total }}</div>
+                <div class="stat-label">Payments</div>
+                <div class="stat-value green-text">{{ stats.payments_count }}</div>
+                <div class="stat-note">{{ stats.paid_total }} paid in {{ current_year }}</div>
             </div>
 
             <div class="stat-card">

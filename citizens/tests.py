@@ -1,11 +1,14 @@
 import re
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from admins.models import UserProfile
+from admins.models import Assembly, UserProfile
+from payments.models import Payment
+from properties.models import Owner, Property
 
 
 User = get_user_model()
@@ -132,3 +135,54 @@ class CitizenPasswordResetTests(TestCase):
         self.assertFalse(
             user.profile.must_change_password
         )
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class CitizenDashboardSummaryTests(TestCase):
+    def test_dashboard_shows_payment_count_and_paid_amount(self):
+        assembly = Assembly.objects.create(
+            name="Citizen Summary Assembly",
+            short_code="CS",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        user = User.objects.create_user(
+            username="summary-citizen",
+            password="Citizen-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(user=user)
+        profile.role = "citizen"
+        profile.assembly = assembly
+        profile.must_change_password = False
+        profile.save(update_fields=["role", "assembly", "must_change_password"])
+        owner = Owner.objects.create(
+            assembly=assembly,
+            linked_user=user,
+            full_name="Summary Citizen",
+            primary_phone="0241111111",
+        )
+        property_record = Property.objects.create(
+            assembly=assembly,
+            owner=owner,
+            address_line="1 Summary Street",
+            area_town="Accra",
+            property_use="residential",
+            building_type="apartment",
+            is_exempt=True,
+        )
+        Payment.objects.create(
+            assembly=assembly,
+            property=property_record,
+            amount=Decimal("75.00"),
+            payment_method="cash",
+            transaction_reference="CITIZEN-SUMMARY-PAYMENT",
+            status="successful",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("citizens:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["stats"]["payments_count"], 1)
+        self.assertContains(response, "Payments")
+        self.assertContains(response, "paid in")
