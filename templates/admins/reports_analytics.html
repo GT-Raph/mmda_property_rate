@@ -20,8 +20,10 @@
             --gold-light: #decc95;
             --green: #16a34a;
             --green-soft: #d9f7df;
-            --blue: #2563eb;
-            --blue-soft: #dbeafe;
+            /* Kept the --blue name (server-side icon_class values reference "icon-blue")
+               but mapped it to gold so nothing on screen renders blue. */
+            --blue: #c7a541;
+            --blue-soft: #f7efcf;
             --shadow: 0 4px 18px rgba(0,0,0,0.04);
             --radius: 18px;
             --sidebar-width: 230px;
@@ -482,48 +484,100 @@
             color: #8a8a8a;
         }
 
-        .period-card {
-            padding: 16px 18px;
+        .report-filter-card {
+            padding: 18px;
             margin-bottom: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
         }
 
-        .period-copy strong { display: block; margin-bottom: 4px; }
-        .period-copy span { color: var(--muted); font-size: 13px; }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            gap: 14px;
+            align-items: end;
+        }
 
-        .period-form { display: flex; align-items: center; gap: 8px; }
-        .period-form select,
-        .period-form button {
+        .filter-field { grid-column: span 3; min-width: 0; }
+        .filter-field.period-field { grid-column: span 4; }
+        .filter-field.year-field { grid-column: span 2; }
+        .filter-field.location-field { grid-column: span 4; }
+        .filter-actions { grid-column: span 2; display: flex; gap: 8px; }
+
+        .filter-field label,
+        .filter-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #292929;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .filter-field select,
+        .filter-field input {
+            width: 100%;
             height: 42px;
+            border: 1px solid #d9dce1;
+            border-radius: 9px;
+            background: #fff;
+            color: #30343a;
+            padding: 0 12px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .filter-field select:focus,
+        .filter-field input:focus { border-color: #8a6500; box-shadow: 0 0 0 3px rgba(138,101,0,.12); }
+
+        .period-switch {
+            height: 42px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border: 1px solid #d9dce1;
+            border-radius: 9px;
+            overflow: hidden;
+            background: #f7f8fa;
+        }
+
+        .period-switch input { position: absolute; opacity: 0; pointer-events: none; }
+        .period-switch label {
+            margin: 0;
+            display: grid;
+            place-items: center;
+            border-left: 1px solid #e4e6e9;
+            color: #5f6670;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .period-switch label:first-of-type { border-left: 0; }
+        .period-switch input:checked + label { background: #8a6500; color: #fff; }
+        .period-switch input:focus-visible + label { outline: 2px solid #111; outline-offset: -3px; }
+
+        .filter-button {
+            flex: 1;
+            height: 42px;
+            border: 1px solid #d9dce1;
             border-radius: 9px;
             padding: 0 14px;
-            font-size: 14px;
+            background: #fff;
+            color: #333;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
             font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
         }
-        .period-form select { border: 1px solid #d9d9d9; background: #fff; }
-        .period-form button { border: 0; background: #171717; color: #fff; cursor: pointer; }
+        .filter-button.primary { border-color: #8a6500; background: #8a6500; color: #fff; }
 
-        .analytics-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 18px;
+        .analytics-chart-card {
+            padding: 20px;
             margin-bottom: 20px;
+            min-width: 0;
         }
-
-        .analytics-chart-card { padding: 18px; min-width: 0; }
-        .analytics-chart-card.yearly { grid-column: 1 / -1; }
         .analytics-chart-card .section-title { margin-bottom: 5px; }
         .chart-subtitle { color: var(--muted); font-size: 13px; }
-        .canvas-wrap { position: relative; height: 310px; margin-top: 18px; }
-
-        .chart-card {
-            padding: 18px 18px 14px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
+        .canvas-wrap { position: relative; height: 360px; margin-top: 18px; }
 
         .section-title {
             margin: 0;
@@ -531,102 +585,71 @@
             font-weight: 800;
         }
 
-        .chart-box {
-            margin-top: 18px;
-            border-left: 2px solid #cbcbcb;
-            border-bottom: 2px solid #cbcbcb;
-            height: 310px;
-            position: relative;
-            padding: 16px 14px 0 56px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 18px;
-            overflow: hidden;
-        }
-
-
-        .chart-grid-line {
-            position: absolute;
-            left: 56px;
-            right: 0;
-            border-top: 1px dashed #dddddd;
-        }
-        .grid-1 { top: 60px; }
-        .grid-2 { top: 115px; }
-        .grid-3 { top: 170px; }
-        .grid-4 { top: 225px; }
-
-        .y-labels {
-            position: absolute;
-            left: 0;
-            top: 4px;
-            width: 46px;
+        .records-card { overflow: hidden; margin-bottom: 20px; }
+        .records-head { padding: 18px 20px; border-bottom: 1px solid var(--line); }
+        .records-head h2 { margin: 0 0 5px; font-size: 18px; }
+        .records-head p { margin: 0; color: var(--muted); font-size: 13px; }
+        .records-table-wrap { width: 100%; overflow-x: auto; }
+        .records-table { width: 100%; min-width: 850px; border-collapse: collapse; }
+        .records-table th {
+            padding: 13px 16px;
+            background: #fafafa;
+            border-bottom: 1px solid var(--line);
+            color: #555c65;
             font-size: 12px;
-            color: #8a8a8a;
-            text-align: right;
-            line-height: 55px;
+            font-weight: 800;
+            text-align: left;
+            white-space: nowrap;
         }
-
-        .month-group {
-            position: relative;
-            z-index: 2;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            min-width: 0;
-        }
-
-        .bars {
-            width: 100%;
-            max-width: 95px;
-            height: 250px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 6px;
-        }
-
-        .bar {
-            width: 42%;
-            border-radius: 4px 4px 0 0;
-        }
-
-        .bar-collected {
-            background: var(--gold);
-        }
-
-        .bar-target {
-            background: var(--gold-light);
-        }
-
-        .month-label {
-            margin-top: 10px;
+        .records-table td {
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--line);
+            color: #34383d;
             font-size: 13px;
-            color: #8a8a8a;
+            vertical-align: middle;
         }
-
-        .chart-legend {
-            margin-top: 16px;
-            display: flex;
-            justify-content: center;
-            gap: 18px;
-            font-size: 14px;
-            color: #8a8a8a;
+        .records-table a { color: #8a6500; font-weight: 700; }
+        .records-table tbody tr:hover { background: #fcfcfc; }
+        .cell-tag {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 9px;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
         }
-
-        .legend-item {
+        .status-success, .type-payment { background: #e4f7e9; color: #15803d; }
+        .status-warning, .type-bill { background: #fff3cd; color: #8a6600; }
+        .status-danger { background: #fde7e9; color: #b4232d; }
+        .status-neutral, .type-citizen { background: #eef0f3; color: #5d6470; }
+        .type-property { background: #ececec; color: #1f1f1f; }
+        .empty-records { text-align: center; color: var(--muted); padding: 28px !important; }
+        .records-footer {
+            padding: 13px 16px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 12px;
         }
-
-        .legend-box {
-            width: 12px;
-            height: 12px;
+        .record-pagination { display: flex; gap: 6px; align-items: center; }
+        .page-btn {
+            min-width: 32px;
+            height: 32px;
+            border: 1px solid #dedede;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 9px;
+            background: #fff;
+            color: #40454b;
+            font-weight: 700;
         }
+        .page-btn.active { border-color: #8a6500; background: #8a6500; color: #fff; }
+        span.page-btn { opacity: .5; }
 
         .reports-card {
             overflow: hidden;
@@ -721,9 +744,9 @@
         }
 
         .message-info {
-            background: #edf4ff;
-            border: 1px solid #bdd4ff;
-            color: #1d4ed8;
+            background: #f3f4f6;
+            border: 1px solid #d0d5dd;
+            color: #344054;
         }
 
         .message-warning {
@@ -746,6 +769,12 @@
             .cards-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .filter-field,
+            .filter-field.period-field,
+            .filter-field.year-field,
+            .filter-field.location-field,
+            .filter-actions { grid-column: span 6; }
         }
 
         @media (max-width: 860px) {
@@ -817,30 +846,14 @@
                 font-size: 24px;
             }
 
-            .cards-grid,
-            .analytics-grid { grid-template-columns: 1fr; }
-            .analytics-chart-card.yearly { grid-column: auto; }
-            .period-card { align-items: flex-start; flex-direction: column; }
-
-            .chart-box {
-                    gap: 10px;
-                    padding-left: 44px;
-                    padding-right: 8px;
-                }
-
-                .chart-grid-line {
-                    left: 44px;
-                }
-
-                .y-labels {
-                    width: 34px;
-                    font-size: 11px;
-                    line-height: 55px;
-                }
-
-                .bars {
-                    max-width: 60px;
-                }
+            .cards-grid { grid-template-columns: 1fr; }
+            .filter-field,
+            .filter-field.period-field,
+            .filter-field.year-field,
+            .filter-field.location-field,
+            .filter-actions { grid-column: 1 / -1; }
+            .canvas-wrap { height: 300px; }
+            .records-footer { align-items: flex-start; flex-direction: column; }
 
             .report-row {
                 flex-direction: column;
@@ -949,21 +962,69 @@
             <h1>{{ page_title }}</h1>
             <div class="page-subtitle">{{ page_subtitle }}</div>
 
-            <section class="card period-card" aria-label="Analytics period">
-                <div class="period-copy">
-                    <strong>Reporting period</strong>
-                    <span>Summary cards and monthly/quarterly charts use the selected year.</span>
-                </div>
-                <form method="get" class="period-form">
-                    <label for="analyticsYear" class="sr-only">Reporting year</label>
-                    <select id="analyticsYear" name="year">
+            <form method="get" class="card report-filter-card" aria-label="Report filters">
+                <div class="filter-grid">
+                    <div class="filter-field">
+                        <label for="reportType">Report Type</label>
+                        <select id="reportType" name="report_type">
+                            {% for value, label in report_type_choices %}
+                                <option value="{{ value }}" {% if value == selected_report_type %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field period-field">
+                        <span class="filter-label">Period</span>
+                        <div class="period-switch">
+                            <input type="radio" id="periodMonthly" name="period" value="monthly" {% if selected_period == "monthly" %}checked{% endif %}>
+                            <label for="periodMonthly">Monthly</label>
+                            <input type="radio" id="periodQuarterly" name="period" value="quarterly" {% if selected_period == "quarterly" %}checked{% endif %}>
+                            <label for="periodQuarterly">Quarterly</label>
+                            <input type="radio" id="periodYearly" name="period" value="yearly" {% if selected_period == "yearly" %}checked{% endif %}>
+                            <label for="periodYearly">Yearly</label>
+                        </div>
+                    </div>
+
+                    <div class="filter-field year-field">
+                        <label for="analyticsYear">Year</label>
+                        <select id="analyticsYear" name="year">
                         {% for year in year_options %}
                             <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
                         {% endfor %}
-                    </select>
-                    <button type="submit">Update</button>
-                </form>
-            </section>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label for="propertyUse">Property Use</label>
+                        <select id="propertyUse" name="property_use">
+                            <option value="">All property uses</option>
+                            {% for value, label in property_use_choices %}
+                                <option value="{{ value }}" {% if value == selected_property_use %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-field location-field">
+                        <label for="reportLocation">Location</label>
+                        <input id="reportLocation" type="search" name="location" value="{{ location }}" placeholder="Town, suburb, address or area">
+                    </div>
+
+                    <div class="filter-field">
+                        <label for="reportStatus">Status</label>
+                        <select id="reportStatus" name="status" {% if not status_choices %}disabled{% endif %}>
+                            <option value="">Any status</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="filter-button primary">Apply</button>
+                        <a href="{% url 'admins:reports-analytics' %}" class="filter-button">Reset</a>
+                    </div>
+                </div>
+            </form>
 
             <section class="cards-grid">
                 {% for stat in stats %}
@@ -978,30 +1039,69 @@
                 {% endfor %}
             </section>
 
-            <section class="analytics-grid" aria-label="Operational charts">
-                <article class="card analytics-chart-card">
-                    <h2 class="section-title">Monthly Activity</h2>
-                    <div class="chart-subtitle">Properties, bills and payments recorded in {{ selected_year }}</div>
-                    <div class="canvas-wrap"><canvas id="monthlyActivityChart"></canvas></div>
-                </article>
+            <section class="card analytics-chart-card" aria-label="{{ chart_title }}">
+                <h2 class="section-title">{{ chart_title }}</h2>
+                <div class="chart-subtitle">{{ chart_subtitle }} · {{ range_label }}</div>
+                <div class="canvas-wrap"><canvas id="reportChart"></canvas></div>
+            </section>
 
-                <article class="card analytics-chart-card">
-                    <h2 class="section-title">Quarterly Finance</h2>
-                    <div class="chart-subtitle">Amount billed, collected and outstanding in {{ selected_year }} (GH₵)</div>
-                    <div class="canvas-wrap"><canvas id="quarterlyFinanceChart"></canvas></div>
-                </article>
-
-                <article class="card analytics-chart-card yearly">
-                    <h2 class="section-title">Yearly Activity</h2>
-                    <div class="chart-subtitle">Five-year registration, billing and payment record trend</div>
-                    <div class="canvas-wrap"><canvas id="yearlyActivityChart"></canvas></div>
-                </article>
+            <section class="card records-card">
+                <div class="records-head">
+                    <h2>{{ record_title }}</h2>
+                    <p>{{ record_subtitle }}</p>
+                </div>
+                <div class="records-table-wrap">
+                    <table class="records-table">
+                        <thead>
+                            <tr>
+                                {% for column in record_columns %}<th>{{ column }}</th>{% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in record_rows %}
+                                <tr>
+                                    {% for cell in row.cells %}
+                                        <td>
+                                            {% if cell.class %}<span class="cell-tag {{ cell.class }}">{% endif %}
+                                            {% if cell.url %}<a href="{{ cell.url }}">{{ cell.text }}</a>{% else %}{{ cell.text }}{% endif %}
+                                            {% if cell.class %}</span>{% endif %}
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="{{ record_columns|length }}" class="empty-records">No records match the selected filters.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="records-footer">
+                    <span>Showing {{ record_start_index }}–{{ record_end_index }} of {{ record_paginator.count }} records</span>
+                    <div class="record-pagination">
+                        {% if record_page_obj.has_previous %}
+                            <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ record_page_obj.previous_page_number }}">Previous</a>
+                        {% else %}
+                            <span class="page-btn">Previous</span>
+                        {% endif %}
+                        {% for num in record_paginator.page_range %}
+                            {% if num == record_page_obj.number %}
+                                <span class="page-btn active">{{ num }}</span>
+                            {% elif num >= record_page_obj.number|add:-1 and num <= record_page_obj.number|add:1 %}
+                                <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ num }}">{{ num }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if record_page_obj.has_next %}
+                            <a class="page-btn" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ record_page_obj.next_page_number }}">Next</a>
+                        {% else %}
+                            <span class="page-btn">Next</span>
+                        {% endif %}
+                    </div>
+                </div>
             </section>
 
             <section class="card reports-card">
                 <div class="reports-head">
-                    <h2>Available Reports</h2>
-                    <p>Generate and download system reports</p>
+                    <h2>Generate &amp; Export Reports</h2>
+                    <p>Download detailed system reports in spreadsheet format</p>
                 </div>
 
                 {% for report in reports %}
@@ -1028,7 +1128,8 @@
     </main>
 </div>
 
-{{ analytics_charts|json_script:"analyticsChartData" }}
+{{ chart_config|json_script:"reportChartData" }}
+{{ status_choices_by_report|json_script:"reportStatusChoices" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const userMenu = document.getElementById("userMenu");
@@ -1071,69 +1172,72 @@
         document.getElementById("mobileOverlay").classList.remove("show");
     }
 
-    const chartDataElement = document.getElementById("analyticsChartData");
+    const reportTypeSelect = document.getElementById("reportType");
+    const reportStatusSelect = document.getElementById("reportStatus");
+    const statusChoicesElement = document.getElementById("reportStatusChoices");
+
+    if (reportTypeSelect && reportStatusSelect && statusChoicesElement) {
+        const statusChoices = JSON.parse(statusChoicesElement.textContent);
+        reportTypeSelect.addEventListener("change", function() {
+            const choices = statusChoices[this.value] || [];
+            reportStatusSelect.innerHTML = '<option value="">Any status</option>';
+            choices.forEach(function(choice) {
+                const option = document.createElement("option");
+                option.value = choice.value;
+                option.textContent = choice.label;
+                reportStatusSelect.appendChild(option);
+            });
+            reportStatusSelect.disabled = choices.length === 0;
+        });
+    }
+
+    const chartDataElement = document.getElementById("reportChartData");
     if (chartDataElement && window.Chart) {
         const chartData = JSON.parse(chartDataElement.textContent);
-        const sharedOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: "index", intersect: false },
-            plugins: {
-                legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
-                tooltip: { padding: 11 }
-            },
-            scales: {
-                x: { grid: { display: false } },
-                y: { beginAtZero: true, ticks: { precision: 0 } }
-            }
-        };
-
-        new Chart(document.getElementById("monthlyActivityChart"), {
-            type: "bar",
-            data: {
-                labels: chartData.monthly.labels,
-                datasets: [
-                    { label: "Properties", data: chartData.monthly.properties, backgroundColor: "#c7a541", borderRadius: 5 },
-                    { label: "Bills", data: chartData.monthly.bills, backgroundColor: "#2563eb", borderRadius: 5 },
-                    { label: "Payments", data: chartData.monthly.payments, backgroundColor: "#16a34a", borderRadius: 5 }
-                ]
-            },
-            options: sharedOptions
+        const reportChart = document.getElementById("reportChart");
+        const datasets = chartData.datasets.map(function(item) {
+            return {
+                ...item,
+                borderWidth: 2,
+                borderRadius: 5,
+                maxBarThickness: 42,
+                tension: 0.3,
+                pointRadius: 3
+            };
         });
 
-        new Chart(document.getElementById("quarterlyFinanceChart"), {
+        new Chart(reportChart, {
             type: "bar",
             data: {
-                labels: chartData.quarterly.labels,
-                datasets: [
-                    { label: "Billed", data: chartData.quarterly.billed, backgroundColor: "#2563eb", borderRadius: 5 },
-                    { label: "Collected", data: chartData.quarterly.collected, backgroundColor: "#16a34a", borderRadius: 5 },
-                    { label: "Outstanding", data: chartData.quarterly.outstanding, backgroundColor: "#d9a92c", borderRadius: 5 }
-                ]
+                labels: chartData.labels,
+                datasets: datasets
             },
             options: {
-                ...sharedOptions,
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8 } },
+                    tooltip: {
+                        padding: 11,
+                        callbacks: chartData.isMoney ? {
+                            label: context => context.dataset.label + ": GH₵ " + Number(context.raw || 0).toLocaleString()
+                        } : {}
+                    }
+                },
                 scales: {
                     x: { grid: { display: false } },
                     y: {
                         beginAtZero: true,
-                        ticks: { callback: value => "GH₵ " + Number(value).toLocaleString() }
+                        ticks: {
+                            precision: chartData.isMoney ? undefined : 0,
+                            callback: chartData.isMoney
+                                ? value => "GH₵ " + Number(value).toLocaleString()
+                                : value => Number(value).toLocaleString()
+                        }
                     }
                 }
             }
-        });
-
-        new Chart(document.getElementById("yearlyActivityChart"), {
-            type: "line",
-            data: {
-                labels: chartData.yearly.labels,
-                datasets: [
-                    { label: "Properties", data: chartData.yearly.properties, borderColor: "#c7a541", backgroundColor: "#c7a541", tension: 0.3 },
-                    { label: "Bills", data: chartData.yearly.bills, borderColor: "#2563eb", backgroundColor: "#2563eb", tension: 0.3 },
-                    { label: "Payments", data: chartData.yearly.payments, borderColor: "#16a34a", backgroundColor: "#16a34a", tension: 0.3 }
-                ]
-            },
-            options: sharedOptions
         });
     }
 </script>

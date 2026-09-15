@@ -5,7 +5,9 @@
     --auth-text: #1f1f1f;
     --auth-muted: #6f7580;
     --auth-gold: #caa94f;
-    --auth-blue: #1f49c7;
+    /* Kept the --auth-blue name (used by .auth-link) but mapped it to a
+       readable dark gold so nothing on screen renders blue. */
+    --auth-blue: #8a6500;
     --auth-red: #b42318;
 }
 

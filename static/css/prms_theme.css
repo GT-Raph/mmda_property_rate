@@ -13,7 +13,7 @@
     --prms-danger: #b42318;
     --prms-danger-hover: #8f1c13;
     --prms-success: #137a3a;
-    --prms-info: #175cd3;
+    --prms-info: #475467;
     --prms-bg: #f6f7f9;
     --prms-surface: #ffffff;
     --prms-surface-subtle: #f9fafb;
@@ -125,6 +125,8 @@ textarea:disabled,
 .submit-btn,
 .cta-btn,
 .mark-all,
+.filter-button.primary,
+.gps-btn,
 .system-modal-button,
 .button:not(.secondary) {
     background: var(--prms-primary) !important;
@@ -145,6 +147,8 @@ textarea:disabled,
 .submit-btn:hover,
 .cta-btn:hover,
 .mark-all:hover,
+.filter-button.primary:hover,
+.gps-btn:hover,
 .system-modal-button:hover,
 .button:not(.secondary):hover {
     background: var(--prms-primary-hover) !important;
@@ -164,6 +168,8 @@ textarea:disabled,
 .submit-btn:active,
 .cta-btn:active,
 .mark-all:active,
+.filter-button.primary:active,
+.gps-btn:active,
 .system-modal-button:active,
 .button:not(.secondary):active {
     transform: translateY(1px);
@@ -697,6 +703,20 @@ textarea:disabled,
     color: var(--prms-muted) !important;
     font-size: 14px;
     text-align: center !important;
+}
+
+/* Neutral "informational" notices used to render in a stray blue —
+   recolored to a neutral gray so nothing on screen renders blue. */
+.alert-info,
+.message-info {
+    background: var(--prms-surface-subtle) !important;
+    border-color: var(--prms-border-strong) !important;
+    color: #344054 !important;
+}
+
+.alert-info a,
+.message-info a {
+    color: var(--prms-primary-hover) !important;
 }
 
 /* Typography rhythm shared by every shell's primary page heading and

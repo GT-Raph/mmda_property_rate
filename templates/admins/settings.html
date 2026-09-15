@@ -19,8 +19,10 @@
             --gold-soft: #f5ecd0;
             --green: #16a34a;
             --green-soft: #d9f7df;
-            --blue-soft: #eaf2ff;
-            --blue-border: #bcd3ff;
+            /* Kept the --blue-* names (used by .code-box) but mapped them to gold
+               so nothing on screen renders blue. */
+            --blue-soft: #f5ecd0;
+            --blue-border: #e0c98a;
             --red: #ef4444;
             --red-soft: #fff1f1;
             --yellow-soft: #fff8df;
@@ -437,9 +439,9 @@
         }
 
         .message-info {
-            background: #edf4ff;
-            border: 1px solid #bdd4ff;
-            color: #1d4ed8;
+            background: #f3f4f6;
+            border: 1px solid #d0d5dd;
+            color: #344054;
         }
 
         .card {

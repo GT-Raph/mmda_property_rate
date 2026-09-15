@@ -25,6 +25,7 @@ from django.views.decorators.http import (
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
+from django.core.paginator import Paginator
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum, Value
 from django.db.models.functions import (
     Coalesce,
@@ -937,6 +938,102 @@ REPORT_BUILDERS = {
 }
 
 
+REPORT_TYPE_CHOICES = (
+    ("overview", "Overview"),
+    ("properties", "Properties"),
+    ("verification", "Verification"),
+    ("billing_payments", "Billing & Payments"),
+    ("citizens", "Citizens"),
+)
+
+REPORT_STATUS_CHOICES = {
+    "overview": (),
+    "properties": (
+        ("active", "Active"),
+        ("inactive", "Inactive"),
+    ),
+    "verification": (
+        ("awaiting_review", "Pending / Under Review"),
+        *Property.VERIFICATION_STATUS_CHOICES,
+    ),
+    "billing_payments": (
+        ("outstanding", "Outstanding Balance"),
+        *Bill.STATUS_CHOICES,
+    ),
+    "citizens": (
+        ("linked", "Portal Account Linked"),
+        ("unlinked", "No Portal Account"),
+    ),
+}
+
+
+def _analytics_period_config(period, selected_year):
+    if period == "yearly":
+        first_year = selected_year - 4
+        buckets = list(range(first_year, selected_year + 1))
+        return {
+            "labels": [str(year) for year in buckets],
+            "buckets": buckets,
+            "extractor": ExtractYear,
+            "start": date(first_year, 1, 1),
+            "end": date(selected_year + 1, 1, 1),
+            "label": f"{first_year}–{selected_year}",
+        }
+
+    if period == "quarterly":
+        return {
+            "labels": ["Q1", "Q2", "Q3", "Q4"],
+            "buckets": [1, 2, 3, 4],
+            "extractor": ExtractQuarter,
+            "start": date(selected_year, 1, 1),
+            "end": date(selected_year + 1, 1, 1),
+            "label": f"Q1–Q4 {selected_year}",
+        }
+
+    buckets = list(range(1, 13))
+    return {
+        "labels": [date(2000, month, 1).strftime("%b") for month in buckets],
+        "buckets": buckets,
+        "extractor": ExtractMonth,
+        "start": date(selected_year, 1, 1),
+        "end": date(selected_year + 1, 1, 1),
+        "label": f"January–December {selected_year}",
+    }
+
+
+def _analytics_range(queryset, date_field, period_config):
+    return queryset.filter(
+        **{
+            f"{date_field}__date__gte": period_config["start"],
+            f"{date_field}__date__lt": period_config["end"],
+        }
+    )
+
+
+def _analytics_series(queryset, date_field, period_config, aggregation):
+    rows = (
+        _analytics_range(queryset, date_field, period_config)
+        .annotate(bucket=period_config["extractor"](date_field))
+        .values("bucket")
+        .annotate(value=aggregation)
+        .order_by("bucket")
+    )
+    values = {
+        int(row["bucket"]): row["value"]
+        for row in rows
+        if row["bucket"] is not None
+    }
+    return [values.get(bucket, 0) for bucket in period_config["buckets"]]
+
+
+def _report_cell(text, *, css_class="", url=""):
+    return {
+        "text": str(text if text not in (None, "") else "—"),
+        "class": css_class,
+        "url": url,
+    }
+
+
 def _download_report(request, report_key, assembly=None):
     config = REPORT_BUILDERS.get(report_key)
     if not config:
@@ -985,7 +1082,6 @@ def dashboard(request):
     }
 
     properties_qs = Property.objects.select_related("owner")
-    owners_qs = Owner.objects.all()
     bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
     payments_qs = Payment.objects.select_related("property__owner", "bill")
     field_visits_qs = FieldVisit.objects.select_related("property__owner", "officer")
@@ -1040,14 +1136,6 @@ def dashboard(request):
 
     property_change = _pct_change(properties_this_month, properties_previous_month)
 
-    bills_this_month = finance_bills_qs.filter(
-        created_at__date__gte=current_month_start
-    ).count()
-    bills_previous_month = finance_bills_qs.filter(
-        created_at__date__gte=previous_month_start,
-        created_at__date__lte=previous_month_end,
-    ).count()
-
     revenue_this_month = finance_payments_qs.filter(
         status="successful",
         paid_at__date__gte=current_month_start,
@@ -1075,157 +1163,61 @@ def dashboard(request):
         total=Coalesce(Sum(balance_expr), Value(Decimal("0.00"), output_field=MONEY_FIELD))
     )["total"]
 
-    bills_change = _pct_change(bills_this_month, bills_previous_month)
     revenue_change = _pct_change(revenue_this_month, revenue_previous_month)
     outstanding_change = _pct_change(outstanding_total, outstanding_previous)
 
-    verified_properties = work_properties_qs.filter(
-        is_active=True,
-        verification_status="verified",
-    ).count()
     pending_properties = work_properties_qs.filter(
         is_active=True,
         verification_status__in=["pending", "under_review"],
     ).count()
-    owner_count = owners_qs.count()
-    total_bills_count = finance_bills_qs.exclude(status="cancelled").count()
-    successful_payments_qs = finance_payments_qs.filter(status="successful")
-    payments_recorded_count = successful_payments_qs.count()
-    total_collected = successful_payments_qs.aggregate(
-        total=Coalesce(
-            Sum("amount"),
-            Value(Decimal("0.00"), output_field=MONEY_FIELD),
-        )
-    )["total"]
-    outstanding_bill_count = open_bills.filter(
-        amount_due__gt=F("amount_paid")
-    ).count()
 
-    if user_role == "field_officer":
-        summary_cards = [
-            {
-                "title": "My Properties",
-                "value": _number(total_properties),
-                "meta": "vs last month",
-                "change": abs(property_change),
-                "change_prefix": "+" if property_change >= 0 else "-",
-                "change_class": "green" if property_change >= 0 else "red",
-                "icon_key": "property",
-                "url": reverse("properties:property-registry"),
-            },
-            {
-                "title": "Assembly Bills",
-                "value": _number(bills_this_month),
-                "meta": "this month",
-                "change": abs(bills_change),
-                "change_prefix": "+" if bills_change >= 0 else "-",
-                "change_class": "green" if bills_change >= 0 else "red",
-                "icon_key": "bill",
-            },
-            {
-                "title": "Assembly Revenue",
-                "value": _money(revenue_this_month),
-                "meta": "this month",
-                "change": abs(revenue_change),
-                "change_prefix": "+" if revenue_change >= 0 else "-",
-                "change_class": "green" if revenue_change >= 0 else "red",
-                "icon_key": "paid",
-            },
-            {
-                "title": "Assembly Outstanding",
-                "value": _money(outstanding_total),
-                "meta": "vs last month",
-                "change": abs(outstanding_change),
-                "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
-                "change_class": "green" if outstanding_total <= outstanding_previous else "red",
-                "icon_key": "alert",
-            },
-        ]
-    else:
-        summary_cards = [
-            {
-                "title": "Total Properties",
-                "value": _number(total_properties),
-                "meta": "new registrations vs last month",
-                "change": abs(property_change),
-                "change_prefix": "+" if property_change >= 0 else "-",
-                "change_class": "green" if property_change >= 0 else "red",
-                "icon_key": "property",
-                "url": reverse("properties:property-registry"),
-            },
-            {
-                "title": "Verified Properties",
-                "value": _number(verified_properties),
-                "meta": "active and verified",
-                "badge": "Current",
-                "icon_key": "mark",
-                "url": f'{reverse("properties:property-registry")}?verification=verified',
-            },
-            {
-                "title": "Pending Verification",
-                "value": _number(pending_properties),
-                "meta": "pending or under review",
-                "badge": "Needs review",
-                "icon_key": "alert",
-                "url": f'{reverse("properties:property-registry")}?verification=awaiting_review',
-            },
-            {
-                "title": "Property Owners",
-                "value": _number(owner_count),
-                "meta": "owners in the registry",
-                "badge": "Citizens",
-                "icon_key": "assembly",
-                "url": reverse("properties:property-registry"),
-            },
-            {
-                "title": "Bills Generated",
-                "value": _number(total_bills_count),
-                "meta": f"{_number(bills_this_month)} generated this month",
-                "badge": "All time",
-                "icon_key": "bill",
-                "url": reverse("billing:billing-management"),
-            },
-            {
-                "title": "Payments Recorded",
-                "value": _number(payments_recorded_count),
-                "meta": f"{_money(total_collected)} collected",
-                "badge": "Successful",
-                "icon_key": "paid",
-                "url": f'{reverse("billing:billing-management")}?payment=recorded',
-            },
-            {
-                "title": "Revenue Collected",
-                "value": _money(revenue_this_month),
-                "meta": "successful payments this month",
-                "change": abs(revenue_change),
-                "change_prefix": "+" if revenue_change >= 0 else "-",
-                "change_class": "green" if revenue_change >= 0 else "red",
-                "icon_key": "money",
-                "url": reverse("billing:billing-management"),
-            },
-            {
-                "title": "Outstanding Payments",
-                "value": _money(outstanding_total),
-                "meta": f"{_number(outstanding_bill_count)} open bill(s)",
-                "badge": "Action needed",
-                "icon_key": "alert",
-                "url": f'{reverse("billing:billing-management")}?status=outstanding',
-            },
-        ]
+    summary_cards = [
+        {
+            "title": "Total Properties",
+            "value": _number(total_properties),
+            "meta": "new registrations vs last month",
+            "change": abs(property_change),
+            "change_prefix": "+" if property_change >= 0 else "-",
+            "change_class": "green" if property_change >= 0 else "red",
+            "icon_key": "property",
+            "url": reverse("properties:property-registry"),
+        },
+        {
+            "title": "Pending Verification",
+            "value": _number(pending_properties),
+            "meta": "pending or under review",
+            "badge": "Needs review",
+            "icon_key": "alert",
+            "url": f'{reverse("properties:property-registry")}?verification=awaiting_review',
+        },
+        {
+            "title": "Revenue Collected",
+            "value": _money(revenue_this_month),
+            "meta": "successful payments this month",
+            "change": abs(revenue_change),
+            "change_prefix": "+" if revenue_change >= 0 else "-",
+            "change_class": "green" if revenue_change >= 0 else "red",
+            "icon_key": "money",
+            "url": reverse("billing:billing-management"),
+        },
+        {
+            "title": "Outstanding Amount",
+            "value": _money(outstanding_total),
+            "meta": "total open bill balance",
+            "change": abs(outstanding_change),
+            "change_prefix": "-" if outstanding_total <= outstanding_previous else "+",
+            "change_class": "green" if outstanding_total <= outstanding_previous else "red",
+            "icon_key": "alert",
+            "url": f'{reverse("billing:billing-management")}?status=outstanding',
+        },
+    ]
 
-    month_starts = []
-    for offset in range(5, -1, -1):
-        month = current_month_start.month - offset
-        year = current_month_start.year
-        while month <= 0:
-            month += 12
-            year -= 1
-        month_starts.append(date(year, month, 1))
+    month_starts = [date(today.year, month, 1) for month in range(1, 13)]
 
     revenue_rows = (
         finance_payments_qs.filter(
             status="successful",
-            paid_at__date__gte=month_starts[0],
+            paid_at__year=today.year,
         )
         .annotate(month=TruncMonth("paid_at"))
         .values("month")
@@ -1254,53 +1246,6 @@ def dashboard(request):
         )
         if total > revenue_max:
             revenue_max = total
-
-    distribution_bills = finance_bills_qs.exclude(status__in=["cancelled"])
-
-    paid_bills_qs = distribution_bills.filter(
-        Q(status__iexact="paid")
-        | Q(amount_paid__gte=F("amount_due"), amount_due__gt=0)
-    ).distinct()
-
-    partial_bills_qs = distribution_bills.filter(
-        Q(status__in=["part_paid", "partial"])
-        | (Q(amount_paid__gt=0) & Q(amount_paid__lt=F("amount_due")))
-    ).exclude(
-        id__in=paid_bills_qs.values_list("id", flat=True)
-    ).distinct()
-
-    unpaid_bills_qs = distribution_bills.exclude(
-        id__in=paid_bills_qs.values_list("id", flat=True)
-    ).exclude(
-        id__in=partial_bills_qs.values_list("id", flat=True)
-    ).distinct()
-
-    paid_count = paid_bills_qs.count()
-    partial_count = partial_bills_qs.count()
-    unpaid_count = unpaid_bills_qs.count()
-
-    distribution_total = max(paid_count + partial_count + unpaid_count, 1)
-
-    payment_distribution = [
-        {
-            "label": "Paid",
-            "count": paid_count,
-            "display": _number(paid_count),
-            "class": "green",
-        },
-        {
-            "label": "Partial",
-            "count": partial_count,
-            "display": _number(partial_count),
-            "class": "yellow",
-        },
-        {
-            "label": "Unpaid",
-            "count": unpaid_count,
-            "display": _number(unpaid_count),
-            "class": "red",
-        },
-    ]
 
     recent_items = []
 
@@ -1396,7 +1341,7 @@ def dashboard(request):
                 "message": f"{_number(overdue_90_count)} overdue payment record(s) in the assembly",
                 "action": "View properties",
                 "url": reverse("properties:property-registry"),
-                "alert_class": "alert-warning",
+                "alert_class": "alert-danger",
             },
             {
                 "message": f"You completed {_number(weekly_field_visits)} field visit(s) this week",
@@ -1414,10 +1359,16 @@ def dashboard(request):
     else:
         alerts = [
             {
+                "message": f"{_number(pending_properties)} properties are pending verification",
+                "action": "Review Queue",
+                "url": f'{reverse("properties:property-registry")}?verification=awaiting_review',
+                "alert_class": "alert-warning",
+            },
+            {
                 "message": f"{_number(overdue_90_count)} properties have overdue payments (>90 days)",
                 "action": "View List",
-                "url": reverse("billing:billing-management"),
-                "alert_class": "alert-warning",
+                "url": f'{reverse("billing:billing-management")}?status=overdue',
+                "alert_class": "alert-danger",
             },
             {
                 "message": f"Monthly billing cycle starts in {days_until_next_cycle} day{'s' if days_until_next_cycle != 1 else ''}",
@@ -1425,16 +1376,9 @@ def dashboard(request):
                 "url": reverse("billing:billing-management"),
                 "alert_class": "alert-info",
             },
-            {
-                "message": f"Field verification completed for {_number(weekly_field_visits)} properties",
-                "action": "Review",
-                "url": reverse("field_operations:field-operations"),
-                "alert_class": "alert-success",
-            },
         ]
 
     portal_access = _portal_access(request.user)
-
     context = {
         "page_title": "Dashboard",
         "page_subtitle": (
@@ -1443,11 +1387,10 @@ def dashboard(request):
             else "Property Rate Management System Overview"
         ),
         "context_assembly": context_assembly,
+        "current_year": today.year,
         "summary_cards": summary_cards,
         "revenue_points": revenue_points,
         "revenue_max": float(revenue_max),
-        "payment_distribution": payment_distribution,
-        "distribution_total": distribution_total,
         "recent_activities": recent_items,
         "alerts": alerts,
         "user_role": user_role,
@@ -1469,6 +1412,18 @@ def reports_analytics(request):
             return _download_report(request, report_key, assembly=context_assembly)
 
     today = timezone.localdate()
+    report_type = (request.GET.get("report_type") or "overview").strip()
+    period = (request.GET.get("period") or "monthly").strip()
+    property_use = (request.GET.get("property_use") or "").strip()
+    location = (request.GET.get("location") or "").strip()
+    status_filter = (request.GET.get("status") or "").strip()
+
+    valid_report_types = {value for value, _label in REPORT_TYPE_CHOICES}
+    if report_type not in valid_report_types:
+        report_type = "overview"
+    if period not in {"monthly", "quarterly", "yearly"}:
+        period = "monthly"
+
     try:
         selected_year = int(request.GET.get("year") or today.year)
     except (TypeError, ValueError):
@@ -1476,212 +1431,452 @@ def reports_analytics(request):
     if selected_year < 2000 or selected_year > today.year + 1:
         selected_year = today.year
 
-    year_options = list(range(today.year, today.year - 5, -1))
+    year_options = list(range(today.year + 1, today.year - 6, -1))
     if selected_year not in year_options:
         year_options.append(selected_year)
         year_options.sort(reverse=True)
 
-    properties_qs = Property.objects.all()
-    owners_qs = Owner.objects.all()
-    bills_qs = Bill.objects.select_related("assembly", "property_record", "rate_policy")
-    payments_qs = Payment.objects.filter(status="successful", paid_at__isnull=False)
+    status_choices = list(REPORT_STATUS_CHOICES[report_type])
+    valid_statuses = {value for value, _label in status_choices}
+    if status_filter not in valid_statuses:
+        status_filter = ""
+
+    properties_qs = Property.objects.select_related(
+        "owner",
+        "community_area",
+    )
+    owners_qs = Owner.objects.select_related("linked_user")
+    bills_qs = Bill.objects.select_related(
+        "property_record__owner",
+        "assembly",
+    )
+    payments_qs = Payment.objects.filter(
+        status="successful",
+        paid_at__isnull=False,
+    ).select_related(
+        "property__owner",
+        "bill__property_record__owner",
+    )
 
     if context_assembly:
         properties_qs = properties_qs.filter(assembly=context_assembly)
         owners_qs = owners_qs.filter(assembly=context_assembly)
-        owners_qs = owners_qs.filter(assembly=context_assembly)
         bills_qs = bills_qs.filter(assembly=context_assembly)
         payments_qs = payments_qs.filter(assembly=context_assembly)
 
-    year_bills_qs = bills_qs.filter(billing_year=selected_year).exclude(status="cancelled")
-    year_payments_qs = payments_qs.filter(paid_at__year=selected_year)
+    if property_use:
+        properties_qs = properties_qs.filter(property_use=property_use)
+        owners_qs = owners_qs.filter(properties__property_use=property_use).distinct()
+        bills_qs = bills_qs.filter(property_record__property_use=property_use)
+        payments_qs = payments_qs.filter(
+            Q(property__property_use=property_use)
+            | Q(bill__property_record__property_use=property_use)
+        )
+
+    if location:
+        property_location_q = (
+            Q(area_town__icontains=location)
+            | Q(suburb__icontains=location)
+            | Q(address_line__icontains=location)
+            | Q(digital_address__icontains=location)
+            | Q(community_area__name__icontains=location)
+        )
+        properties_qs = properties_qs.filter(property_location_q)
+        owners_qs = owners_qs.filter(
+            Q(properties__area_town__icontains=location)
+            | Q(properties__suburb__icontains=location)
+            | Q(properties__address_line__icontains=location)
+            | Q(properties__digital_address__icontains=location)
+            | Q(properties__community_area__name__icontains=location)
+        ).distinct()
+        bills_qs = bills_qs.filter(
+            Q(property_record__area_town__icontains=location)
+            | Q(property_record__suburb__icontains=location)
+            | Q(property_record__address_line__icontains=location)
+            | Q(property_record__digital_address__icontains=location)
+            | Q(property_record__community_area__name__icontains=location)
+        )
+        payments_qs = payments_qs.filter(
+            Q(property__area_town__icontains=location)
+            | Q(property__suburb__icontains=location)
+            | Q(property__address_line__icontains=location)
+            | Q(property__digital_address__icontains=location)
+            | Q(property__community_area__name__icontains=location)
+            | Q(bill__property_record__area_town__icontains=location)
+            | Q(bill__property_record__suburb__icontains=location)
+            | Q(bill__property_record__address_line__icontains=location)
+            | Q(bill__property_record__digital_address__icontains=location)
+            | Q(bill__property_record__community_area__name__icontains=location)
+        ).distinct()
+
+    if report_type == "properties" and status_filter:
+        properties_qs = properties_qs.filter(is_active=status_filter == "active")
+    elif report_type == "verification" and status_filter:
+        if status_filter == "awaiting_review":
+            properties_qs = properties_qs.filter(
+                verification_status__in=["pending", "under_review"]
+            )
+        else:
+            properties_qs = properties_qs.filter(verification_status=status_filter)
+    elif report_type == "billing_payments" and status_filter:
+        if status_filter == "outstanding":
+            bills_qs = bills_qs.exclude(status="cancelled").filter(
+                amount_due__gt=F("amount_paid")
+            )
+            payments_qs = payments_qs.exclude(
+                bill__status="cancelled"
+            ).filter(
+                bill__amount_due__gt=F("bill__amount_paid")
+            )
+        else:
+            bills_qs = bills_qs.filter(status=status_filter)
+            payments_qs = payments_qs.filter(bill__status=status_filter)
+    elif report_type == "citizens" and status_filter:
+        owners_qs = owners_qs.filter(
+            linked_user__isnull=status_filter == "unlinked"
+        )
+
+    if report_type == "citizens":
+        owner_ids = owners_qs.values("id")
+        properties_qs = properties_qs.filter(owner_id__in=owner_ids)
+        bills_qs = bills_qs.filter(property_record__owner_id__in=owner_ids)
+        payments_qs = payments_qs.filter(
+            Q(property__owner_id__in=owner_ids)
+            | Q(bill__property_record__owner_id__in=owner_ids)
+        ).distinct()
+
+    period_config = _analytics_period_config(period, selected_year)
+    period_properties_qs = _analytics_range(properties_qs, "created_at", period_config)
+    period_owners_qs = _analytics_range(owners_qs, "created_at", period_config)
+    period_bills_qs = _analytics_range(bills_qs, "issued_at", period_config)
+    period_payments_qs = _analytics_range(payments_qs, "paid_at", period_config)
+    financial_bills_qs = period_bills_qs.exclude(status="cancelled")
     balance_expr = ExpressionWrapper(
         F("amount_due") - F("amount_paid"),
         output_field=MONEY_FIELD,
     )
-    outstanding_bills_qs = year_bills_qs.filter(amount_due__gt=F("amount_paid"))
-    outstanding_total = outstanding_bills_qs.aggregate(
-        total=Coalesce(
-            Sum(balance_expr),
-            Value(Decimal("0.00"), output_field=MONEY_FIELD),
-        )
-    )["total"]
-
-    stats = [
-        {
-            "icon_key": "property",
-            "icon_class": "icon-gold",
-            "title": "Total Properties",
-            "value": _number(properties_qs.count()),
-            "meta": "all registry records",
-        },
-        {
-            "icon_key": "mark",
-            "icon_class": "icon-green",
-            "title": "Verified Properties",
-            "value": _number(properties_qs.filter(is_active=True, verification_status="verified").count()),
-            "meta": "active and verified",
-        },
-        {
-            "icon_key": "alert",
-            "icon_class": "icon-gold",
-            "title": "Pending Verification",
-            "value": _number(properties_qs.filter(is_active=True, verification_status__in=["pending", "under_review"]).count()),
-            "meta": "pending or under review",
-        },
-        {
-            "icon_key": "assembly",
-            "icon_class": "icon-blue",
-            "title": "Citizens / Owners",
-            "value": _number(owners_qs.count()),
-            "meta": "registered property owners",
-        },
-        {
-            "icon_key": "bill",
-            "icon_class": "icon-blue",
-            "title": "Bills Generated",
-            "value": _number(year_bills_qs.count()),
-            "meta": f"for {selected_year}",
-        },
-        {
-            "icon_key": "paid",
-            "icon_class": "icon-green",
-            "title": "Payments Recorded",
-            "value": _number(year_payments_qs.count()),
-            "meta": f"successful in {selected_year}",
-        },
-        {
-            "icon_key": "reciept",
-            "icon_class": "icon-gold",
-            "title": "Outstanding Bills",
-            "value": _number(outstanding_bills_qs.count()),
-            "meta": f"open balances in {selected_year}",
-        },
-        {
-            "icon_key": "money",
-            "icon_class": "icon-gold",
-            "title": "Outstanding Amount",
-            "value": _money(outstanding_total),
-            "meta": f"balance due for {selected_year}",
-        },
-    ]
-
-    property_month_rows = (
-        properties_qs.filter(created_at__year=selected_year)
-        .annotate(month=ExtractMonth("created_at"))
-        .values("month")
-        .annotate(total=Count("id"))
-        .order_by("month")
-    )
-    bill_month_rows = (
-        bills_qs.filter(created_at__year=selected_year).exclude(status="cancelled")
-        .annotate(month=ExtractMonth("created_at"))
-        .values("month")
-        .annotate(total=Count("id"))
-        .order_by("month")
-    )
-    payment_month_rows = (
-        year_payments_qs.annotate(month=ExtractMonth("paid_at"))
-        .values("month")
-        .annotate(total=Count("id"))
-        .order_by("month")
+    outstanding_bills_qs = financial_bills_qs.filter(
+        amount_due__gt=F("amount_paid")
     )
 
-    def period_map(rows, key):
-        return {int(row[key]): row["total"] for row in rows if row[key] is not None}
-
-    property_month_map = period_map(property_month_rows, "month")
-    bill_month_map = period_map(bill_month_rows, "month")
-    payment_month_map = period_map(payment_month_rows, "month")
-
-    quarterly_bills = (
-        bills_qs.filter(issued_at__year=selected_year).exclude(status="cancelled")
-        .annotate(quarter=ExtractQuarter("issued_at"))
-        .values("quarter")
-        .annotate(
-            billed=Coalesce(
-                Sum("amount_due"),
-                Value(Decimal("0.00"), output_field=MONEY_FIELD),
-            ),
-            outstanding=Coalesce(
-                Sum(balance_expr, filter=Q(amount_due__gt=F("amount_paid"))),
-                Value(Decimal("0.00"), output_field=MONEY_FIELD),
-            ),
-        )
-        .order_by("quarter")
-    )
-    quarterly_payments = (
-        year_payments_qs.annotate(quarter=ExtractQuarter("paid_at"))
-        .values("quarter")
-        .annotate(
+    def money_total(queryset, expression):
+        return queryset.aggregate(
             total=Coalesce(
-                Sum("amount"),
+                Sum(expression),
                 Value(Decimal("0.00"), output_field=MONEY_FIELD),
             )
+        )["total"]
+
+    billed_total = money_total(financial_bills_qs, "amount_due")
+    revenue_total = money_total(period_payments_qs, "amount")
+    outstanding_total = money_total(outstanding_bills_qs, balance_expr)
+    rateable_total = money_total(properties_qs, "rateable_value")
+    verified_qs = properties_qs.filter(
+        is_active=True,
+        verification_status="verified",
+    )
+    awaiting_qs = properties_qs.filter(
+        is_active=True,
+        verification_status__in=["pending", "under_review"],
+    )
+    range_label = period_config["label"]
+
+    def stat(icon_key, icon_class, title, value, meta):
+        return {
+            "icon_key": icon_key,
+            "icon_class": icon_class,
+            "title": title,
+            "value": value,
+            "meta": meta,
+        }
+
+    if report_type == "properties":
+        stats = [
+            stat("property", "icon-blue", "Properties in Registry", _number(properties_qs.count()), "matching current filters"),
+            stat("property", "icon-gold", "Properties Registered", _number(period_properties_qs.count()), range_label),
+            stat("mark", "icon-green", "Active Properties", _number(properties_qs.filter(is_active=True).count()), "currently active"),
+            stat("money", "icon-gold", "Rateable Value", _money(rateable_total), "matching properties"),
+        ]
+    elif report_type == "verification":
+        total_for_rate = max(properties_qs.count(), 1)
+        verification_rate = (verified_qs.count() / total_for_rate) * 100
+        stats = [
+            stat("mark", "icon-green", "Verified Properties", _number(verified_qs.count()), "active and verified"),
+            stat("alert", "icon-gold", "Pending Verification", _number(awaiting_qs.count()), "pending or under review"),
+            stat("alert", "icon-blue", "Flagged", _number(properties_qs.filter(verification_status__in=["flagged", "possible_duplicate"]).count()), "requires investigation"),
+            stat("alert", "icon-gold", "Rejected", _number(properties_qs.filter(verification_status="rejected").count()), "verification rejected"),
+            stat("collection", "icon-green", "Verification Rate", f"{verification_rate:.1f}%", "of matching properties"),
+        ]
+    elif report_type == "billing_payments":
+        stats = [
+            stat("bill", "icon-blue", "Bills Generated", _number(period_bills_qs.count()), range_label),
+            stat("money", "icon-blue", "Amount Billed", _money(billed_total), range_label),
+            stat("paid", "icon-green", "Payments Recorded", _number(period_payments_qs.count()), "successful payments"),
+            stat("collection", "icon-green", "Revenue Collected", _money(revenue_total), range_label),
+            stat("reciept", "icon-gold", "Outstanding Bills", _number(outstanding_bills_qs.count()), "open balances"),
+            stat("alert", "icon-gold", "Outstanding Amount", _money(outstanding_total), "balance due"),
+        ]
+    elif report_type == "citizens":
+        stats = [
+            stat("assembly", "icon-blue", "Citizens / Owners", _number(owners_qs.count()), "matching current filters"),
+            stat("assembly", "icon-gold", "Citizens Added", _number(period_owners_qs.count()), range_label),
+            stat("mark", "icon-green", "Portal Accounts", _number(owners_qs.filter(linked_user__isnull=False).count()), "linked citizen accounts"),
+            stat("property", "icon-blue", "Properties Owned", _number(properties_qs.count()), "matching citizens"),
+            stat("alert", "icon-gold", "Outstanding Amount", _money(outstanding_total), "balance due"),
+        ]
+    else:
+        stats = [
+            stat("property", "icon-blue", "Total Properties", _number(properties_qs.count()), "matching current filters"),
+            stat("mark", "icon-green", "Verified Properties", _number(verified_qs.count()), "active and verified"),
+            stat("alert", "icon-gold", "Pending Verification", _number(awaiting_qs.count()), "pending or under review"),
+            stat("assembly", "icon-blue", "Citizens / Owners", _number(owners_qs.count()), "registered owners"),
+            stat("bill", "icon-blue", "Bills Generated", _number(period_bills_qs.count()), range_label),
+            stat("paid", "icon-green", "Payments Recorded", _number(period_payments_qs.count()), "successful payments"),
+            stat("collection", "icon-green", "Revenue Collected", _money(revenue_total), range_label),
+            stat("alert", "icon-gold", "Outstanding Amount", _money(outstanding_total), "balance due"),
+        ]
+
+    count_aggregation = Count("id")
+    billed_aggregation = Sum("amount_due")
+    collected_aggregation = Sum("amount")
+    outstanding_aggregation = Sum(balance_expr)
+
+    def dataset(label, values, color):
+        return {
+            "label": label,
+            "data": [float(value or 0) for value in values],
+            "backgroundColor": color,
+            "borderColor": color,
+        }
+
+    if report_type == "properties":
+        chart_title = "Property Registration Trend"
+        chart_subtitle = f"Properties registered by {period[:-2] if period.endswith('ly') else period} period"
+        chart_is_money = False
+        chart_datasets = [
+            dataset(
+                "Properties Registered",
+                _analytics_series(properties_qs, "created_at", period_config, count_aggregation),
+                "#c9a031",
+            )
+        ]
+    elif report_type == "verification":
+        chart_title = "Verification Status Trend"
+        chart_subtitle = "Registration cohorts grouped by their current verification status"
+        chart_is_money = False
+        other_verification_qs = properties_qs.exclude(
+            verification_status__in=["verified", "pending", "under_review"]
         )
-        .order_by("quarter")
-    )
-    billed_quarter_map = {
-        int(row["quarter"]): row["billed"]
-        for row in quarterly_bills
-        if row["quarter"] is not None
-    }
-    outstanding_quarter_map = {
-        int(row["quarter"]): row["outstanding"]
-        for row in quarterly_bills
-        if row["quarter"] is not None
-    }
-    payment_quarter_map = period_map(quarterly_payments, "quarter")
+        chart_datasets = [
+            dataset("Verified", _analytics_series(verified_qs, "created_at", period_config, count_aggregation), "#16a34a"),
+            dataset("Pending / Review", _analytics_series(awaiting_qs, "created_at", period_config, count_aggregation), "#d9a92c"),
+            dataset("Flagged / Rejected", _analytics_series(other_verification_qs, "created_at", period_config, count_aggregation), "#dc3545"),
+        ]
+    elif report_type == "citizens":
+        chart_title = "Citizen and Property Registration Trend"
+        chart_subtitle = "New property owners and their registered properties"
+        chart_is_money = False
+        chart_datasets = [
+            dataset("Citizens / Owners", _analytics_series(owners_qs, "created_at", period_config, count_aggregation), "#1f1f1f"),
+            dataset("Properties", _analytics_series(properties_qs, "created_at", period_config, count_aggregation), "#c7a541"),
+        ]
+    else:
+        chart_title = "Billing & Revenue Trend" if report_type == "billing_payments" else "Financial Overview"
+        chart_subtitle = "Amount billed, collected and still outstanding"
+        chart_is_money = True
+        chart_datasets = [
+            dataset("Amount Billed", _analytics_series(financial_bills_qs, "issued_at", period_config, billed_aggregation), "#1f1f1f"),
+            dataset("Revenue Collected", _analytics_series(payments_qs, "paid_at", period_config, collected_aggregation), "#16a34a"),
+            dataset("Outstanding", _analytics_series(outstanding_bills_qs, "issued_at", period_config, outstanding_aggregation), "#d9a92c"),
+        ]
 
-    first_year = selected_year - 4
-    years = list(range(first_year, selected_year + 1))
-    property_year_map = period_map(
-        properties_qs.filter(created_at__year__range=(first_year, selected_year))
-        .annotate(year=ExtractYear("created_at"))
-        .values("year")
-        .annotate(total=Count("id"))
-        .order_by("year"),
-        "year",
-    )
-    bill_year_map = {
-        int(row["billing_year"]): row["total"]
-        for row in bills_qs.filter(billing_year__range=(first_year, selected_year))
-        .exclude(status="cancelled")
-        .values("billing_year")
-        .annotate(total=Count("id"))
-        .order_by("billing_year")
+    chart_config = {
+        "labels": period_config["labels"],
+        "datasets": chart_datasets,
+        "isMoney": chart_is_money,
     }
-    payment_year_map = period_map(
-        payments_qs.filter(paid_at__year__range=(first_year, selected_year))
-        .annotate(year=ExtractYear("paid_at"))
-        .values("year")
-        .annotate(total=Count("id"))
-        .order_by("year"),
-        "year",
-    )
 
-    month_numbers = range(1, 13)
-    quarter_numbers = range(1, 5)
-    analytics_charts = {
-        "monthly": {
-            "labels": [date(2000, month, 1).strftime("%b") for month in month_numbers],
-            "properties": [property_month_map.get(month, 0) for month in month_numbers],
-            "bills": [bill_month_map.get(month, 0) for month in month_numbers],
-            "payments": [payment_month_map.get(month, 0) for month in month_numbers],
-        },
-        "quarterly": {
-            "labels": [f"Q{quarter}" for quarter in quarter_numbers],
-            "billed": [float(billed_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
-            "collected": [float(payment_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
-            "outstanding": [float(outstanding_quarter_map.get(quarter, 0)) for quarter in quarter_numbers],
-        },
-        "yearly": {
-            "labels": [str(year) for year in years],
-            "properties": [property_year_map.get(year, 0) for year in years],
-            "bills": [bill_year_map.get(year, 0) for year in years],
-            "payments": [payment_year_map.get(year, 0) for year in years],
-        },
-    }
+    def record_date(value):
+        if not value:
+            return "—"
+        if hasattr(value, "hour"):
+            value = timezone.localtime(value)
+        return value.strftime("%d %b %Y")
+
+    def property_location(property_record):
+        return ", ".join(
+            part
+            for part in [property_record.area_town, property_record.suburb]
+            if part
+        ) or property_record.address_line
+
+    page_number = request.GET.get("page", 1)
+
+    if report_type == "properties":
+        record_title = "Property Records"
+        record_subtitle = "Properties matching the selected filters and reporting range"
+        record_columns = ["Registered", "Reference", "Owner", "Location", "Use", "Verification", "Record Status"]
+        record_paginator = Paginator(period_properties_qs.order_by("-created_at"), 10)
+        record_page_obj = record_paginator.get_page(page_number)
+        record_rows = []
+        for property_record in record_page_obj:
+            detail_url = reverse("properties:property-detail", args=[property_record.pk])
+            verification_class = "status-success" if property_record.verification_status == "verified" else "status-warning"
+            record_rows.append({
+                "cells": [
+                    _report_cell(record_date(property_record.created_at)),
+                    _report_cell(property_record.property_reference, url=detail_url),
+                    _report_cell(property_record.owner.full_name),
+                    _report_cell(property_location(property_record)),
+                    _report_cell(property_record.get_property_use_display()),
+                    _report_cell(property_record.get_verification_status_display(), css_class=verification_class),
+                    _report_cell("Active" if property_record.is_active else "Inactive", css_class="status-success" if property_record.is_active else "status-neutral"),
+                ]
+            })
+    elif report_type == "verification":
+        record_title = "Verification Records"
+        record_subtitle = "Current verification state of properties registered in the reporting range"
+        record_columns = ["Registered", "Reference", "Owner", "Location", "Status", "Last Verified"]
+        record_paginator = Paginator(period_properties_qs.order_by("-created_at"), 10)
+        record_page_obj = record_paginator.get_page(page_number)
+        record_rows = []
+        for property_record in record_page_obj:
+            detail_url = reverse("properties:property-detail", args=[property_record.pk])
+            if property_record.verification_status == "verified":
+                status_class = "status-success"
+            elif property_record.verification_status in {"pending", "under_review"}:
+                status_class = "status-warning"
+            else:
+                status_class = "status-danger"
+            record_rows.append({
+                "cells": [
+                    _report_cell(record_date(property_record.created_at)),
+                    _report_cell(property_record.property_reference, url=detail_url),
+                    _report_cell(property_record.owner.full_name),
+                    _report_cell(property_location(property_record)),
+                    _report_cell(property_record.get_verification_status_display(), css_class=status_class),
+                    _report_cell(record_date(property_record.last_verified_at)),
+                ]
+            })
+    elif report_type == "billing_payments":
+        record_title = "Billing Records"
+        record_subtitle = "Bills issued in the reporting range; payment totals are reflected above"
+        record_columns = ["Issued", "Bill Number", "Property", "Owner", "Amount Due", "Paid", "Balance", "Status"]
+        record_paginator = Paginator(period_bills_qs.order_by("-issued_at"), 10)
+        record_page_obj = record_paginator.get_page(page_number)
+        record_rows = []
+        for bill in record_page_obj:
+            detail_url = reverse("properties:property-detail", args=[bill.property_record_id])
+            if bill.status == "paid":
+                status_class = "status-success"
+            elif bill.status == "cancelled":
+                status_class = "status-neutral"
+            else:
+                status_class = "status-warning"
+            record_rows.append({
+                "cells": [
+                    _report_cell(record_date(bill.issued_at)),
+                    _report_cell(bill.bill_number, url=detail_url),
+                    _report_cell(bill.property_record.property_reference, url=detail_url),
+                    _report_cell(bill.property_record.owner.full_name),
+                    _report_cell(_money(bill.amount_due)),
+                    _report_cell(_money(bill.amount_paid)),
+                    _report_cell(_money(max(bill.balance, Decimal("0.00")))),
+                    _report_cell(bill.get_status_display(), css_class=status_class),
+                ]
+            })
+    elif report_type == "citizens":
+        record_title = "Citizen / Owner Records"
+        record_subtitle = "Property owners registered in the selected reporting range"
+        record_columns = ["Registered", "Citizen / Owner", "Phone", "Email", "Properties", "Portal Access"]
+        citizen_records_qs = period_owners_qs.annotate(
+            property_count=Count("properties", distinct=True)
+        ).order_by("-created_at")
+        record_paginator = Paginator(citizen_records_qs, 10)
+        record_page_obj = record_paginator.get_page(page_number)
+        record_rows = []
+        for owner in record_page_obj:
+            owner_url = f'{reverse("properties:property-registry")}?q={owner.primary_phone}'
+            record_rows.append({
+                "cells": [
+                    _report_cell(record_date(owner.created_at)),
+                    _report_cell(owner.full_name, url=owner_url),
+                    _report_cell(owner.primary_phone),
+                    _report_cell(owner.email or "Not provided"),
+                    _report_cell(owner.property_count),
+                    _report_cell("Linked" if owner.linked_user_id else "Not linked", css_class="status-success" if owner.linked_user_id else "status-neutral"),
+                ]
+            })
+    else:
+        record_title = "Recent Records"
+        record_subtitle = "Latest properties, citizens, bills and successful payments in the reporting range"
+        record_columns = ["Date", "Type", "Reference", "Details", "Status"]
+        combined_records = []
+        for property_record in period_properties_qs.order_by("-created_at")[:30]:
+            combined_records.append({
+                "sort_at": property_record.created_at,
+                "cells": [
+                    _report_cell(record_date(property_record.created_at)),
+                    _report_cell("Property", css_class="type-property"),
+                    _report_cell(property_record.property_reference, url=reverse("properties:property-detail", args=[property_record.pk])),
+                    _report_cell(f"{property_record.owner.full_name} · {property_location(property_record)}"),
+                    _report_cell(property_record.get_verification_status_display(), css_class="status-success" if property_record.verification_status == "verified" else "status-warning"),
+                ],
+            })
+        for bill in period_bills_qs.order_by("-issued_at")[:30]:
+            combined_records.append({
+                "sort_at": bill.issued_at,
+                "cells": [
+                    _report_cell(record_date(bill.issued_at)),
+                    _report_cell("Bill", css_class="type-bill"),
+                    _report_cell(bill.bill_number, url=reverse("properties:property-detail", args=[bill.property_record_id])),
+                    _report_cell(f"{bill.property_record.property_reference} · {_money(bill.amount_due)}"),
+                    _report_cell(bill.get_status_display(), css_class="status-success" if bill.status == "paid" else "status-warning"),
+                ],
+            })
+        for payment in period_payments_qs.order_by("-paid_at")[:30]:
+            payment_property = payment.property or getattr(payment.bill, "property_record", None)
+            payment_url = reverse("properties:property-detail", args=[payment_property.pk]) if payment_property else ""
+            combined_records.append({
+                "sort_at": payment.paid_at,
+                "cells": [
+                    _report_cell(record_date(payment.paid_at)),
+                    _report_cell("Payment", css_class="type-payment"),
+                    _report_cell(payment.transaction_reference, url=payment_url),
+                    _report_cell(f"{getattr(payment_property, 'property_reference', 'Unmatched')} · {_money(payment.amount)}"),
+                    _report_cell("Completed", css_class="status-success"),
+                ],
+            })
+        for owner in period_owners_qs.order_by("-created_at")[:20]:
+            combined_records.append({
+                "sort_at": owner.created_at,
+                "cells": [
+                    _report_cell(record_date(owner.created_at)),
+                    _report_cell("Citizen", css_class="type-citizen"),
+                    _report_cell(owner.primary_phone),
+                    _report_cell(owner.full_name),
+                    _report_cell("Portal linked" if owner.linked_user_id else "Registered", css_class="status-success" if owner.linked_user_id else "status-neutral"),
+                ],
+            })
+        combined_records.sort(key=lambda item: item["sort_at"] or timezone.now(), reverse=True)
+        record_paginator = Paginator(combined_records, 10)
+        record_page_obj = record_paginator.get_page(page_number)
+        record_rows = list(record_page_obj.object_list)
+
+    filter_query_params = request.GET.copy()
+    filter_query_params.pop("page", None)
+    filter_query_params["report_type"] = report_type
+    filter_query_params["period"] = period
+    filter_query_params["year"] = selected_year
+    for key, value in {
+        "property_use": property_use,
+        "location": location,
+        "status": status_filter,
+    }.items():
+        if value:
+            filter_query_params[key] = value
+        else:
+            filter_query_params.pop(key, None)
 
     latest_runs = _latest_report_run_map(context_assembly)
     reports = []
@@ -1698,15 +1893,44 @@ def reports_analytics(request):
         )
 
     portal_access = _portal_access(request.user)
+    status_choices_by_report = {
+        key: [
+            {"value": value, "label": label}
+            for value, label in choices
+        ]
+        for key, choices in REPORT_STATUS_CHOICES.items()
+    }
 
     context = {
         "page_title": "Reports & Analytics",
         "page_subtitle": "Review operational trends and export system reports",
         "context_assembly": context_assembly,
         "stats": stats,
+        "report_type_choices": REPORT_TYPE_CHOICES,
+        "selected_report_type": report_type,
+        "selected_report_type_label": dict(REPORT_TYPE_CHOICES)[report_type],
+        "selected_period": period,
         "selected_year": selected_year,
         "year_options": year_options,
-        "analytics_charts": analytics_charts,
+        "property_use_choices": Property.PROPERTY_USE_CHOICES,
+        "selected_property_use": property_use,
+        "location": location,
+        "selected_status": status_filter,
+        "status_choices": status_choices,
+        "status_choices_by_report": status_choices_by_report,
+        "range_label": range_label,
+        "chart_title": chart_title,
+        "chart_subtitle": chart_subtitle,
+        "chart_config": chart_config,
+        "record_title": record_title,
+        "record_subtitle": record_subtitle,
+        "record_columns": record_columns,
+        "record_rows": record_rows,
+        "record_page_obj": record_page_obj,
+        "record_paginator": record_paginator,
+        "record_start_index": record_page_obj.start_index() if record_paginator.count else 0,
+        "record_end_index": record_page_obj.end_index() if record_paginator.count else 0,
+        "filter_query": filter_query_params.urlencode(),
         "reports": reports,
         "portal_access": portal_access,
         "allowed_modules": portal_access,

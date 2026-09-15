@@ -19,8 +19,10 @@
             --gold-bg: #e9d59a;
             --green: #19a54a;
             --green-soft: #d8f3df;
-            --blue: #3b82f6;
-            --blue-soft: #dce9ff;
+            /* Kept the --blue name (server-side icon_class values reference "soft-blue")
+               but mapped it to gold so nothing on screen renders blue. */
+            --blue: #d1ac4c;
+            --blue-soft: #f6edcf;
             --yellow: #d2a21c;
             --yellow-soft: #f7efc7;
             --red: #ef4444;
@@ -419,7 +421,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 14px;
             margin-bottom: 18px;
         }
@@ -539,12 +541,17 @@
         }
 
         .panel-pill {
-            width: 110px;
             height: 28px;
             border: 1px solid var(--line);
             border-radius: 8px;
             background: #fafafa;
             flex-shrink: 0;
+            padding: 0 11px;
+            display: inline-flex;
+            align-items: center;
+            color: #5f6368;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         .chart-wrap {
@@ -552,58 +559,15 @@
             position: relative;
         }
 
-        .pie-wrap {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
-        }
-
-        .pie-canvas-box {
-            width: 220px;
-            height: 220px;
-            margin: 8px auto 24px;
-            position: relative;
-        }
-
-        .distribution-legend {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .legend-item {
+        .dashboard-overview-grid {
             display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: center;
-            gap: 12px;
-            font-size: 14px;
+            grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr);
+            gap: 18px;
+            margin-bottom: 18px;
+            align-items: stretch;
         }
 
-        .legend-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #333;
-        }
-
-        .legend-value {
-            font-weight: 700;
-            color: #333;
-        }
-
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .dot-green { background: #2ac45a; }
-        .dot-yellow { background: #e0ac00; }
-        .dot-red { background: #d60d27; }
+        .dashboard-overview-grid .panel { margin-bottom: 0; }
 
         .activity-list {
             display: flex;
@@ -696,12 +660,19 @@
 
         .alert-warning a { color: #8f740d; }
 
-        .alert-info {
-            background: #edf4ff;
-            border-color: #bdd4ff;
+        .alert-danger {
+            background: #fff0f1;
+            border-color: #f3bcc2;
         }
 
-        .alert-info a { color: #3567ca; }
+        .alert-danger a { color: #b4232d; }
+
+        .alert-info {
+            background: #f3f4f6;
+            border-color: #d0d5dd;
+        }
+
+        .alert-info a { color: #344054; }
 
         .alert-success {
             background: #ebfaef;
@@ -717,6 +688,14 @@
         @media (max-width: 1024px) {
             .page {
                 max-width: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .dashboard-overview-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -810,14 +789,6 @@
                 height: 220px;
             }
 
-            .pie-canvas-box {
-                width: 190px;
-                height: 190px;
-            }
-
-            .pie-wrap {
-                min-height: 260px;
-            }
         }
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
@@ -950,13 +921,14 @@
                 {% endfor %}
             </section>
 
+            <div class="dashboard-overview-grid">
             <section class="card panel">
                 <div class="panel-head">
                     <div>
                         <h3 class="panel-title">Revenue Trend</h3>
-                        <div class="panel-subtitle">Monthly collection (GH₵)</div>
+                        <div class="panel-subtitle">Monthly collection for {{ current_year }} (GH₵)</div>
                     </div>
-                    <div class="panel-pill"></div>
+                    <div class="panel-pill">{{ current_year }}</div>
                 </div>
 
                 <div class="chart-wrap">
@@ -967,29 +939,21 @@
             <section class="card panel">
                 <div class="panel-head">
                     <div>
-                        <h3 class="panel-title">Payment Distribution</h3>
-                        <div class="panel-subtitle">Paid, partial and unpaid bills</div>
+                        <h3 class="panel-title">System Alerts</h3>
+                        <div class="panel-subtitle">Items that may need attention</div>
                     </div>
                 </div>
 
-                <div class="pie-wrap">
-                    <div class="pie-canvas-box">
-                        <canvas id="paymentChart"></canvas>
+                <div class="alert-stack">
+                    {% for alert in alerts %}
+                    <div class="alert-box {{ alert.alert_class }}">
+                        <strong>{{ alert.message }}</strong>
+                        <a href="{{ alert.url }}">{{ alert.action }}</a>
                     </div>
-
-                    <div class="distribution-legend">
-                        {% for item in payment_distribution %}
-                        <div class="legend-item">
-                            <div class="legend-left">
-                                <span class="dot {% if item.class == 'green' %}dot-green{% elif item.class == 'yellow' %}dot-yellow{% else %}dot-red{% endif %}"></span>
-                                <span>{{ item.label }}</span>
-                            </div>
-                            <div class="legend-value">{{ item.display }}</div>
-                        </div>
-                        {% endfor %}
-                    </div>
+                    {% endfor %}
                 </div>
             </section>
+            </div>
 
             <section class="card panel">
                 <div class="panel-head">
@@ -1022,22 +986,6 @@
                 </div>
             </section>
 
-            <section class="card panel">
-                <div class="panel-head">
-                    <div>
-                        <h3 class="panel-title">System Alerts</h3>
-                    </div>
-                </div>
-
-                <div class="alert-stack">
-                    {% for alert in alerts %}
-                    <div class="alert-box {{ alert.alert_class }}">
-                        <strong>{{ alert.message }}</strong>
-                        <a href="{{ alert.url }}">{{ alert.action }}</a>
-                    </div>
-                    {% endfor %}
-                </div>
-            </section>
         </div>
     </main>
 </div>
@@ -1097,49 +1045,6 @@
         {% endfor %}
     ];
 
-    const paymentLabels = [
-        {% for item in payment_distribution %}
-            "{{ item.label|escapejs }}"{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-
-    const paymentValues = [
-        {% for item in payment_distribution %}
-            {{ item.count|default:0 }}{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ];
-
-    const paymentTotal = paymentValues.reduce((sum, value) => sum + Number(value || 0), 0);
-
-    const centerTextPlugin = {
-        id: "centerTextPlugin",
-        afterDraw(chart, args, pluginOptions) {
-            if (chart.config.type !== "pie" && chart.config.type !== "doughnut") return;
-
-            const { ctx } = chart;
-            const meta = chart.getDatasetMeta(0);
-            if (!meta || !meta.data || !meta.data.length) return;
-
-            const x = meta.data[0].x;
-            const y = meta.data[0].y;
-
-            ctx.save();
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            ctx.fillStyle = "#171717";
-            ctx.font = "700 24px Arial";
-            ctx.fillText(pluginOptions.valueText || "0", x, y - 8);
-
-            ctx.fillStyle = "#8a8a8a";
-            ctx.font = "13px Arial";
-            ctx.fillText(pluginOptions.labelText || "Bills", x, y + 16);
-            ctx.restore();
-        }
-    };
-
-    Chart.register(centerTextPlugin);
-
     const revenueCtx = document.getElementById("revenueChart");
     new Chart(revenueCtx, {
         type: "line",
@@ -1194,37 +1099,6 @@
         }
     });
 
-    const paymentCtx = document.getElementById("paymentChart");
-    new Chart(paymentCtx, {
-        type: "doughnut",
-        data: {
-            labels: paymentLabels,
-            datasets: [{
-                data: paymentTotal > 0 ? paymentValues : [1],
-                backgroundColor: paymentTotal > 0
-                    ? ["#2ac45a", "#e0ac00", "#d60d27"]
-                    : ["#ececec"],
-                borderColor: "#ffffff",
-                borderWidth: 2,
-                hoverOffset: paymentTotal > 0 ? 4 : 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "68%",
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    enabled: paymentTotal > 0
-                },
-                centerTextPlugin: {
-                    valueText: String(paymentTotal),
-                    labelText: paymentTotal > 0 ? "Bills" : "No Data"
-                }
-            }
-        }
-    });
 </script>
 </body>
 </html>

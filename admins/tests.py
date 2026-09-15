@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -5,7 +7,8 @@ from django.utils import timezone
 
 from admins.models import Assembly, UserProfile
 from admins.views import PortalLoginView, _find_citizen_user_by_phone
-from properties.models import Owner
+from payments.models import Payment
+from properties.models import Owner, Property
 
 User = get_user_model()
 
@@ -138,43 +141,101 @@ class AdminAnalyticsViewTests(TestCase):
             email="analytics@example.com",
             password="Admin-pass-123",
         )
+        self.owner = Owner.objects.create(
+            assembly=self.assembly,
+            full_name="Analytics Citizen",
+            primary_phone="0242222222",
+        )
+        self.property_record = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="1 Analytics Road",
+            area_town="Accra",
+            property_use="residential",
+            building_type="apartment",
+            verification_status="pending",
+            is_exempt=True,
+        )
+        Payment.objects.create(
+            assembly=self.assembly,
+            property=self.property_record,
+            amount=Decimal("50.00"),
+            payment_method="cash",
+            transaction_reference="ANALYTICS-PAYMENT-1",
+            status="successful",
+        )
         self.client.force_login(self.user)
         session = self.client.session
         session["active_assembly_id"] = self.assembly.pk
         session.save()
 
-    def test_dashboard_exposes_complete_operational_summary(self):
+    def test_dashboard_exposes_only_four_key_metrics(self):
         response = self.client.get(
             reverse("admins:admin-dashboard"),
             secure=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        titles = {card["title"] for card in response.context["summary_cards"]}
-        self.assertTrue(
-            {
+        titles = [card["title"] for card in response.context["summary_cards"]]
+        self.assertEqual(
+            titles,
+            [
                 "Total Properties",
-                "Verified Properties",
                 "Pending Verification",
-                "Property Owners",
-                "Bills Generated",
-                "Payments Recorded",
-                "Outstanding Payments",
-            }.issubset(titles)
+                "Revenue Collected",
+                "Outstanding Amount",
+            ],
         )
+        self.assertNotContains(response, "Payment Distribution")
 
-    def test_reports_exposes_monthly_quarterly_and_yearly_datasets(self):
+    def test_reports_exposes_one_filter_driven_chart_and_records(self):
         response = self.client.get(
             reverse("admins:reports-analytics"),
-            {"year": timezone.localdate().year},
+            {
+                "report_type": "verification",
+                "period": "quarterly",
+                "year": timezone.localdate().year,
+                "status": "awaiting_review",
+            },
             secure=True,
         )
 
         self.assertEqual(response.status_code, 200)
-        charts = response.context["analytics_charts"]
-        self.assertEqual(len(charts["monthly"]["labels"]), 12)
-        self.assertEqual(len(charts["quarterly"]["labels"]), 4)
-        self.assertEqual(len(charts["yearly"]["labels"]), 5)
-        self.assertContains(response, "Monthly Activity")
-        self.assertContains(response, "Quarterly Finance")
-        self.assertContains(response, "Yearly Activity")
+        self.assertEqual(response.context["selected_report_type"], "verification")
+        self.assertEqual(response.context["selected_period"], "quarterly")
+        self.assertEqual(response.context["selected_status"], "awaiting_review")
+        self.assertEqual(len(response.context["chart_config"]["labels"]), 4)
+        self.assertEqual(response.context["record_title"], "Verification Records")
+        self.assertEqual(response.context["record_paginator"].count, 1)
+        self.assertContains(response, "Report Type")
+        self.assertContains(response, "Generate &amp; Export Reports")
+
+    def test_yearly_period_returns_five_year_series(self):
+        response = self.client.get(
+            reverse("admins:reports-analytics"),
+            {"report_type": "citizens", "period": "yearly"},
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["chart_config"]["labels"]), 5)
+        self.assertEqual(response.context["record_title"], "Citizen / Owner Records")
+
+    def test_every_report_type_renders_its_matching_records_table(self):
+        expected_titles = {
+            "overview": "Recent Records",
+            "properties": "Property Records",
+            "verification": "Verification Records",
+            "billing_payments": "Billing Records",
+            "citizens": "Citizen / Owner Records",
+        }
+
+        for report_type, record_title in expected_titles.items():
+            with self.subTest(report_type=report_type):
+                response = self.client.get(
+                    reverse("admins:reports-analytics"),
+                    {"report_type": report_type, "period": "monthly"},
+                    secure=True,
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["record_title"], record_title)
