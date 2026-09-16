@@ -514,6 +514,8 @@
             color: #8a8a8a;
         }
 
+        .stat-secondary { color:#5f6368; font-size:12px; font-weight:700; margin-top:5px; }
+
         .panel {
             padding: 18px;
             margin-bottom: 18px;
@@ -917,6 +919,7 @@
                     <div class="stat-title">{{ card.title }}</div>
                     <div class="stat-value">{{ card.value }}</div>
                     <div class="stat-meta">{{ card.meta }}</div>
+                    {% if card.secondary %}<div class="stat-secondary">{{ card.secondary }}</div>{% endif %}
                 {% if card.url %}</a>{% else %}</div>{% endif %}
                 {% endfor %}
             </section>
