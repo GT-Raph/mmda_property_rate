@@ -24,14 +24,14 @@ def apply_payment_to_bill(
         locked_payment = (
             Payment.objects
             .select_for_update()
-            .select_related(
-                "bill",
-                "bill__property_record",
-            )
             .get(
                 pk=payment.pk
             )
         )
+
+        # Do not select_related("bill") here. Payment.bill is nullable, so
+        # PostgreSQL would build a LEFT OUTER JOIN and reject FOR UPDATE on
+        # the nullable side. The bill is fetched and locked explicitly below.
 
         if (
             locked_payment.status

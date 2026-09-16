@@ -9,3 +9,4 @@ staticfiles/
 .vscode/
 *.pyc
 .qodo/
+demo_exports/
