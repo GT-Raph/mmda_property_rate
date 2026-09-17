@@ -157,6 +157,73 @@
             gap: 12px;
         }
 
+        .filters {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr) 210px auto auto;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel);
+        }
+
+        .filters input,
+        .filters select,
+        .filters button,
+        .filters a {
+            min-height: 42px;
+            border: 1px solid #d4d4d4;
+            border-radius: 9px;
+            padding: 0 12px;
+            background: #ffffff;
+            color: var(--text);
+            font: inherit;
+        }
+
+        .filters button,
+        .filters a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-color: var(--gold);
+            background: var(--gold);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .filters a {
+            border-color: #d4d4d4;
+            background: #ffffff;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .page-link {
+            min-width: 40px;
+            min-height: 38px;
+            padding: 0 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #ffffff;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .page-link.current {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
         .card {
             background: #ffffff;
             border: 1px solid var(--line);
@@ -266,6 +333,15 @@
             .action {
                 width: 100%;
             }
+
+            .filters {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .filters input,
+            .filters select {
+                grid-column: 1 / -1;
+            }
         }
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
@@ -310,6 +386,26 @@
                     </span>
                 </div>
             </header>
+
+            <form method="get" class="filters" role="search">
+                <input
+                    type="search"
+                    name="q"
+                    value="{{ search }}"
+                    placeholder="Search reference, owner, phone, or address"
+                    aria-label="Search my assignments"
+                >
+                <select name="status" aria-label="Filter assignments by status">
+                    <option value="">All statuses</option>
+                    <option value="assigned" {% if selected_status == 'assigned' %}selected{% endif %}>Not Started</option>
+                    <option value="in_progress" {% if selected_status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+                <button type="submit">Apply</button>
+                <a href="{% url 'field_operations:field-officer-assignments' %}">Clear</a>
+            </form>
 
             <section class="list">
                 {% for assignment in assignments %}
@@ -375,11 +471,26 @@
                     </article>
                 {% empty %}
                     <div class="empty">
-                        No properties have been
-                        assigned to you yet.
+                        {% if search or selected_status %}
+                            No assignments match the selected search and status filters.
+                        {% else %}
+                            No properties have been assigned to you yet.
+                        {% endif %}
                     </div>
                 {% endfor %}
             </section>
+
+            {% if paginator.num_pages > 1 %}
+                <nav class="pagination" aria-label="Assignment pages">
+                    {% if page_obj.has_previous %}
+                        <a class="page-link" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                    {% endif %}
+                    <span class="page-link current">{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}
+                        <a class="page-link" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                    {% endif %}
+                </nav>
+            {% endif %}
         </div>
     </main>
 </body>

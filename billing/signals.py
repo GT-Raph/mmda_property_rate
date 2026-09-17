@@ -21,6 +21,25 @@ def auto_generate_current_year_bill(
     if raw:
         return
 
+    update_fields = kwargs.get("update_fields")
+    billing_fields = {
+        "assembly",
+        "community_area",
+        "property_use",
+        "property_class",
+        "building_type",
+        "rateable_value",
+        "is_exempt",
+        "is_active",
+    }
+
+    if (
+        not created
+        and update_fields is not None
+        and set(update_fields).isdisjoint(billing_fields)
+    ):
+        return
+
     if not instance.is_active:
         return
 

@@ -138,6 +138,177 @@ class AdminAssignmentSearchTests(TestCase):
         )
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
+class FieldOfficerAssignmentListTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Officer Assignment Assembly",
+            short_code="OAA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.officer = self._officer("list-officer")
+        self.other_officer = self._officer("other-list-officer")
+        self.owner = Owner.objects.create(
+            assembly=self.assembly,
+            full_name="Abena Assignment Owner",
+            primary_phone="0551234567",
+        )
+        self.assigned = self._assignment(
+            "1 Assigned Lane",
+            "Dansoman",
+            "assigned",
+        )
+        self.in_progress = self._assignment(
+            "2 Progress Avenue",
+            "Mamprobi",
+            "in_progress",
+        )
+        self.completed = self._assignment(
+            "3 Complete Road",
+            "Chorkor",
+            "completed",
+        )
+        self.rejected = self._assignment(
+            "4 Rejected Road",
+            "Glefe",
+            "rejected",
+        )
+        self.cancelled = self._assignment(
+            "5 Cancelled Road",
+            "Korle Gonno",
+            "cancelled",
+        )
+        self.other_assignment = self._assignment(
+            "99 Private Officer Road",
+            "Hidden Town",
+            "completed",
+            officer=self.other_officer,
+        )
+        self.unassigned_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="100 Unassigned Road",
+            area_town="Hidden Town",
+            property_use="residential",
+            building_type="detached",
+            is_exempt=True,
+        )
+        self.client.force_login(self.officer)
+        session = self.client.session
+        session["active_assembly_id"] = self.assembly.pk
+        session.save()
+        self.url = reverse("field_operations:field-officer-assignments")
+
+    def _officer(self, username):
+        user = User.objects.create_user(
+            username=username,
+            password="Officer-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(user=user)
+        profile.role = "field_officer"
+        profile.assembly = self.assembly
+        profile.must_change_password = False
+        profile.save(update_fields=["role", "assembly", "must_change_password"])
+        return user
+
+    def _assignment(self, address, town, status, officer=None):
+        property_record = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line=address,
+            area_town=town,
+            property_use="residential",
+            building_type="detached",
+            verification_status=("verified" if status == "completed" else "pending"),
+            is_exempt=True,
+        )
+        return FieldAssignment.objects.create(
+            assembly=self.assembly,
+            property=property_record,
+            officer=officer or self.officer,
+            status=status,
+        )
+
+    def _references(self, response):
+        return {
+            assignment.property.property_reference
+            for assignment in response.context["assignments"]
+        }
+
+    def test_searches_reference_owner_phone_address_and_town(self):
+        searches = (
+            (self.assigned.property.property_reference[3:9], self.assigned),
+            ("Abena Assignment", self.assigned),
+            ("0551234", self.assigned),
+            ("Progress Avenue", self.in_progress),
+            ("chorkor", self.completed),
+        )
+        for query, expected in searches:
+            with self.subTest(query=query):
+                response = self.client.get(self.url, {"q": query})
+                self.assertIn(expected.property.property_reference, self._references(response))
+
+    def test_search_cannot_expose_other_officer_or_unassigned_property(self):
+        response = self.client.get(self.url, {"q": "Hidden Town"})
+        references = self._references(response)
+        self.assertNotIn(self.other_assignment.property.property_reference, references)
+        self.assertNotIn(self.unassigned_property.property_reference, references)
+        self.assertEqual(references, set())
+
+    def test_real_assignment_status_filters(self):
+        expected = {
+            "assigned": self.assigned,
+            "in_progress": self.in_progress,
+            "completed": self.completed,
+            "rejected": self.rejected,
+            "cancelled": self.cancelled,
+        }
+        for status, assignment in expected.items():
+            with self.subTest(status=status):
+                response = self.client.get(self.url, {"status": status})
+                self.assertEqual(
+                    self._references(response),
+                    {assignment.property.property_reference},
+                )
+
+    def test_search_and_status_filter_work_together(self):
+        response = self.client.get(
+            self.url,
+            {"q": "Complete Road", "status": "completed"},
+        )
+        self.assertEqual(
+            self._references(response),
+            {self.completed.property.property_reference},
+        )
+        no_match = self.client.get(
+            self.url,
+            {"q": "Complete Road", "status": "in_progress"},
+        )
+        self.assertEqual(self._references(no_match), set())
+
+    def test_pagination_preserves_search_and_status(self):
+        for index in range(11):
+            self._assignment(
+                f"{index + 20} Bulk Completed Road",
+                "Accra",
+                "completed",
+            )
+        response = self.client.get(
+            self.url,
+            {"q": "Bulk Completed", "status": "completed"},
+        )
+        self.assertEqual(response.context["paginator"].num_pages, 2)
+        self.assertEqual(
+            response.context["filter_query"],
+            "q=Bulk+Completed&status=completed",
+        )
+        self.assertContains(
+            response,
+            "q=Bulk+Completed&amp;status=completed&amp;page=2",
+        )
+
+
 @override_settings(
     SECURE_SSL_REDIRECT=False,
     FIELD_GPS_DEMO_MODE=False,
@@ -265,6 +436,9 @@ class FieldVerificationGpsTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["verification_status"], "")
+        self.assertContains(response, 'id="verificationSubmitButton"')
+        self.assertContains(response, "Submitting verification…")
+        self.assertContains(response, 'dataset.submitting === "true"')
 
     def test_pending_outcome_is_clearly_incomplete_and_not_payment_eligible(self):
         response = self._post("5.600100", "-0.180100", status="pending")
@@ -293,6 +467,22 @@ class FieldVerificationGpsTests(TestCase):
         self.property.refresh_from_db()
         self.assertEqual(self.property.verification_status, "pending")
         self.assertFalse(FieldVisit.objects.filter(property=self.property).exists())
+
+    def test_repeated_submission_does_not_create_duplicate_visit(self):
+        first = self._post("5.600100", "-0.180100")
+        self.assertEqual(first.status_code, 302)
+
+        second = self._post("5.600100", "-0.180100")
+        self.assertRedirects(
+            second,
+            reverse("field_operations:field-officer-verify"),
+        )
+        self.assertEqual(
+            FieldVisit.objects.filter(property=self.property).count(),
+            1,
+        )
+        self.assignment.refresh_from_db()
+        self.assertEqual(self.assignment.status, "completed")
 
     def test_outside_radius_cannot_be_marked_verified(self):
         response = self._post(

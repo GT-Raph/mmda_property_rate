@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
 from django.db.models import Case, Count, IntegerField, Max, Q, Value, When
 from django.http import request
 from django.shortcuts import render, redirect
@@ -1958,7 +1959,19 @@ def field_officer_assignments(request):
         request
     )
 
-    assignments = (
+    search = (request.GET.get("q") or "").strip()
+    selected_status = (
+        request.GET.get("status") or ""
+    ).strip()
+    allowed_statuses = {
+        value
+        for value, _label
+        in FieldAssignment.STATUS_CHOICES
+    }
+    if selected_status not in allowed_statuses:
+        selected_status = ""
+
+    assignments_base = (
         FieldAssignment.objects
         .select_related(
             "property",
@@ -1993,9 +2006,33 @@ def field_officer_assignments(request):
     )
 
     if assembly:
-        assignments = assignments.filter(
+        assignments_base = assignments_base.filter(
             assembly=assembly,
         )
+
+    assignments = assignments_base
+
+    if search:
+        assignments = assignments.filter(
+            Q(property__property_reference__icontains=search)
+            | Q(property__owner__full_name__icontains=search)
+            | Q(property__owner__primary_phone__icontains=search)
+            | Q(property__address_line__icontains=search)
+            | Q(property__area_town__icontains=search)
+            | Q(property__suburb__icontains=search)
+        )
+
+    if selected_status:
+        assignments = assignments.filter(
+            status=selected_status,
+        )
+
+    paginator = Paginator(assignments, 10)
+    page_obj = paginator.get_page(
+        request.GET.get("page")
+    )
+    filter_query_params = request.GET.copy()
+    filter_query_params.pop("page", None)
 
     portal_access = get_allowed_modules(
         request.user
@@ -2017,10 +2054,15 @@ def field_officer_assignments(request):
                 "Properties assigned to you "
                 "for field verification."
             ),
-            "assignments": assignments,
+            "assignments": page_obj,
+            "page_obj": page_obj,
+            "paginator": paginator,
+            "filter_query": filter_query_params.urlencode(),
+            "search": search,
+            "selected_status": selected_status,
 
             "active_count": (
-                assignments.filter(
+                assignments_base.filter(
                     status__in=[
                         "assigned",
                         "in_progress",
@@ -2029,7 +2071,7 @@ def field_officer_assignments(request):
             ),
 
             "completed_count": (
-                assignments.filter(
+                assignments_base.filter(
                     status="completed",
                 ).count()
             ),

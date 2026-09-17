@@ -640,12 +640,29 @@
 
         <div class="actions">
             <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Submit Verification Report</button>
+            <button type="submit" class="btn btn-primary" id="verificationSubmitButton">
+                <span class="submit-label">Submit Verification Report</span>
+            </button>
         </div>
     </form>
 </main>
 
 <script>
+    const verificationForm = document.getElementById("verificationForm");
+    const verificationSubmitButton = document.getElementById("verificationSubmitButton");
+
+    verificationForm?.addEventListener("submit", function (event) {
+        if (verificationForm.dataset.submitting === "true") {
+            event.preventDefault();
+            return;
+        }
+
+        verificationForm.dataset.submitting = "true";
+        verificationSubmitButton.disabled = true;
+        verificationSubmitButton.setAttribute("aria-busy", "true");
+        verificationSubmitButton.querySelector(".submit-label").textContent = "Submitting verification…";
+    });
+
     function goBack() {
         if (window.history.length > 1) {
             window.history.back();
