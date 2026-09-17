@@ -8,8 +8,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from admins.models import Assembly
+from admins.models import Assembly, UserProfile
 from billing.models import Bill
+from field_operations.models import FieldAssignment
 from payments.models import Payment
 
 from .forms import PropertyCreateForm
@@ -169,6 +170,84 @@ class TemporaryPasswordTests(TestCase):
 
         self.assertRegex(first, re.compile(r"^Prms-\d{6}$"))
         self.assertNotEqual(first, second)
+
+
+class FieldOfficerPropertyRegistryTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Field Registry Assembly",
+            short_code="FRA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.officer = User.objects.create_user(
+            username="assigned-officer",
+            password="Officer-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(
+            user=self.officer,
+        )
+        profile.role = "field_officer"
+        profile.assembly = self.assembly
+        profile.must_change_password = False
+        profile.save(
+            update_fields=[
+                "role",
+                "assembly",
+                "must_change_password",
+            ]
+        )
+
+        owner = Owner.objects.create(
+            assembly=self.assembly,
+            full_name="Assigned Property Owner",
+            primary_phone="0241234000",
+        )
+        self.assigned_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=owner,
+            address_line="1 Assignment Road",
+            area_town="Accra",
+            property_use="residential",
+            building_type="detached",
+            verification_status="verified",
+            is_exempt=True,
+        )
+        self.unassigned_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=owner,
+            address_line="2 Assignment Road",
+            area_town="Accra",
+            property_use="residential",
+            building_type="detached",
+            verification_status="verified",
+            is_exempt=True,
+        )
+        FieldAssignment.objects.create(
+            assembly=self.assembly,
+            property=self.assigned_property,
+            officer=self.officer,
+            status="completed",
+        )
+
+        self.client.force_login(self.officer)
+        session = self.client.session
+        session["active_assembly_id"] = self.assembly.pk
+        session.save()
+
+    def test_registry_lists_assigned_properties_not_only_registered_properties(self):
+        response = self.client.get(
+            reverse("properties:property-registry"),
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_title"], "My Assigned Properties")
+        self.assertEqual(response.context["paginator"].count, 1)
+        self.assertEqual(
+            response.context["properties"][0]["reference"],
+            self.assigned_property.property_reference,
+        )
 
 
 class AdminRecordFilteringTests(TestCase):
