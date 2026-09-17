@@ -24,10 +24,6 @@ def apply_payment_to_bill(
         locked_payment = (
             Payment.objects
             .select_for_update()
-            .select_related(
-                "bill",
-                "bill__property_record",
-            )
             .get(
                 pk=payment.pk
             )
