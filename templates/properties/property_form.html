@@ -762,6 +762,7 @@
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
     <script defer src="{% static 'js/prms_ui.js' %}"></script>
+    <script defer src="{% static 'js/prms_submission.js' %}"></script>
 
 </head>
 <body class="portal-shell">
@@ -854,7 +855,14 @@
         {% endif %}
 
         <section class="card">
-            <form method="post" id="propertyCreateForm" data-rate-preview-url="{% url 'properties:property-rate-preview' %}">
+            <form
+                method="post"
+                id="propertyCreateForm"
+                data-rate-preview-url="{% url 'properties:property-rate-preview' %}"
+                data-submission-overlay="propertyRegistrationProcessingOverlay"
+                data-submission-button="confirmPropertySave"
+                data-submission-label="Registering property…"
+            >
                 {% csrf_token %}
 
                 <h2 class="section-title">
@@ -1079,6 +1087,7 @@
                     </div>
                 </div>
             </form>
+            {% include "shared/submission_overlay.html" with overlay_id="propertyRegistrationProcessingOverlay" overlay_title="Registering Property" overlay_message="Please wait while the property record and billing information are being created." %}
         </section>
     </div>
 </main>

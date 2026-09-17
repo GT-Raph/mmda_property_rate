@@ -445,6 +445,7 @@
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
     <script defer src="{% static 'js/prms_ui.js' %}"></script>
+    <script defer src="{% static 'js/prms_submission.js' %}"></script>
 </head>
 <body class="field-task-shell">
 <header class="topbar">
@@ -483,7 +484,14 @@
         </div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" id="verificationForm">
+    <form
+        method="post"
+        enctype="multipart/form-data"
+        id="verificationForm"
+        data-submission-overlay="verificationProcessingOverlay"
+        data-submission-button="verificationSubmitButton"
+        data-submission-label="Submitting verification…"
+    >
         {% csrf_token %}
 
         <section class="card">
@@ -645,24 +653,10 @@
             </button>
         </div>
     </form>
+    {% include "shared/submission_overlay.html" with overlay_id="verificationProcessingOverlay" overlay_title="Submitting Verification" overlay_message="Please wait while the property verification is being processed." %}
 </main>
 
 <script>
-    const verificationForm = document.getElementById("verificationForm");
-    const verificationSubmitButton = document.getElementById("verificationSubmitButton");
-
-    verificationForm?.addEventListener("submit", function (event) {
-        if (verificationForm.dataset.submitting === "true") {
-            event.preventDefault();
-            return;
-        }
-
-        verificationForm.dataset.submitting = "true";
-        verificationSubmitButton.disabled = true;
-        verificationSubmitButton.setAttribute("aria-busy", "true");
-        verificationSubmitButton.querySelector(".submit-label").textContent = "Submitting verification…";
-    });
-
     function goBack() {
         if (window.history.length > 1) {
             window.history.back();

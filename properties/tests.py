@@ -172,6 +172,46 @@ class TemporaryPasswordTests(TestCase):
         self.assertNotEqual(first, second)
 
 
+class PropertyRegistrationSubmissionFeedbackTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Registration Feedback Assembly",
+            short_code="RFA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.user = User.objects.create_user(
+            username="registration-feedback-admin",
+            password="Admin-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = "property_officer"
+        profile.assembly = self.assembly
+        profile.must_change_password = False
+        profile.save(update_fields=["role", "assembly", "must_change_password"])
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_assembly_id"] = self.assembly.pk
+        session.save()
+
+    def test_registration_form_uses_shared_processing_overlay(self):
+        response = self.client.get(
+            reverse("properties:add-property"),
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            'data-submission-overlay="propertyRegistrationProcessingOverlay"',
+        )
+        self.assertContains(response, 'data-submission-button="confirmPropertySave"')
+        self.assertContains(response, 'id="propertyRegistrationProcessingOverlay"')
+        self.assertContains(response, "Registering Property")
+        self.assertContains(response, "Registering property…")
+        self.assertContains(response, "prms_submission.js")
+
+
 class FieldOfficerPropertyRegistryTests(TestCase):
     def setUp(self):
         self.assembly = Assembly.objects.create(

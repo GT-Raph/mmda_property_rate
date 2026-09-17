@@ -1,0 +1,17 @@
+<div
+    class="prms-processing-overlay"
+    id="{{ overlay_id }}"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="{{ overlay_id }}Title"
+    aria-describedby="{{ overlay_id }}Message"
+    aria-hidden="true"
+    hidden
+>
+    <div class="prms-processing-card" role="status" aria-live="polite">
+        <span class="prms-processing-spinner" aria-hidden="true"></span>
+        <h2 id="{{ overlay_id }}Title">{{ overlay_title }}</h2>
+        <p id="{{ overlay_id }}Message">{{ overlay_message }}</p>
+        <span class="prms-processing-bar" aria-hidden="true"><span></span></span>
+    </div>
+</div>

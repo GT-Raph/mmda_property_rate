@@ -300,6 +300,90 @@ textarea:disabled,
     backdrop-filter: blur(10px);
 }
 
+/* Shared, indeterminate feedback for server-bound form submissions. */
+.prms-processing-overlay[hidden] {
+    display: none !important;
+}
+
+.prms-processing-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(16, 17, 20, 0.68);
+    backdrop-filter: blur(2px);
+}
+
+.prms-processing-card {
+    width: min(430px, 100%);
+    padding: 30px;
+    border: 1px solid var(--prms-border);
+    border-radius: var(--prms-radius-lg);
+    background: var(--prms-surface);
+    color: var(--prms-text);
+    box-shadow: var(--prms-shadow-md);
+    text-align: center;
+}
+
+.prms-processing-card h2 {
+    margin: 18px 0 8px;
+    font-size: 22px;
+    line-height: 1.2;
+}
+
+.prms-processing-card p {
+    margin: 0;
+    color: var(--prms-muted);
+    line-height: 1.55;
+}
+
+.prms-processing-spinner {
+    width: 52px;
+    height: 52px;
+    display: inline-block;
+    border: 5px solid var(--prms-primary-soft);
+    border-top-color: var(--prms-primary);
+    border-radius: 50%;
+    animation: prms-processing-spin 0.8s linear infinite;
+}
+
+.prms-processing-bar {
+    position: relative;
+    height: 5px;
+    margin-top: 22px;
+    display: block;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--prms-primary-soft);
+}
+
+.prms-processing-bar span {
+    position: absolute;
+    inset: 0 auto 0 -35%;
+    width: 35%;
+    border-radius: inherit;
+    background: var(--prms-primary);
+    animation: prms-processing-progress 1.25s ease-in-out infinite;
+}
+
+@keyframes prms-processing-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes prms-processing-progress {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(390%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .prms-processing-spinner,
+    .prms-processing-bar span {
+        animation-duration: 2.5s;
+    }
+}
+
 /* Keep the sidebar offset inside the viewport rather than adding it to a
    full-width content column. Wide data tables continue to scroll locally. */
 .portal-shell > .content {

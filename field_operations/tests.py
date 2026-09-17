@@ -437,8 +437,14 @@ class FieldVerificationGpsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["verification_status"], "")
         self.assertContains(response, 'id="verificationSubmitButton"')
+        self.assertContains(
+            response,
+            'data-submission-overlay="verificationProcessingOverlay"',
+        )
+        self.assertContains(response, 'id="verificationProcessingOverlay"')
+        self.assertContains(response, "Submitting Verification")
         self.assertContains(response, "Submitting verification…")
-        self.assertContains(response, 'dataset.submitting === "true"')
+        self.assertContains(response, "prms_submission.js")
 
     def test_pending_outcome_is_clearly_incomplete_and_not_payment_eligible(self):
         response = self._post("5.600100", "-0.180100", status="pending")

@@ -169,9 +169,7 @@
         }
 
         .filters input,
-        .filters select,
-        .filters button,
-        .filters a {
+        .filters select {
             min-height: 42px;
             border: 1px solid #d4d4d4;
             border-radius: 9px;
@@ -183,18 +181,14 @@
 
         .filters button,
         .filters a {
+            min-height: 42px;
+            padding: 0 12px;
+            border-radius: 9px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-color: var(--gold);
-            background: var(--gold);
             font-weight: 800;
             cursor: pointer;
-        }
-
-        .filters a {
-            border-color: #d4d4d4;
-            background: #ffffff;
         }
 
         .pagination {
@@ -217,11 +211,6 @@
             background: #ffffff;
             font-size: 13px;
             font-weight: 700;
-        }
-
-        .page-link.current {
-            background: var(--gold);
-            border-color: var(--gold);
         }
 
         .card {
@@ -403,8 +392,8 @@
                     <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
                     <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
                 </select>
-                <button type="submit">Apply</button>
-                <a href="{% url 'field_operations:field-officer-assignments' %}">Clear</a>
+                <button type="submit" class="btn-primary">Apply</button>
+                <a class="btn-secondary" href="{% url 'field_operations:field-officer-assignments' %}">Clear</a>
             </form>
 
             <section class="list">
@@ -483,11 +472,11 @@
             {% if paginator.num_pages > 1 %}
                 <nav class="pagination" aria-label="Assignment pages">
                     {% if page_obj.has_previous %}
-                        <a class="page-link" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                        <a class="page-link btn-secondary" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
                     {% endif %}
-                    <span class="page-link current">{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+                    <span class="page-link btn-primary current">{{ page_obj.number }} / {{ paginator.num_pages }}</span>
                     {% if page_obj.has_next %}
-                        <a class="page-link" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                        <a class="page-link btn-secondary" href="?{% if filter_query %}{{ filter_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
                     {% endif %}
                 </nav>
             {% endif %}

@@ -240,20 +240,12 @@
         .property-search a {
             min-height: 43px;
             padding: 0 16px;
-            border: 1px solid var(--gold);
             border-radius: 9px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background: var(--gold);
-            color: #171717;
             font-weight: 800;
             cursor: pointer;
-        }
-
-        .property-search a {
-            border-color: #cfcfcf;
-            background: #ffffff;
         }
 
         .property-option {
@@ -426,8 +418,8 @@
                             placeholder="Search reference, owner, phone, or address"
                             aria-label="Search properties available for assignment"
                         >
-                        <button type="submit">Search</button>
-                        <a href="{% url 'field_operations:assign-field-officer-property' %}">Clear</a>
+                        <button type="submit" class="btn-primary">Search</button>
+                        <a class="btn-secondary" href="{% url 'field_operations:assign-field-officer-property' %}">Clear</a>
                     </form>
 
                     <form method="post">
