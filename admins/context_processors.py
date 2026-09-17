@@ -14,6 +14,17 @@ def portal_access(request):
         user
     )
 
+    profile = (
+        getattr(user, "profile", None)
+        if user and user.is_authenticated
+        else None
+    )
+    portal_mandatory_modal_active = bool(
+        role == "citizen"
+        and profile
+        and profile.must_change_password
+    )
+
     unread_notification_count = 0
     latest_unread_notification = None
 
@@ -36,9 +47,10 @@ def portal_access(request):
             unread_notifications.count()
         )
 
-        latest_unread_notification = (
-            unread_notifications.first()
-        )
+        if not portal_mandatory_modal_active:
+            latest_unread_notification = (
+                unread_notifications.first()
+            )
 
     return {
         "portal_role": role,
@@ -100,5 +112,9 @@ def portal_access(request):
 
         "latest_unread_notification": (
             latest_unread_notification
+        ),
+
+        "portal_mandatory_modal_active": (
+            portal_mandatory_modal_active
         ),
     }

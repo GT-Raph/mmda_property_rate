@@ -7,13 +7,112 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from admins.models import Assembly, UserProfile
+from admins.models import Assembly, UserNotification, UserProfile
 from billing.models import Bill
 from payments.models import Payment
 from properties.models import Owner, Property
 
 
 User = get_user_model()
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class CitizenMandatoryPasswordModalPriorityTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Citizen Modal Priority Assembly",
+            short_code="CMPA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.user = User.objects.create_user(
+            username="modal-priority-citizen",
+            password="Temporary-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = "citizen"
+        profile.assembly = self.assembly
+        profile.must_change_password = True
+        profile.save(update_fields=["role", "assembly", "must_change_password"])
+        Owner.objects.create(
+            assembly=self.assembly,
+            linked_user=self.user,
+            full_name="Modal Priority Citizen",
+            primary_phone="0240000011",
+        )
+        self.notification = UserNotification.objects.create(
+            user=self.user,
+            notification_type="property_verified",
+            level="success",
+            title="Property Verified",
+            message="Your property is verified and eligible for payment.",
+            action_url=reverse("citizens:properties"),
+        )
+        self.client.force_login(self.user)
+
+    def test_required_password_modal_defers_unread_notification(self):
+        response = self.client.get(reverse("citizens:dashboard"), follow=True)
+
+        self.assertRedirects(
+            response,
+            f'{reverse("citizens:profile")}?modal=password',
+        )
+        self.assertContains(response, "Change Password")
+        self.assertNotContains(response, 'id="systemNotificationModal"')
+        self.assertNotContains(response, "Property Verified")
+        self.assertTrue(response.context["portal_mandatory_modal_active"])
+        self.assertEqual(response.context["unread_notification_count"], 1)
+        self.assertIsNone(response.context["latest_unread_notification"])
+        self.notification.refresh_from_db()
+        self.assertFalse(self.notification.is_read)
+
+    def test_successful_password_change_releases_pending_notification(self):
+        response = self.client.post(
+            reverse("citizens:change-password"),
+            {
+                "old_password": "Temporary-pass-123",
+                "new_password1": "Permanent-pass-4827",
+                "new_password2": "Permanent-pass-4827",
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("citizens:profile"))
+        self.user.profile.refresh_from_db()
+        self.assertFalse(self.user.profile.must_change_password)
+        self.assertContains(response, 'id="systemNotificationModal"')
+        self.assertContains(response, "Password updated successfully.")
+        self.assertContains(response, "Property Verified")
+        self.assertFalse(response.context["portal_mandatory_modal_active"])
+        self.notification.refresh_from_db()
+        self.assertFalse(self.notification.is_read)
+
+    def test_other_citizen_profile_modal_also_defers_notification(self):
+        self.user.profile.must_change_password = False
+        self.user.profile.save(update_fields=["must_change_password"])
+
+        response = self.client.get(
+            reverse("citizens:profile"),
+            {"modal": "email"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Edit Email Address")
+        self.assertNotContains(response, 'id="systemNotificationModal"')
+        self.notification.refresh_from_db()
+        self.assertFalse(self.notification.is_read)
+
+    def test_unread_notification_opens_normally_without_password_requirement(self):
+        self.user.profile.must_change_password = False
+        self.user.profile.save(update_fields=["must_change_password"])
+
+        response = self.client.get(reverse("citizens:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="systemNotificationModal"')
+        self.assertContains(response, "Property Verified")
+        self.notification.refresh_from_db()
+        self.assertFalse(self.notification.is_read)
 
 
 @override_settings(

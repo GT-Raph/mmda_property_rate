@@ -1,3 +1,4 @@
+{% if not portal_mandatory_modal_active and not active_modal %}
 {% if messages or latest_unread_notification %}
 
 <style>
@@ -330,4 +331,5 @@
     })();
 </script>
 
+{% endif %}
 {% endif %}
