@@ -59,7 +59,16 @@
         document.querySelectorAll("form[data-submission-overlay]").forEach(bindSubmissionFeedback);
     });
 
-    window.addEventListener("pageshow", function () {
+    window.addEventListener("pageshow", function (event) {
+        // A fresh document is initialized by DOMContentLoaded. Only clear a
+        // persisted submission state when the browser restores this page from
+        // its back/forward cache after the previous navigation completed.
+        // Resetting on every pageshow can expose an in-flight source page when
+        // a browser re-shows it while a request is still being processed.
+        if (!event.persisted) {
+            return;
+        }
+
         document.querySelectorAll("form[data-submission-overlay]").forEach(resetSubmissionState);
     });
 })();

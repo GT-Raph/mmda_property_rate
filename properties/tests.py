@@ -1,9 +1,11 @@
 import re
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -210,6 +212,17 @@ class PropertyRegistrationSubmissionFeedbackTests(TestCase):
         self.assertContains(response, "Registering Property")
         self.assertContains(response, "Registering property…")
         self.assertContains(response, "prms_submission.js")
+
+    def test_submission_overlay_has_no_timer_and_only_resets_bfcache_pages(self):
+        script = (
+            Path(settings.BASE_DIR) / "static" / "js" / "prms_submission.js"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("setTimeout", script)
+        self.assertIn('window.addEventListener("pageshow"', script)
+        self.assertIn("if (!event.persisted)", script)
+        self.assertIn('form.dataset.submitting = "true"', script)
+        self.assertIn("event.preventDefault()", script)
 
 
 class FieldOfficerPropertyRegistryTests(TestCase):

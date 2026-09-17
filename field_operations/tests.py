@@ -427,6 +427,34 @@ class FieldVerificationGpsTests(TestCase):
         self.assertContains(assignments_response, "Completed")
         self.assertNotContains(assignments_response, "Continue Verification")
 
+    def test_success_redirect_renders_feedback_modal_immediately(self):
+        response = self.client.post(
+            reverse(
+                "field_operations:field-officer-verify-property",
+                args=[self.property.pk],
+            ),
+            {
+                "property_id": self.property.pk,
+                "property_reference": self.property.property_reference,
+                "verification_type": "property_verification",
+                "verification_status": "verified",
+                "owner_present": "yes",
+                "notes": "The property details were checked on site.",
+                "latitude": "5.600100",
+                "longitude": "-0.180100",
+                "gps_accuracy": "8.50",
+            },
+            follow=True,
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("field_operations:field-officer-stats"),
+        )
+        self.assertContains(response, 'id="systemNotificationModal"')
+        self.assertContains(response, "was verified successfully")
+        self.assertContains(response, "var modal = document.getElementById")
+
     def test_new_assignment_requires_explicit_verification_outcome(self):
         response = self.client.get(
             reverse(
