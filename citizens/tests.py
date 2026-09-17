@@ -5,8 +5,10 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from admins.models import Assembly, UserProfile
+from billing.models import Bill
 from payments.models import Payment
 from properties.models import Owner, Property
 
@@ -186,3 +188,91 @@ class CitizenDashboardSummaryTests(TestCase):
         self.assertEqual(response.context["stats"]["payments_count"], 1)
         self.assertContains(response, "Payments")
         self.assertContains(response, "paid in")
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class CitizenVerifiedPaymentWorkflowTests(TestCase):
+    def setUp(self):
+        self.assembly = Assembly.objects.create(
+            name="Citizen Payment Assembly",
+            short_code="CPA",
+            assembly_type="municipal",
+            region="Greater Accra",
+        )
+        self.user = User.objects.create_user(
+            username="payment-citizen",
+            password="Citizen-pass-123",
+        )
+        profile, _created = UserProfile.objects.get_or_create(user=self.user)
+        profile.role = "citizen"
+        profile.assembly = self.assembly
+        profile.must_change_password = False
+        profile.save(update_fields=["role", "assembly", "must_change_password"])
+        self.owner = Owner.objects.create(
+            assembly=self.assembly,
+            linked_user=self.user,
+            full_name="Citizen Payment Owner",
+            primary_phone="0242222222",
+        )
+        self.pending_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="1 Pending Street",
+            area_town="Accra",
+            property_use="residential",
+            building_type="detached",
+            verification_status="pending",
+            is_exempt=True,
+        )
+        self.verified_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=self.owner,
+            address_line="2 Verified Street",
+            area_town="Accra",
+            property_use="residential",
+            building_type="detached",
+            verification_status="verified",
+            is_exempt=True,
+        )
+        self.pending_bill = Bill.objects.get(
+            property_record=self.pending_property,
+            billing_year=timezone.localdate().year,
+        )
+        self.verified_bill = Bill.objects.get(
+            property_record=self.verified_property,
+            billing_year=timezone.localdate().year,
+        )
+        for bill in (self.pending_bill, self.verified_bill):
+            bill.arrears_brought_forward = Decimal("100.00")
+            bill.save()
+        self.client.force_login(self.user)
+
+    def test_pending_property_cannot_enter_payment_confirmation(self):
+        response = self.client.get(
+            reverse("citizens:payment-confirm"),
+            {"bill": self.pending_bill.pk},
+        )
+        self.assertRedirects(response, reverse("citizens:bills"))
+        self.assertFalse(Payment.objects.filter(bill=self.pending_bill).exists())
+
+    def test_verified_property_completes_mobile_money_payment(self):
+        response = self.client.post(
+            reverse("citizens:payment-confirm"),
+            {
+                "bill_ids": [str(self.verified_bill.pk)],
+                "network": "mtn",
+                "mobile_number": "0242222222",
+            },
+        )
+        self.assertRedirects(response, reverse("citizens:payment-processing"))
+
+        response = self.client.get(reverse("citizens:payment-success"))
+        self.assertEqual(response.status_code, 200)
+        payment = Payment.objects.get(bill=self.verified_bill)
+        self.assertEqual(payment.payment_method, "momo")
+        self.assertEqual(payment.status, "successful")
+        self.verified_bill.refresh_from_db()
+        self.assertEqual(self.verified_bill.status, "paid")
+        self.assertEqual(self.verified_bill.amount_paid, Decimal("100.00"))
+        history = self.client.get(reverse("citizens:payment-history"))
+        self.assertContains(history, payment.transaction_reference)

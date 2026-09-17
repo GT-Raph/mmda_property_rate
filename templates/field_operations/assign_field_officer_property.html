@@ -229,6 +229,33 @@
             background: #ffffff;
         }
 
+        .property-search {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: 9px;
+            margin-bottom: 10px;
+        }
+
+        .property-search button,
+        .property-search a {
+            min-height: 43px;
+            padding: 0 16px;
+            border: 1px solid var(--gold);
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold);
+            color: #171717;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .property-search a {
+            border-color: #cfcfcf;
+            background: #ffffff;
+        }
+
         .property-option {
             display: flex;
             align-items: flex-start;
@@ -333,6 +360,14 @@
             .form-grid {
                 grid-template-columns: 1fr;
             }
+
+            .property-search {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .property-search input {
+                grid-column: 1 / -1;
+            }
         }
     </style>
     <link rel="stylesheet" href="{% static 'css/prms_theme.css' %}">
@@ -383,6 +418,18 @@
 
                     <h2>New Assignment</h2>
 
+                    <form method="get" class="property-search" role="search">
+                        <input
+                            type="search"
+                            name="q"
+                            value="{{ property_search }}"
+                            placeholder="Search reference, owner, phone, or address"
+                            aria-label="Search properties available for assignment"
+                        >
+                        <button type="submit">Search</button>
+                        <a href="{% url 'field_operations:assign-field-officer-property' %}">Clear</a>
+                    </form>
+
                     <form method="post">
                         {% csrf_token %}
 
@@ -426,8 +473,11 @@
                                     {% empty %}
 
                                         <div style="padding:15px;">
-                                            No unverified properties
-                                            are available.
+                                            {% if property_search %}
+                                                No available properties match “{{ property_search }}”.
+                                            {% else %}
+                                                No unverified properties are available.
+                                            {% endif %}
                                         </div>
 
                                     {% endfor %}

@@ -934,7 +934,7 @@
                             type="search"
                             name="q"
                             value="{{ search }}"
-                            placeholder="Search by reference, owner name, or location..."
+                            placeholder="Search by reference, owner, phone, or location..."
                             aria-label="Search properties"
                         >
                     </div>
@@ -1058,7 +1058,13 @@
                                 </tr>
                             {% empty %}
                                 <tr class="empty-row">
-                                    <td colspan="7">No properties found.</td>
+                                    <td colspan="7">
+                                        {% if search %}
+                                            No properties match “{{ search }}”.
+                                        {% else %}
+                                            No properties found.
+                                        {% endif %}
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>

@@ -198,6 +198,20 @@ class FieldOfficerPropertyRegistryTests(TestCase):
             ]
         )
 
+        self.other_officer = User.objects.create_user(
+            username="other-officer",
+            password="Officer-pass-456",
+        )
+        other_profile, _created = UserProfile.objects.get_or_create(
+            user=self.other_officer,
+        )
+        other_profile.role = "field_officer"
+        other_profile.assembly = self.assembly
+        other_profile.must_change_password = False
+        other_profile.save(
+            update_fields=["role", "assembly", "must_change_password"]
+        )
+
         owner = Owner.objects.create(
             assembly=self.assembly,
             full_name="Assigned Property Owner",
@@ -223,11 +237,31 @@ class FieldOfficerPropertyRegistryTests(TestCase):
             verification_status="verified",
             is_exempt=True,
         )
+        other_owner = Owner.objects.create(
+            assembly=self.assembly,
+            full_name="Hidden Search Owner",
+            primary_phone="0559876543",
+        )
+        self.other_officer_property = Property.objects.create(
+            assembly=self.assembly,
+            owner=other_owner,
+            address_line="99 Hidden Avenue",
+            area_town="Tema",
+            property_use="residential",
+            building_type="detached",
+            verification_status="pending",
+            is_exempt=True,
+        )
         FieldAssignment.objects.create(
             assembly=self.assembly,
             property=self.assigned_property,
             officer=self.officer,
             status="completed",
+        )
+        FieldAssignment.objects.create(
+            assembly=self.assembly,
+            property=self.other_officer_property,
+            officer=self.other_officer,
         )
 
         self.client.force_login(self.officer)
@@ -247,6 +281,43 @@ class FieldOfficerPropertyRegistryTests(TestCase):
         self.assertEqual(
             response.context["properties"][0]["reference"],
             self.assigned_property.property_reference,
+        )
+
+    def test_assigned_registry_searches_reference_owner_address_and_phone(self):
+        searches = (
+            self.assigned_property.property_reference,
+            self.assigned_property.property_reference[3:9],
+            "Assigned Property",
+            "Assignment Road",
+            "0241234",
+        )
+
+        for query in searches:
+            with self.subTest(query=query):
+                response = self.client.get(
+                    reverse("properties:property-registry"),
+                    {"q": query},
+                    secure=True,
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["paginator"].count, 1)
+                self.assertEqual(
+                    response.context["properties"][0]["reference"],
+                    self.assigned_property.property_reference,
+                )
+
+    def test_search_never_exposes_unassigned_or_other_officer_property(self):
+        response = self.client.get(
+            reverse("properties:property-registry"),
+            {"q": "Hidden Search Owner"},
+            secure=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["paginator"].count, 0)
+        self.assertNotContains(
+            response,
+            self.other_officer_property.property_reference,
         )
 
 

@@ -246,6 +246,7 @@ def property_registry(request):
         properties_qs = properties_qs.filter(
             Q(property_reference__icontains=search)
             | Q(owner__full_name__icontains=search)
+            | Q(owner__primary_phone__icontains=search)
             | Q(area_town__icontains=search)
             | Q(suburb__icontains=search)
             | Q(address_line__icontains=search)

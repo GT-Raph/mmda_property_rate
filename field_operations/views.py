@@ -3017,6 +3017,10 @@ def assign_field_officer_property(request):
         )
 
     assembly = _prms_current_assembly(request)
+    property_search = (
+        request.GET.get("q")
+        or ""
+    ).strip()
 
     properties_queryset = (
         Property.objects
@@ -3037,6 +3041,42 @@ def assign_field_officer_property(request):
         properties_queryset = (
             properties_queryset.filter(
                 assembly=assembly,
+            )
+        )
+
+    if property_search:
+        properties_queryset = (
+            properties_queryset.filter(
+                Q(
+                    property_reference__icontains=(
+                        property_search
+                    )
+                )
+                | Q(
+                    owner__full_name__icontains=(
+                        property_search
+                    )
+                )
+                | Q(
+                    owner__primary_phone__icontains=(
+                        property_search
+                    )
+                )
+                | Q(
+                    address_line__icontains=(
+                        property_search
+                    )
+                )
+                | Q(
+                    area_town__icontains=(
+                        property_search
+                    )
+                )
+                | Q(
+                    suburb__icontains=(
+                        property_search
+                    )
+                )
             )
         )
 
@@ -3304,6 +3344,7 @@ def assign_field_officer_property(request):
             "properties": (
                 properties_queryset[:500]
             ),
+            "property_search": property_search,
             "officers": officers_queryset,
             "assignments": (
                 assignments_queryset[:100]
@@ -3473,9 +3514,7 @@ def field_officer_verify_property(
             "property_verification"
         ),
         "verification_status": (
-            property_obj.verification_status
-            if property_obj
-            else ""
+            ""
         ),
         "owner_present": "yes",
         "notes": "",
@@ -3851,9 +3890,28 @@ def field_officer_verify_property(
                     ]
                 )
 
-            message = (
-                "Verification submitted successfully."
-            )
+            if (
+                form_values["verification_status"]
+                == "verified"
+            ):
+                message = (
+                    f"Property {property_obj.property_reference} "
+                    "was verified successfully. The assignment is "
+                    "complete and the property is now eligible for payment."
+                )
+            else:
+                status_label = dict(
+                    verification_status_choices
+                ).get(
+                    form_values["verification_status"],
+                    form_values["verification_status"],
+                )
+                message = (
+                    "Verification evidence was saved with status "
+                    f"{status_label}. The assignment remains in progress "
+                    "and Citizen payment stays unavailable until the "
+                    "property is marked Verified."
+                )
 
             if photo_count:
                 message += (
