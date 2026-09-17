@@ -235,7 +235,12 @@ def property_registry(request):
         properties_qs = properties_qs.filter(assembly=context_assembly)
 
     if user_role == "field_officer":
-        properties_qs = properties_qs.filter(registered_by=request.user)
+        # A property may be registered by an administrator and then assigned
+        # to a field officer. The officer's registry must therefore follow the
+        # assignment relationship rather than the registration audit field.
+        properties_qs = properties_qs.filter(
+            field_assignments__officer=request.user,
+        ).distinct()
 
     if search:
         properties_qs = properties_qs.filter(
@@ -337,11 +342,11 @@ def property_registry(request):
     filter_query_params.pop("page", None)
 
     context = {
-        "page_title": "Property Registry" if user_role != "field_officer" else "My Registered Properties",
+        "page_title": "Property Registry" if user_role != "field_officer" else "My Assigned Properties",
         "page_subtitle": (
             f"Manage and view all registered properties ({paginator.count} total)"
             if user_role != "field_officer"
-            else f"Properties you registered ({paginator.count} total)"
+            else f"Properties assigned to you ({paginator.count} total)"
         ),
         "context_assembly": context_assembly,
         "properties": property_rows,
