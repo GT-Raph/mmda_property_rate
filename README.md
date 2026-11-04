@@ -430,6 +430,8 @@ where each `N` is a digit.
 
 The generated password is returned once during account creation.
 
+It expires 7 days after it is issued, unless the owner has already replaced it. After that, the owner can use Forgot password if the account has an email address. Otherwise, staff can use Issue New Temporary Password on the Property Details page, which appears only while the owner is still on a temporary password.
+
 The property-registration workflow displays:
 
 ```text
@@ -2896,8 +2898,28 @@ Temporary passwords must:
 Be generated randomly
 Be shown only when necessary
 Require first-login replacement
+Expire after 7 days
 Never be hard-coded
 ```
+
+---
+
+## Login Attempt Limits
+
+`/owner/login/`, `/admin-login/`, `/login/` and `/admin/` all count failed attempts:
+
+```text
+5 failures per account in 15 minutes
+20 failures per client address in 15 minutes
+```
+
+At either limit, attempts are refused, even with the correct password, until enough failures are more than 15 minutes old.
+
+A successful login or a password reset clears the account's count. Neither clears the address count.
+
+Counts are stored in the database as keyed hashes, so no phone number, username or IP address is kept.
+
+On Render, the client address comes from the `True-Client-IP` header, because client-sent `X-Forwarded-For` values may be kept by the proxy. If that header is missing, only the account limit applies.
 
 ---
 
@@ -2919,14 +2941,14 @@ Production implementations should consider malware scanning for arbitrary docume
 
 # Testing
 
-The automated suite has 65 tests.
+The automated suite has 104 tests.
 
 A fresh copy runs them with no `.env` file and no `collectstatic`. Under `python manage.py test`, settings use plain static file storage, and a temporary `SECRET_KEY` if none is set.
 
 Tests per application:
 
 ```text
-admins             17   Citizen phone lookup, login access, analytics and reports, population command
+admins             56   Citizen phone lookup, login access, login limits, temporary password expiry, analytics and reports, population command
 billing             2   Bill generation signal
 citizens           10   Forced password change, password reset, dashboard, verified payment flow
 field_operations   20   GPS distance, assignment search, officer lists, field verification

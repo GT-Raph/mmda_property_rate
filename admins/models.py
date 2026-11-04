@@ -140,6 +140,10 @@ class UserProfile(TimeStampedModel):
     must_change_password = models.BooleanField(
         default=False
     )
+    temporary_password_expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
 
     EMPLOYEE_ID_PREFIXES = {
         "sys_admin": "SA",
@@ -156,6 +160,14 @@ class UserProfile(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user.get_username()} ({self.role})"
+
+    @property
+    def temporary_password_expired(self):
+        return bool(
+            self.must_change_password
+            and self.temporary_password_expires_at
+            and timezone.now() >= self.temporary_password_expires_at
+        )
 
     def _build_employee_id(self):
         prefix = self.EMPLOYEE_ID_PREFIXES.get(self.role)
@@ -283,6 +295,28 @@ class LoginAudit(TimeStampedModel):
             f"{self.user.get_username()} - "
             f"{self.device_name or 'Session'}"
         )
+
+
+class LoginFailure(models.Model):
+    """
+    One failed login, counted against an account or a client address.
+
+    The key is an HMAC, so no phone number, username or IP address is stored.
+    """
+
+    key = models.CharField(max_length=64)
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["key", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.key[:12]} at {self.created_at}"
 
 
 class UserNotification(TimeStampedModel):

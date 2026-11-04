@@ -67,6 +67,11 @@ from properties.models import Owner, Property
 from properties.utils import normalize_phone
 
 from .access import get_allowed_modules, get_user_role, landing_url_for_user
+from .login_security import (
+    LoginProtectionMixin,
+    ProtectedAuthenticationForm,
+    account_failure_key,
+)
 
 
 MONEY_FIELD = DecimalField(max_digits=14, decimal_places=2)
@@ -173,7 +178,7 @@ def _set_citizen_active_assembly(request, user):
         request.session.modified = True
 
 
-class AdminAuthenticationForm(AuthenticationForm):
+class AdminAuthenticationForm(LoginProtectionMixin, AuthenticationForm):
     username = forms.CharField(
         label="Email Address or Username",
         widget=forms.TextInput(
@@ -184,7 +189,13 @@ class AdminAuthenticationForm(AuthenticationForm):
         ),
     )
 
-    def clean(self):
+    def login_account_key(self, identifier):
+        return account_failure_key(
+            _find_admin_user_by_identifier(identifier),
+            identifier,
+        )
+
+    def check_credentials(self):
         identifier = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
 
@@ -215,7 +226,7 @@ class AdminAuthenticationForm(AuthenticationForm):
         return self.cleaned_data
 
 
-class CitizenPhoneAuthenticationForm(AuthenticationForm):
+class CitizenPhoneAuthenticationForm(LoginProtectionMixin, AuthenticationForm):
     username = forms.CharField(
         label="Phone Number",
         widget=forms.TextInput(
@@ -227,26 +238,28 @@ class CitizenPhoneAuthenticationForm(AuthenticationForm):
         ),
     )
 
-    def clean(self):
+    def login_account_key(self, identifier):
+        return account_failure_key(
+            _find_citizen_user_by_phone(identifier),
+            normalize_phone(identifier) or identifier,
+        )
+
+    def check_credentials(self):
         phone_number = self.cleaned_data.get("username")
         password = self.cleaned_data.get("password")
 
         if phone_number and password:
             user = _find_citizen_user_by_phone(phone_number)
 
+            # One message and one password hash for every failure, so neither
+            # the page nor its timing shows which numbers have accounts.
             if user is None:
-                raise forms.ValidationError(
-                    _("No active property owner account was found for this phone number."),
-                    code="invalid_login",
-                )
+                User().set_password(password)
+                password_is_correct = False
+            else:
+                password_is_correct = user.check_password(password)
 
-            if get_user_role(user) != "citizen":
-                raise forms.ValidationError(
-                    _("This login page is only for property owners."),
-                    code="invalid_login",
-                )
-
-            if not user.check_password(password):
+            if not password_is_correct or get_user_role(user) != "citizen":
                 raise forms.ValidationError(
                     _("Please enter the correct phone number and password."),
                     code="invalid_login",
@@ -361,7 +374,7 @@ def _settings_url(tab="profile"):
 
 class PortalLoginView(LoginView):
     template_name = "registration/login.html"
-    authentication_form = AuthenticationForm
+    authentication_form = ProtectedAuthenticationForm
     redirect_authenticated_user = True
 
     selected_assembly_session_key = "selected_assembly_id"

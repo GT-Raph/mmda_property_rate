@@ -8,16 +8,20 @@ from django.db.models import Exists, F, OuterRef, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from admins.access import get_allowed_modules, get_user_role
 from admins.decorators import module_required
+from admins.login_security import TEMPORARY_PASSWORD_LIFETIME
 from admins.models import Assembly
 from billing.models import Bill, CommunityArea, RatePolicy
 from payments.models import Payment
 from properties.forms import PropertyCreateForm, PropertyUpdateForm, OwnerUpdateForm
 from properties.models import Property
-from properties.utils import link_or_create_citizen_for_owner
+from properties.utils import (
+    link_or_create_citizen_for_owner,
+    reissue_temporary_password,
+)
 import logging
 from functools import wraps
 
@@ -532,7 +536,9 @@ def add_property(request):
                             "Phone number: "
                             f"{account_result['login_phone']}\n"
                             "Temporary password: "
-                            f"{account_result['temporary_password']}"
+                            f"{account_result['temporary_password']}\n"
+                            "Expires in "
+                            f"{TEMPORARY_PASSWORD_LIFETIME.days} days."
                         ),
                         extra_tags="credentials",
                     )
@@ -651,6 +657,56 @@ def _money_full(value):
     return f"GH₵ {Decimal(value or 0):,.2f}"
 
 
+def _owner_can_get_new_temporary_password(owner):
+    """
+    Only an owner still on a temporary password qualifies, so staff cannot use
+    this to take over an account whose owner has set their own password.
+    """
+    user = owner.linked_user
+    profile = getattr(user, "profile", None)
+
+    return bool(
+        profile
+        and profile.must_change_password
+        and get_user_role(user) == "citizen"
+    )
+
+
+@module_required("properties")
+@require_POST
+def reissue_owner_temporary_password(request, property_id):
+    property_obj = get_object_or_404(
+        _property_access_queryset(request),
+        pk=property_id,
+    )
+    owner = property_obj.owner
+
+    if _owner_can_get_new_temporary_password(owner):
+        temporary_password = reissue_temporary_password(owner.linked_user)
+        logger.info(
+            "User %s issued a new temporary password for user %s.",
+            request.user.pk,
+            owner.linked_user_id,
+        )
+        messages.info(
+            request,
+            (
+                f"New temporary password for {owner.full_name}.\n\n"
+                f"Phone number: {owner.primary_phone}\n"
+                f"Temporary password: {temporary_password}\n"
+                f"Expires in {TEMPORARY_PASSWORD_LIFETIME.days} days."
+            ),
+            extra_tags="credentials",
+        )
+    else:
+        messages.error(
+            request,
+            "This owner has no temporary password to replace.",
+        )
+
+    return redirect("properties:property-detail", property_id)
+
+
 @module_required("properties")
 def property_detail(request, property_id):
     property_obj = get_object_or_404(
@@ -663,6 +719,9 @@ def property_detail(request, property_id):
 
     context = {
         "page_title": "Property Details",
+        "can_reissue_temporary_password": _owner_can_get_new_temporary_password(
+            property_obj.owner
+        ),
         "page_subtitle": property_obj.property_reference,
         "context_assembly": _get_current_assembly(request),
         "portal_access": portal_access,

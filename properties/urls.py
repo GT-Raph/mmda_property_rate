@@ -12,6 +12,11 @@ urlpatterns = [
     path("<int:property_id>/", views.property_detail, name="property-detail"),
     path("<int:property_id>/edit/", views.edit_property, name="property-edit"),
     path("<int:property_id>/document/", views.property_document, name="property-document"),
+    path(
+        "<int:property_id>/reissue-temporary-password/",
+        views.reissue_owner_temporary_password,
+        name="reissue-temporary-password",
+    ),
 
     path("api/rate-preview/", views.property_rate_preview, name="property-rate-preview"),
 ]

@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from admins.access import get_user_role
+from admins.login_security import clear_login_failures
 from admins.models import Assembly
 from billing.models import Bill
 from payments.models import Payment
@@ -80,6 +81,7 @@ class CitizenPasswordResetConfirmView(
 
     def form_valid(self, form):
         response = super().form_valid(form)
+        clear_login_failures(form.user)
         profile = getattr(
             form.user,
             "profile",

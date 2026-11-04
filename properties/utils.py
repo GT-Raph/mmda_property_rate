@@ -3,7 +3,12 @@ import secrets
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 
+from admins.login_security import (
+    TEMPORARY_PASSWORD_LIFETIME,
+    clear_login_failures,
+)
 from admins.models import UserProfile
 
 User = get_user_model()
@@ -44,6 +49,23 @@ def generate_temporary_password(length=6):
     safe_length = max(6, int(length or 6))
     token = secrets.randbelow(10 ** safe_length)
     return f"Prms-{token:0{safe_length}d}"
+
+
+@transaction.atomic
+def reissue_temporary_password(user):
+    """Replace an owner's temporary password and restart its expiry."""
+    temporary_password = generate_temporary_password()
+    user.set_password(temporary_password)
+    user.save(update_fields=["password"])
+
+    profile = user.profile
+    profile.temporary_password_expires_at = (
+        timezone.now() + TEMPORARY_PASSWORD_LIFETIME
+    )
+    profile.save(update_fields=["temporary_password_expires_at"])
+
+    clear_login_failures(user)
+    return temporary_password
 
 
 def build_unique_citizen_username(owner):
@@ -320,7 +342,11 @@ def link_or_create_citizen_for_owner(owner, default_password=None):
     owner.linked_user = user
     owner.save(update_fields=["linked_user"])
 
-    _profile, assembly_added = ensure_citizen_profile_access(user, owner)
+    profile, assembly_added = ensure_citizen_profile_access(user, owner)
+    profile.temporary_password_expires_at = (
+        timezone.now() + TEMPORARY_PASSWORD_LIFETIME
+    )
+    profile.save(update_fields=["temporary_password_expires_at"])
 
     return {
         "user": user,

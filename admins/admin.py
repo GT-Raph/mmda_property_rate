@@ -1,8 +1,10 @@
 from django.contrib import admin
+from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 
+from .login_security import LoginProtectionMixin
 from .models import Assembly, ReportRun, UserProfile
 
 User = get_user_model()
@@ -113,6 +115,12 @@ class UserAdmin(BaseUserAdmin):
         make_citizen,
     ]
 
+
+class ProtectedAdminSiteLoginForm(LoginProtectionMixin, AdminAuthenticationForm):
+    """Django admin's login form with the login protections added."""
+
+
+admin.site.login_form = ProtectedAdminSiteLoginForm
 admin.site.site_header = "MMDA Property Rate System"
 admin.site.site_title = "MMDA Admin"
 admin.site.index_title = "Welcome to MMDA Administration"
