@@ -991,6 +991,13 @@ class BillAdmin(admin.ModelAdmin):
         "rate_policy",
     )
 
+    def save_model(self, request, obj, form, change):
+        # Choosing a different policy for a bill is a deliberate re-pricing.
+        if change and "rate_policy" in form.changed_data:
+            obj.resnapshot_from_policy()
+
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(BillDispute)
 class BillDisputeAdmin(admin.ModelAdmin):

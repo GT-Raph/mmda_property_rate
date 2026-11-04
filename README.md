@@ -1028,9 +1028,14 @@ policy_name_snapshot
 property_class_snapshot
 rateable_value_snapshot
 rate_impost_snapshot
+minimum_charge_snapshot
 ```
 
 This provides basic auditability across billing years.
+
+An issued bill's principal comes from these snapshots, so editing or deleting a rate policy does not change it. `Bill.generate_for_property` and choosing a different rate policy for a bill in Django admin re-price it on purpose.
+
+Bills issued before `minimum_charge_snapshot` existed have it empty and keep their stored principal until they are re-priced.
 
 ---
 
