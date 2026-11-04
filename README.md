@@ -415,16 +415,18 @@ Example:
 New citizen passwords use:
 
 ```python
-secrets.choice(...)
+secrets.randbelow(10 ** 6)
 ```
 
-with uppercase letters and digits.
+which gives six random digits after a fixed prefix.
 
 Format:
 
 ```text
-PRMS-XXXXXXXX
+Prms-NNNNNN
 ```
+
+where each `N` is a digit.
 
 The generated password is returned once during account creation.
 
@@ -2514,6 +2516,10 @@ EMAIL_USE_TLS=True
 DEFAULT_FROM_EMAIL=PRMS Support <no-reply@your-domain.example>
 ```
 
+`SECRET_KEY` is required whenever `DEBUG` is off. Without it the app stops at startup with an error.
+
+With `DEBUG=True` and no `SECRET_KEY`, the app generates a temporary key on each start, so logins reset on restart.
+
 ---
 
 # Local Development
@@ -2913,22 +2919,20 @@ Production implementations should consider malware scanning for arbitrary docume
 
 # Testing
 
-The current automated test suite is minimal.
+The automated suite has 65 tests.
 
-Implemented tests are concentrated in:
+A fresh copy runs them with no `.env` file and no `collectstatic`. Under `python manage.py test`, settings use plain static file storage, and a temporary `SECRET_KEY` if none is set.
 
-```text
-admins/tests.py
-```
-
-Current coverage includes:
+Tests per application:
 
 ```text
-Citizen phone lookup
-Citizen assembly-access denial
+admins             17   Citizen phone lookup, login access, analytics and reports, population command
+billing             2   Bill generation signal
+citizens           10   Forced password change, password reset, dashboard, verified payment flow
+field_operations   20   GPS distance, assignment search, officer lists, field verification
+payments            1   Applying a successful payment
+properties         15   Building types, owner form rules, temporary password format, registration feedback, officer registry, record filters
 ```
-
-Other application test modules currently contain placeholders.
 
 Run:
 
@@ -2946,7 +2950,7 @@ python manage.py test admins
 
 # Required Test Expansion
 
-Before production deployment, add tests for:
+Before production deployment, add or extend tests for:
 
 ```text
 Property registration
@@ -3065,7 +3069,7 @@ then certificate creation should move to the verification transition.
 
 ## 4. Limited Automated Tests
 
-Most domain applications currently have empty or placeholder test modules.
+Every domain application has tests, but coverage is uneven. Billing has 2 tests and payments has 1.
 
 Regression risk remains high for:
 
@@ -3910,7 +3914,7 @@ Notifications                  ██████████  Implemented
 TOTP / 2FA                     ████████░░  Implemented
 First-Login Password Control   ████████░░  Implemented / needs tests
 Reports                        █████████░  Implemented
-Automated Tests                ██░░░░░░░░  Minimal
+Automated Tests                ████░░░░░░  Partial
 Persistent Media Storage       ███░░░░░░░  Deployment dependent
 Production Observability       ██░░░░░░░░  Future hardening
 ```

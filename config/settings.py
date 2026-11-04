@@ -11,9 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import secrets
+import sys
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,13 +28,26 @@ load_dotenv(BASE_DIR / ".env")
 # CORE SECURITY SETTINGS
 # =========================================================
 
-# Load secret key from environment
-# On Render, add SECRET_KEY in Environment Variables
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
-
 # Production-safe DEBUG handling
 # Set DEBUG=False on Render
 DEBUG = os.getenv("DEBUG", "False").strip().lower() == "true"
+
+# True only under `python manage.py test`
+running_tests = sys.argv[1:2] == ["test"]
+
+# Load secret key from environment
+# On Render, add SECRET_KEY in Environment Variables
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    if not (DEBUG or running_tests):
+        raise ImproperlyConfigured(
+            "The SECRET_KEY environment variable is not set. "
+            "Add it on Render, or set DEBUG=True in .env for local development."
+        )
+    # Local development and tests only. A new key each start means logins reset
+    # on restart; set SECRET_KEY in .env to keep them.
+    SECRET_KEY = secrets.token_urlsafe(50)
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -213,6 +229,13 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# Tests render templates without running collectstatic, so there is no manifest
+# to look hashed names up in.
+if running_tests:
+    STORAGES["staticfiles"]["BACKEND"] = (
+        "django.contrib.staticfiles.storage.StaticFilesStorage"
+    )
 
 
 # =========================================================
