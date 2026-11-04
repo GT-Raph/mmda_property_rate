@@ -132,6 +132,11 @@ def generate_bill_for_property(
             if rate_policy
             else Decimal("0.00000")
         ),
+        minimum_charge_snapshot=(
+            rate_policy.minimum_charge
+            if rate_policy
+            else None
+        ),
         policy_name_snapshot=(
             rate_policy.policy_name
             if rate_policy

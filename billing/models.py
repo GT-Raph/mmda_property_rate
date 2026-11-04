@@ -219,6 +219,35 @@ class PropertyClass(TimeStampedModel):
         )
 
 
+def compute_principal(
+    rateable_value,
+    rate_impost,
+    minimum_charge,
+):
+    principal = (
+        Decimal(
+            rateable_value
+            or 0
+        )
+        * Decimal(
+            rate_impost
+            or 0
+        )
+    )
+
+    minimum_charge = Decimal(
+        minimum_charge
+        or 0
+    )
+
+    if principal < minimum_charge:
+        principal = minimum_charge
+
+    return principal.quantize(
+        Decimal("0.01")
+    )
+
+
 class RatePolicy(TimeStampedModel):
     assembly = models.ForeignKey(
         Assembly,
@@ -636,29 +665,10 @@ class RatePolicy(TimeStampedModel):
         self,
         rateable_value,
     ):
-        rateable_value = Decimal(
-            rateable_value
-            or 0
-        )
-
-        principal = (
-            rateable_value
-            * (
-                self.rate_impost
-                or Decimal("0.00000")
-            )
-        )
-
-        minimum_charge = (
-            self.minimum_charge
-            or Decimal("0.00")
-        )
-
-        if principal < minimum_charge:
-            principal = minimum_charge
-
-        return principal.quantize(
-            Decimal("0.01")
+        return compute_principal(
+            rateable_value,
+            self.rate_impost,
+            self.minimum_charge,
         )
 
 
@@ -736,6 +746,15 @@ class Bill(TimeStampedModel):
         max_digits=10,
         decimal_places=5,
         default=0,
+    )
+
+    # Empty on exempt bills and on bills issued before this field existed. Those
+    # older bills never recorded a minimum, so their stored principal stands.
+    minimum_charge_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
 
     principal_amount = models.DecimalField(
@@ -868,7 +887,21 @@ class Bill(TimeStampedModel):
         else:
             self.status = "pending"
 
+    def _is_priced(self):
+        # An issued bill with terms or an amount on record is priced from those
+        # alone. It no longer reads its policy or the property's rateable value.
+        return (
+            not self._state.adding
+            and (
+                bool(self.rate_impost_snapshot)
+                or self.minimum_charge_snapshot is not None
+                or bool(self.principal_amount)
+            )
+        )
+
     def _ensure_policy_and_snapshots(self):
+        is_priced = self._is_priced()
+
         if (
             self.property_record_id
             and not self.assembly_id
@@ -880,6 +913,7 @@ class Bill(TimeStampedModel):
         if (
             self.property_record_id
             and not self.rateable_value_snapshot
+            and not is_priced
         ):
             self.rateable_value_snapshot = (
                 self.property_record
@@ -891,6 +925,7 @@ class Bill(TimeStampedModel):
             self.property_record_id
             and not self.rate_policy_id
             and not self.property_record.is_exempt
+            and not is_priced
         ):
             policy_date = (
                 self.issued_at.date()
@@ -934,12 +969,52 @@ class Bill(TimeStampedModel):
                     .property_class
                 )
 
-            if not self.rate_impost_snapshot:
-                self.rate_impost_snapshot = (
-                    self.rate_policy
-                    .rate_impost
-                    or Decimal("0.00000")
-                )
+            if not is_priced:
+                if not self.rate_impost_snapshot:
+                    self.rate_impost_snapshot = (
+                        self.rate_policy
+                        .rate_impost
+                        or Decimal("0.00000")
+                    )
+
+                if self.minimum_charge_snapshot is None:
+                    self.minimum_charge_snapshot = (
+                        self.rate_policy
+                        .minimum_charge
+                        or Decimal("0.00")
+                    )
+
+    def resnapshot_from_policy(self):
+        # Deliberate re-pricing only. An ordinary save never reads these terms.
+        policy = self.rate_policy
+
+        if policy:
+            self.policy_name_snapshot = (
+                policy.policy_name
+            )
+            self.property_class_snapshot = (
+                policy.property_class
+            )
+            self.rate_impost_snapshot = (
+                policy.rate_impost
+                or Decimal("0.00000")
+            )
+            self.minimum_charge_snapshot = (
+                policy.minimum_charge
+                or Decimal("0.00")
+            )
+
+        else:
+            # Unpriced again, so save() finds a policy or refuses.
+            self.policy_name_snapshot = ""
+            self.property_class_snapshot = ""
+            self.rate_impost_snapshot = (
+                Decimal("0.00000")
+            )
+            self.minimum_charge_snapshot = None
+            self.principal_amount = (
+                Decimal("0.00")
+            )
 
     def _recalculate_totals(self):
         self._ensure_policy_and_snapshots()
@@ -952,6 +1027,8 @@ class Bill(TimeStampedModel):
                 Decimal("0.00000")
             )
 
+            self.minimum_charge_snapshot = None
+
             self.principal_amount = (
                 Decimal("0.00")
             )
@@ -960,7 +1037,10 @@ class Bill(TimeStampedModel):
                 self.property_class_snapshot = ""
 
         else:
-            if not self.rate_policy_id:
+            if (
+                not self.rate_policy_id
+                and not self._is_priced()
+            ):
                 raise ValidationError(
                     "No active rate policy matches "
                     "this property's billing year, "
@@ -968,12 +1048,14 @@ class Bill(TimeStampedModel):
                     "type."
                 )
 
-            self.principal_amount = (
-                self.rate_policy
-                .calculate_principal(
-                    self.rateable_value_snapshot
+            if self.minimum_charge_snapshot is not None:
+                self.principal_amount = (
+                    compute_principal(
+                        self.rateable_value_snapshot,
+                        self.rate_impost_snapshot,
+                        self.minimum_charge_snapshot,
+                    )
                 )
-            )
 
         self.amount_due = (
             (
@@ -1086,6 +1168,8 @@ class Bill(TimeStampedModel):
                 year=billing_year,
             )
         )
+
+        bill.resnapshot_from_policy()
 
         bill.save()
 
