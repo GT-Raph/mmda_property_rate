@@ -32,6 +32,12 @@
             <div class="row"><span>Alternate Phone</span><strong>{{ owner.alternate_phone|default:"—" }}</strong></div>
             <div class="row"><span>Email</span><strong>{{ owner.email|default:"—" }}</strong></div>
             <div class="row"><span>Ghana Card</span><strong>{{ owner.ghana_card_number|default:"—" }}</strong></div>
+            {% if can_reissue_temporary_password %}
+            <form class="no-print" style="margin-top:14px;" method="post" action="{% url 'properties:reissue-temporary-password' property_obj.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">Issue New Temporary Password</button>
+            </form>
+            {% endif %}
         </section>
         <section class="card">
             <h2 class="section-title">Property Summary</h2>

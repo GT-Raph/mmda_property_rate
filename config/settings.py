@@ -85,6 +85,11 @@ if extra_csrf_origins:
 
 CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CSRF_TRUSTED_ORIGINS))
 
+# Request header holding the real client address, for the login limit per IP.
+# Render's proxy keeps client-sent X-Forwarded-For values, so that header can be
+# faked. Without a proxy, REMOTE_ADDR is used.
+CLIENT_IP_HEADER = "HTTP_TRUE_CLIENT_IP" if render_external_hostname else None
+
 
 # =========================================================
 # APPLICATION DEFINITION
